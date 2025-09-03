@@ -300,6 +300,10 @@ func StorageSet(key string, value any) {}
 // StorageDelete removes a stored value for key.
 func StorageDelete(key string) {}
 
+// AddConfig registers a configuration entry for the plugin.
+// typ may be "int-slider", "float-slider", "check-box", "text-box", or "item-selector".
+func AddConfig(name, typ string) {}
+
 // RegisterChatHandler registers a callback for any chat message.
 // The handler receives the full message text.
 func RegisterChatHandler(fn func(msg string)) {}
