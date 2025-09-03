@@ -35,7 +35,6 @@ func Init() {
 		"ui": "/useitem ",
 		"uu": "/use ",
 		"un": "/unshare ",
-		// Tip: /who often needs a name; leave a space so you can keep typing.
 		"w":  "/who ",
 		"wh": "/whisper ",
 		"yy": "/yell ",
