@@ -1,0 +1,599 @@
+//go:build !test
+
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"gothoom/eui"
+	"math"
+	"sort"
+	"strings"
+	"time"
+	"unicode"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	text "github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+)
+
+var inventoryWin *eui.WindowData
+var inventoryList *eui.ItemData
+var inventoryDirty bool
+
+type invRef struct {
+	id     uint16
+	idx    int
+	global int
+}
+
+var inventoryRowRefs = map[*eui.ItemData]invRef{}
+var inventoryCtxWin *eui.WindowData
+var invShortcutWin *eui.WindowData
+var invShortcutDD *eui.ItemData
+var invShortcutTarget int
+var invNameWin *eui.WindowData
+var invNameInput *eui.ItemData
+
+var selectedInvID uint16
+var selectedInvIdx int = -1
+var lastInvClickID uint16
+var lastInvClickIdx int
+var lastInvClickTime time.Time
+
+var TitleCaser = cases.Title(language.AmericanEnglish)
+var foldCaser = cases.Fold()
+
+var (
+	invBoldSrc   *text.GoTextFaceSource
+	invItalicSrc *text.GoTextFaceSource
+)
+
+type invGroupKey struct {
+	id   uint16
+	name string
+	idx  int
+}
+
+// slotNames maps item slot constants to display strings.
+var slotNames = []string{
+	"invalid", // kItemSlotNotInventory
+	"unknown", // kItemSlotNotWearable
+	"forehead",
+	"neck",
+	"shoulder",
+	"arms",
+	"gloves",
+	"finger",
+	"coat",
+	"cloak",
+	"torso",
+	"waist",
+	"legs",
+	"feet",
+	"right",
+	"left",
+	"hands",
+	"head",
+}
+
+func makeInventoryWindow() {
+	if inventoryWin != nil {
+		return
+	}
+	inventoryWin, inventoryList, _ = makeTextWindow("Inventory", eui.HZoneLeft, eui.VZoneMiddleTop, true)
+	// Ensure layout updates immediately on resize to avoid gaps.
+	inventoryWin.OnResize = func() { updateInventoryWindow() }
+	updateInventoryWindow()
+}
+
+func updateInventoryWindow() {
+	if inventoryWin == nil || inventoryList == nil {
+		return
+	}
+
+	prevScroll := inventoryList.Scroll
+
+	// Build a unique list of items while counting duplicates and tracking
+	// whether any instance of a given key is equipped. Non-clothing items are
+	// grouped by ID and name so identical items appear once with a quantity,
+	// while clothing items are listed individually to allow swapping similar
+	// pieces (e.g. different pairs of shoes).
+	items := getInventory()
+	counts := make(map[invGroupKey]int)
+	first := make(map[invGroupKey]InventoryItem)
+	anyEquipped := make(map[invGroupKey]bool)
+	hasShortcut := make(map[invGroupKey]bool)
+	order := make([]invGroupKey, 0, len(items))
+	for _, it := range items {
+		key := invGroupKey{id: it.ID, name: it.Name}
+		if it.IDIndex >= 0 {
+			// Template-data items must remain unique by their per-ID index
+			key.idx = it.IDIndex
+			key.name = ""
+		}
+		if _, seen := counts[key]; !seen {
+			order = append(order, key)
+			first[key] = it
+		}
+		counts[key] += it.Quantity
+		if it.Equipped {
+			anyEquipped[key] = true
+		}
+		if r, ok := getInventoryShortcut(it.Index); ok && r != 0 {
+			hasShortcut[key] = true
+		}
+	}
+
+	sort.SliceStable(order, func(i, j int) bool {
+		ai := order[i]
+		aj := order[j]
+		hi := hasShortcut[ai]
+		hj := hasShortcut[aj]
+		if hi != hj {
+			return hi
+		}
+		nameI := officialName(ai, first[ai])
+		nameJ := officialName(aj, first[aj])
+		if nameI != nameJ {
+			return nameI < nameJ
+		}
+		return first[ai].Index < first[aj].Index
+	})
+
+	// Clear prior contents and rebuild rows as [icon][name (xN)].
+	inventoryList.Contents = nil
+	inventoryRowRefs = map[*eui.ItemData]invRef{}
+
+	// Compute row height from actual font metrics (ascent+descent) at the
+	// exact point size used when rendering (+2px fudge for Ebiten).
+	fontSize := gs.InventoryFontSize
+	if fontSize <= 0 {
+		fontSize = gs.ConsoleFontSize
+	}
+	uiScale := eui.UIScale()
+	facePx := float64(float32(fontSize)*uiScale) + 2
+	var goFace *text.GoTextFace
+	if src := eui.FontSource(); src != nil {
+		goFace = &text.GoTextFace{Source: src, Size: facePx}
+	} else {
+		goFace = &text.GoTextFace{Size: facePx}
+	}
+	metrics := goFace.Metrics()
+	if invBoldSrc == nil {
+		invBoldSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansBold))
+	}
+	if invItalicSrc == nil {
+		invItalicSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansItalic))
+	}
+	// Metrics already include the rendering fudge so no extra padding is
+	// needed here.
+	rowPx := float32(math.Ceil(metrics.HAscent + metrics.HDescent))
+	rowUnits := rowPx / uiScale
+	iconSize := int(rowUnits + 0.5)
+
+	// Compute available client width/height similar to updateTextWindow so rows
+	// don't extend into the window padding and get clipped.
+	clientW := inventoryWin.GetSize().X
+	clientH := inventoryWin.GetSize().Y - inventoryWin.GetTitleSize()
+	s := eui.UIScale()
+	if inventoryWin.NoScale {
+		s = 1
+	}
+	pad := (inventoryWin.Padding + inventoryWin.BorderPad) * s
+	clientWAvail := clientW - 2*pad
+	if clientWAvail < 0 {
+		clientWAvail = 0
+	}
+	clientHAvail := clientH - 2*pad
+	if clientHAvail < 0 {
+		clientHAvail = 0
+	}
+
+	for _, key := range order {
+		it := first[key]
+		qty := counts[key]
+		id := key.id
+
+		// Row container for icon + text
+		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+		row.Size.X = clientWAvail
+
+		// Icon
+		icon, _ := eui.NewImageItem(iconSize, iconSize)
+		icon.Filled = false
+		icon.Border = 0
+
+		// Choose a pict ID for the item sprite and determine equipped slot.
+		var pict uint32
+		slot := -1
+		if clImages != nil {
+			// Inventory list usually uses the worn pict for display.
+			if p := clImages.ItemWornPict(uint32(id)); p != 0 {
+				pict = p
+			}
+			slot = clImages.ItemSlot(uint32(id))
+		}
+		if pict != 0 {
+			if img := loadImage(uint16(pict)); img != nil {
+				icon.Image = img
+				icon.ImageName = fmt.Sprintf("item:%d", id)
+			}
+		}
+		// Add a small right margin after the icon
+		icon.Margin = 4
+		row.AddItem(icon)
+
+		// Text label: Title-case only base name; preserve bracketed/custom suffix exactly
+		raw := it.Name
+		if raw == "" && clImages != nil {
+			raw = clImages.ItemName(uint32(id))
+		}
+		if raw == "" {
+			raw = fmt.Sprintf("Item %d", id)
+		}
+		base := raw
+		suffix := ""
+		if p := strings.Index(base, " <"); p >= 0 {
+			suffix = base[p:]
+			base = base[:p]
+		}
+		prefix := ""
+		if r, ok := getInventoryShortcut(it.Index); ok && r != 0 {
+			prefix = fmt.Sprintf("[%c] ", unicode.ToUpper(r))
+		}
+		qtySuffix := ""
+		if qty > 1 {
+			qtySuffix = fmt.Sprintf(" (%v)", qty)
+		}
+
+		t, _ := eui.NewText()
+		t.Text = prefix + TitleCaser.String(base) + suffix + qtySuffix
+		t.FontSize = float32(fontSize)
+
+		face := goFace
+		if anyEquipped[key] {
+			switch slot {
+			case kItemSlotRightHand, kItemSlotLeftHand, kItemSlotBothHands:
+				if invBoldSrc != nil {
+					face = &text.GoTextFace{Source: invBoldSrc, Size: facePx}
+					t.Face = face
+				}
+			default:
+				if invItalicSrc != nil {
+					face = &text.GoTextFace{Source: invItalicSrc, Size: facePx}
+					t.Face = face
+				}
+			}
+		}
+
+		t.Size.Y = rowUnits
+
+		availName := row.Size.X - float32(iconSize) - icon.Margin
+		var lt *eui.ItemData
+		if anyEquipped[key] && slot >= 0 && slot < len(slotNames) {
+			loc := fmt.Sprintf("[%v]", TitleCaser.String(slotNames[slot]))
+			locW, _ := text.Measure(loc, face, 0)
+			locWU := float32(math.Ceil(locW / float64(uiScale)))
+			if availName > locWU {
+				availName -= locWU
+				lt, _ = eui.NewText()
+				lt.Text = loc
+				lt.FontSize = float32(fontSize)
+				lt.Face = face
+				lt.Size.Y = rowUnits
+				lt.Size.X = locWU
+				lt.Fixed = true
+				lt.Position.X = row.Size.X - locWU
+			}
+		}
+
+		if availName < 0 {
+			availName = 0
+		}
+		t.Size.X = availName
+		row.AddItem(t)
+		if lt != nil {
+			row.AddItem(lt)
+		}
+
+		idCopy := id
+		idxCopy := it.IDIndex
+		if qty > 1 {
+			idxCopy = -1
+		}
+		if idCopy == selectedInvID && idxCopy == selectedInvIdx {
+			row.Filled = true
+			if inventoryWin != nil && inventoryWin.Theme != nil {
+				row.Color = inventoryWin.Theme.Button.SelectedColor
+			}
+		}
+		click := func() { handleInventoryClick(idCopy, idxCopy) }
+		icon.Action = click
+		t.Action = click
+		if lt != nil {
+			lt.Action = click
+		}
+
+		// Row height matches the icon/text height with minimal padding.
+		row.Size.Y = rowUnits
+
+		inventoryList.AddItem(row)
+		inventoryRowRefs[row] = invRef{id: idCopy, idx: idxCopy, global: it.Index}
+	}
+
+	// Add a trailing spacer equal to one row height so the last item is never
+	// clipped at the bottom when fully scrolled.
+	spacer, _ := eui.NewText()
+	spacer.Text = ""
+	spacer.Size = eui.Point{X: 1, Y: rowUnits}
+	spacer.FontSize = float32(fontSize)
+	inventoryList.AddItem(spacer)
+
+	// Size the list and refresh window similar to updateTextWindow behavior.
+	if inventoryWin != nil {
+		if inventoryList.Parent != nil {
+			inventoryList.Parent.Size.X = clientWAvail
+			inventoryList.Parent.Size.Y = clientHAvail
+		}
+		inventoryList.Size.X = clientWAvail
+		inventoryList.Size.Y = clientHAvail
+		inventoryList.Scroll = prevScroll
+		inventoryWin.Refresh()
+	}
+}
+
+func handleInventoryClick(id uint16, idx int) {
+	now := time.Now()
+	if id == lastInvClickID && idx == lastInvClickIdx && now.Sub(lastInvClickTime) < 500*time.Millisecond {
+		if ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
+			enqueueCommand(fmt.Sprintf("/useitem %d", id))
+			nextCommand()
+		} else {
+			toggleInventoryEquipAt(id, idx)
+		}
+		lastInvClickTime = time.Time{}
+	} else {
+		selectInventoryItem(id, idx)
+		lastInvClickID = id
+		lastInvClickIdx = idx
+		lastInvClickTime = now
+	}
+}
+
+func selectInventoryItem(id uint16, idx int) {
+	if id == selectedInvID && idx == selectedInvIdx {
+		return
+	}
+	selectedInvID = id
+	selectedInvIdx = idx
+	serverIdx := idx
+	if serverIdx < 0 {
+		serverIdx = 0
+	}
+	enqueueCommand(fmt.Sprintf("\\BE-SELECT %d %d", id, serverIdx))
+	nextCommand()
+	updateInventoryWindow()
+}
+
+// handleInventoryContextClick opens the inventory context menu if the mouse
+// position is over an inventory row. Returns true if a menu was opened.
+func handleInventoryContextClick(mx, my int) bool {
+	if inventoryWin == nil || inventoryList == nil || !inventoryWin.IsOpen() {
+		return false
+	}
+	pos := eui.Point{X: float32(mx), Y: float32(my)}
+	for _, row := range inventoryList.Contents {
+		r := row.DrawRect
+		if pos.X >= r.X0 && pos.X <= r.X1 && pos.Y >= r.Y0 && pos.Y <= r.Y1 {
+			if ref, ok := inventoryRowRefs[row]; ok {
+				// Also select the item to provide a visual cue and
+				// ensure subsequent actions can rely on current selection.
+				selectInventoryItem(ref.id, ref.idx)
+				openInventoryContextMenu(ref, pos)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func openInventoryContextMenu(ref invRef, pos eui.Point) {
+	// Close any existing context menus so only one is visible at a time.
+	eui.CloseContextMenus()
+	// Minimal overlay menu using the new EUI context menus: Equip/Unequip
+	wearable := false
+	equipped := false
+	slotVal := -1
+	displayName := ""
+	examineName := ""
+	if it, ok := inventoryItemByIndex(ref.global); ok {
+		equipped = it.Equipped
+		if clImages != nil {
+			slot := clImages.ItemSlot(uint32(it.ID))
+			if slot >= kItemSlotFirstReal && slot <= kItemSlotLastReal {
+				wearable = true
+				slotVal = int(slot)
+			}
+		}
+		// Build a display name similar to the inventory list formatting.
+		raw := it.Name
+		if raw == "" && clImages != nil {
+			raw = clImages.ItemName(uint32(it.ID))
+		}
+		if raw == "" {
+			raw = fmt.Sprintf("Item %d", it.ID)
+		}
+		base := raw
+		suffix := ""
+		if p := strings.Index(base, " <"); p >= 0 {
+			suffix = base[p:]
+			base = base[:p]
+		}
+		displayName = TitleCaser.String(base) + suffix
+		// Emulate classic client: show worn slot for equipped items.
+		if equipped && slotVal >= 0 && slotVal < len(slotNames) {
+			displayName += " [" + TitleCaser.String(slotNames[slotVal]) + "]"
+		}
+		examineName = base
+	}
+	// First, the non-selectable header: item name.
+	options := []string{}
+	if displayName != "" {
+		options = append(options, "Item: "+displayName+":")
+	}
+	actions := []func(){}
+	if wearable && !equipped {
+		options = append(options, "Equip")
+		actions = append(actions, func() {
+			queueEquipCommand(ref.id, ref.idx)
+			equipInventoryItem(ref.id, ref.idx, true)
+		})
+	}
+	if wearable && equipped {
+		options = append(options, "Unequip")
+		actions = append(actions, func() {
+			enqueueCommand(fmt.Sprintf("/unequip %d", ref.id))
+			nextCommand()
+			equipInventoryItem(ref.id, -1, false)
+		})
+	}
+	// Always offer Examine when we know the item's name.
+	if examineName != "" {
+		options = append(options, "Examine")
+		actions = append(actions, func() {
+			// Ensure the item is selected before examining
+			selectInventoryItem(ref.id, ref.idx)
+			enqueueCommand("/examine")
+			nextCommand()
+		})
+	}
+	// Offer Show (announce item name).
+	if examineName != "" {
+		options = append(options, "Show")
+		actions = append(actions, func() {
+			enqueueCommand("/show")
+			nextCommand()
+		})
+	}
+	// Offer Drop options: plain and Mine-protected.
+	options = append(options, "Drop")
+	actions = append(actions, func() {
+		enqueueCommand("/drop")
+		nextCommand()
+	})
+	options = append(options, "Drop (Mine)")
+	actions = append(actions, func() {
+		enqueueCommand("/drop /mine")
+		nextCommand()
+	})
+	if len(options) == 0 {
+		return
+	}
+	menu := eui.ShowContextMenu(options, pos.X, pos.Y, func(i int) {
+		// Adjust for header occupying first index (if present)
+		adj := i
+		if displayName != "" {
+			adj = i - 1
+		}
+		if adj >= 0 && adj < len(actions) {
+			actions[adj]()
+		}
+	})
+	if menu != nil && displayName != "" {
+		// Mark first row as a non-interactive header
+		menu.HeaderCount = 1
+	}
+}
+
+// maybeQuoteName wraps a name in quotes if it contains whitespace.
+func maybeQuoteName(s string) string {
+	if strings.IndexFunc(s, func(r rune) bool { return r == ' ' || r == '\t' }) >= 0 {
+		return fmt.Sprintf("\"%s\"", s)
+	}
+	return s
+}
+
+func promptInventoryShortcut(idx int) {
+	invShortcutTarget = idx
+	if invShortcutWin == nil {
+		invShortcutWin = eui.NewWindow()
+		invShortcutWin.Title = "Shortcut"
+		invShortcutWin.AutoSize = true
+		invShortcutWin.Closable = true
+		invShortcutWin.Movable = false
+		invShortcutWin.Resizable = false
+		invShortcutWin.NoScroll = true
+	}
+	invShortcutWin.Contents = nil
+	opts := []string{"None"}
+	for r := '0'; r <= '9'; r++ {
+		opts = append(opts, string(r))
+	}
+	for r := 'A'; r <= 'Z'; r++ {
+		opts = append(opts, string(r))
+	}
+	dd, _ := eui.NewDropdown()
+	dd.Options = opts
+	dd.OnSelect = func(n int) {
+		if n > 0 {
+			setInventoryShortcut(idx, rune(opts[n][0]))
+		} else {
+			setInventoryShortcut(idx, 0)
+		}
+		inventoryDirty = true
+		invShortcutWin.Close()
+	}
+	invShortcutWin.AddItem(dd)
+	invShortcutWin.MarkOpen()
+	invShortcutWin.Refresh()
+}
+
+func promptInventoryName(id uint16, idx int) {
+	selectInventoryItem(id, idx)
+	if invNameWin == nil {
+		invNameWin = eui.NewWindow()
+		invNameWin.Title = "Name Item"
+		invNameWin.AutoSize = true
+		invNameWin.Closable = true
+		invNameWin.Movable = false
+		invNameWin.Resizable = false
+		invNameWin.NoScroll = true
+	}
+	invNameWin.Contents = nil
+	input, _ := eui.NewInput()
+	input.Size = eui.Point{X: 160, Y: 20}
+	invNameInput = input
+	apply := func() {
+		name := invNameInput.Text
+		if invNameInput.TextPtr != nil {
+			name = *invNameInput.TextPtr
+		}
+		enqueueCommand(fmt.Sprintf("/name %s", name))
+		nextCommand()
+		invNameWin.Close()
+	}
+	input.Action = apply
+	ok, _ := eui.NewButton()
+	ok.Text = "OK"
+	ok.FontSize = 12
+	ok.Action = apply
+	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
+	flow.AddItem(input)
+	flow.AddItem(ok)
+	invNameWin.AddItem(flow)
+	invNameWin.MarkOpen()
+	invNameWin.Refresh()
+}
+
+func officialName(k invGroupKey, it InventoryItem) string {
+	name := it.Name
+	if name == "" && clImages != nil {
+		name = clImages.ItemName(uint32(k.id))
+	}
+	if name == "" {
+		name = fmt.Sprintf("Item %d", k.id)
+	}
+	return foldCaser.String(name)
+}

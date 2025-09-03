@@ -1,0 +1,36 @@
+{
+  "versions": [
+    {
+      "Version": 21,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 22,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 23,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 24,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 25,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 26,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 27,
+      "CLVersion": 1445
+    },
+    {
+      "Version": 28,
+      "CLVersion": 1445
+    }
+  ]
+}

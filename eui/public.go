@@ -1,0 +1,177 @@
+package eui
+
+import (
+	"bytes"
+
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+)
+
+// Windows returns the list of active windows.
+func Windows() []*WindowData { return windows }
+
+// WindowTiling reports whether window tiling is enabled.
+func WindowTiling() bool { return windowTiling }
+
+// SetWindowTiling enables or disables window tiling.
+func SetWindowTiling(enabled bool) { windowTiling = enabled }
+
+// WindowSnapping reports whether window snapping is enabled.
+func WindowSnapping() bool { return windowSnapping }
+
+// SetWindowSnapping enables or disables window snapping.
+func SetWindowSnapping(enabled bool) { windowSnapping = enabled }
+
+// ShowPinLocations reports whether pin-to zone indicators are shown while dragging windows.
+func ShowPinLocations() bool { return showPinLocations }
+
+// SetShowPinLocations enables or disables pin-to zone indicators while dragging windows.
+func SetShowPinLocations(enabled bool) { showPinLocations = enabled }
+
+// MiddleClickMove reports whether middle-click window dragging is enabled.
+func MiddleClickMove() bool { return middleClickMove }
+
+// SetMiddleClickMove enables or disables dragging windows with the middle mouse button.
+func SetMiddleClickMove(enabled bool) { middleClickMove = enabled }
+
+// SetScreenSize sets the current screen size used for layout calculations.
+func SetScreenSize(w, h int) {
+	screenWidth = w
+	screenHeight = h
+	needDirty := false
+	for _, win := range windows {
+		size := win.GetSize()
+		resized := false
+		if size.X > float32(screenWidth) {
+			if win.NoScale {
+				win.Size.X = float32(screenWidth)
+			} else {
+				win.Size.X = float32(screenWidth) / uiScale
+			}
+			resized = true
+		}
+		if size.Y > float32(screenHeight) {
+			if win.NoScale {
+				win.Size.Y = float32(screenHeight)
+			} else {
+				win.Size.Y = float32(screenHeight) / uiScale
+			}
+			resized = true
+		}
+		if win.AutoSize {
+			win.updateAutoSize()
+			win.adjustScrollForResize()
+			needDirty = true
+		} else if resized {
+			win.resizeFlows()
+			win.adjustScrollForResize()
+			needDirty = true
+			if win.OnResize != nil {
+				win.OnResize()
+			}
+		}
+		if win.zone != nil {
+			win.updateZonePosition()
+		}
+		win.clampToScreen()
+	}
+	if needDirty {
+		markAllDirty()
+	}
+
+}
+
+// ScreenSize returns the current screen size.
+func ScreenSize() (int, int) { return screenWidth, screenHeight }
+
+// SetFontSource sets the text face source used when rendering text.
+func SetFontSource(src *text.GoTextFaceSource) {
+	mplusFaceSource = src
+	faceCache = map[float64]*text.GoTextFace{}
+}
+
+// SetBoldFontSource sets the bold text face source used when rendering bold text.
+func SetBoldFontSource(src *text.GoTextFaceSource) {
+	mplusBoldFaceSource = src
+	boldFaceCache = map[float64]*text.GoTextFace{}
+}
+
+// FontSource returns the current text face source.
+func FontSource() *text.GoTextFaceSource { return mplusFaceSource }
+
+// BoldFontSource returns the current bold text face source.
+func BoldFontSource() *text.GoTextFaceSource { return mplusBoldFaceSource }
+
+// EnsureFontSource initializes the font source from ttf data if needed.
+func EnsureFontSource(ttf []byte) error {
+	if mplusFaceSource != nil {
+		return nil
+	}
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(ttf))
+	if err != nil {
+		return err
+	}
+	mplusFaceSource = s
+	faceCache = map[float64]*text.GoTextFace{}
+	return nil
+}
+
+// EnsureBoldFontSource initializes the bold font source from ttf data if needed.
+func EnsureBoldFontSource(ttf []byte) error {
+	if mplusBoldFaceSource != nil {
+		return nil
+	}
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(ttf))
+	if err != nil {
+		return err
+	}
+	mplusBoldFaceSource = s
+	boldFaceCache = map[float64]*text.GoTextFace{}
+	return nil
+}
+
+// ShowContextMenu opens a simple context menu at screen-space pixel
+// coordinates (x, y) with the provided options. onSelect is called with the
+// selected index when an item is clicked. Returns the handle to the menu.
+// (context menu APIs are defined in context_menu.go)
+
+// AddItem appends a child item to the parent item.
+func (parent *ItemData) AddItem(child *ItemData) { parent.addItemTo(child) }
+
+// AddItem appends a child item to the window.
+func (win *WindowData) AddItem(child *ItemData) { win.addItemTo(child) }
+
+// PrependItem prepends a child item to the parent item.
+func (parent *ItemData) PrependItem(child *ItemData) { parent.prependItemTo(child) }
+
+// PrependItem prepends a child item to the window.
+func (win *WindowData) PrependItem(child *ItemData) { win.prependItemTo(child) }
+
+// ListThemes returns the available palette names.
+func ListThemes() ([]string, error) { return listThemes() }
+
+// ListStyles returns the available style theme names.
+func ListStyles() ([]string, error) { return listStyles() }
+
+// CurrentThemeName returns the active theme name.
+func CurrentThemeName() string { return currentThemeName }
+
+// SetCurrentThemeName updates the active theme name.
+func SetCurrentThemeName(name string) { currentThemeName = name }
+
+// CurrentStyleName returns the active style theme name.
+func CurrentStyleName() string { return currentStyleName }
+
+// SetCurrentStyleName updates the active style theme name.
+func SetCurrentStyleName(name string) { currentStyleName = name }
+
+// AccentSaturation returns the current accent color saturation value.
+func AccentSaturation() float64 { return accentSaturation }
+
+// ClearFocus removes focus from the provided item if it is currently focused.
+func ClearFocus(it *ItemData) {
+	if focusedItem == it {
+		focusedItem.Focused = false
+		focusedItem.markDirty()
+		focusedItem = nil
+	}
+}
