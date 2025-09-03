@@ -255,6 +255,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			"Shortcuts",
 			"Triggers",
 			"Scripts",
+			"Saved Data",
 		}
 		eui.ShowContextMenu(options, r.X0, r.Y1, func(i int) {
 			switch i {
@@ -269,6 +270,9 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			case 3:
 				refreshPluginsWindow()
 				pluginsWin.ToggleNear(actionsBtn)
+			case 4:
+				makeSavedDataWindow()
+				savedDataWin.ToggleNear(actionsBtn)
 			}
 		})
 	}
