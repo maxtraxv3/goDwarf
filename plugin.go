@@ -220,6 +220,7 @@ func exportsForPlugin(owner string) interp.Exports {
 		m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
 		m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
 		m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
+		m["AddConfig"] = reflect.ValueOf(func(name, typ string) { pluginAddConfig(owner, name, typ) })
 
 		// Timers
 		m["After"] = reflect.ValueOf(func(ms int, fn func()) {
@@ -757,6 +758,7 @@ func pluginEnqueueCommand(owner, cmd string) {
 }
 
 func loadPluginSource(owner, name, path string, src []byte, restricted interp.Exports) {
+	pluginRemoveConfig(owner)
 	i := interp.New(interp.Options{})
 	if len(restricted) > 0 {
 		i.Use(restricted)
@@ -850,6 +852,12 @@ func disablePlugin(owner, reason string) {
 		pluginRemoveHotkey(owner, hk.Combo)
 	}
 	pluginRemoveShortcuts(owner)
+	pluginRemoveConfig(owner)
+	if pluginConfigWin != nil && pluginConfigOwner == owner {
+		pluginConfigWin.Close()
+		pluginConfigWin = nil
+		pluginConfigOwner = ""
+	}
 	inputHandlersMu.Lock()
 	for i := len(pluginInputHandlers) - 1; i >= 0; i-- {
 		if pluginInputHandlers[i].owner == owner {

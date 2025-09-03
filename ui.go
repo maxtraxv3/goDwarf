@@ -62,6 +62,8 @@ var pluginsWin *eui.WindowData
 var pluginsList *eui.ItemData
 var pluginDetails *eui.ItemData
 var selectedPlugin string
+var pluginConfigWin *eui.WindowData
+var pluginConfigOwner string
 
 // Checkboxes in the Windows window so we can update their state live
 var windowsPlayersCB *eui.ItemData
@@ -582,6 +584,21 @@ func refreshPluginsWindow() {
 					}
 				}
 				row.AddItem(reloadBtn)
+
+				pluginConfigMu.RLock()
+				cfg := pluginConfigEntries[owner]
+				pluginConfigMu.RUnlock()
+				if len(cfg) > 0 {
+					cfgBtn, ch := eui.NewButton()
+					cfgBtn.Text = "Configure"
+					cfgBtn.Size = eui.Point{X: 70, Y: 24}
+					ch.Handle = func(ev eui.UIEvent) {
+						if ev.Type == eui.EventClick {
+							openPluginConfigWindow(owner)
+						}
+					}
+					row.AddItem(cfgBtn)
+				}
 			}
 			nameTxt, _ = eui.NewText()
 			nameTxt.FontSize = 12
@@ -716,6 +733,71 @@ func refreshPluginDetails() {
 	if pluginsWin != nil {
 		pluginsWin.Refresh()
 	}
+}
+
+func openPluginConfigWindow(owner string) {
+	pluginConfigMu.RLock()
+	entries := pluginConfigEntries[owner]
+	pluginConfigMu.RUnlock()
+	if len(entries) == 0 {
+		return
+	}
+	if pluginConfigWin != nil {
+		pluginConfigWin.Close()
+	}
+	pluginMu.RLock()
+	name := pluginDisplayNames[owner]
+	pluginMu.RUnlock()
+	pluginConfigWin = eui.NewWindow()
+	pluginConfigWin.Title = "Configure: " + name
+	pluginConfigWin.Closable = true
+	pluginConfigWin.Resizable = false
+	pluginConfigWin.AutoSize = true
+	pluginConfigWin.Movable = true
+	pluginConfigWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
+
+	root := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	pluginConfigWin.AddItem(root)
+
+	for _, ce := range entries {
+		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+		lbl, _ := eui.NewText()
+		lbl.Text = ce.Name
+		lbl.FontSize = 12
+		lbl.Size = eui.Point{X: 120, Y: 24}
+		row.AddItem(lbl)
+
+		switch ce.Type {
+		case "int-slider", "float-slider":
+			s, _ := eui.NewSlider()
+			s.MinValue = 0
+			s.MaxValue = 100
+			s.Size = eui.Point{X: 120, Y: 24}
+			row.AddItem(s)
+		case "check-box":
+			cb, _ := eui.NewCheckbox()
+			cb.Size = eui.Point{X: 24, Y: 24}
+			row.AddItem(cb)
+		case "text-box":
+			inp, _ := eui.NewInput()
+			inp.Size = eui.Point{X: 120, Y: 24}
+			row.AddItem(inp)
+		case "item-selector":
+			dd, _ := eui.NewDropdown()
+			dd.Size = eui.Point{X: 120, Y: 24}
+			row.AddItem(dd)
+		default:
+			t, _ := eui.NewText()
+			t.Text = ce.Type
+			t.FontSize = 12
+			t.Size = eui.Point{X: 120, Y: 24}
+			row.AddItem(t)
+		}
+		root.AddItem(row)
+	}
+
+	pluginConfigWin.AddWindow(false)
+	pluginConfigOwner = owner
 }
 
 func makeMixerWindow() {
