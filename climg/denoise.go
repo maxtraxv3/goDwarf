@@ -20,12 +20,28 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 	src := getTempRGBA(bounds)
 	copy(src.Pix, img.Pix)
 
+	hsvs := make([]hsv, w*h)
+	for y := 0; y < h; y++ {
+		yoff := y * src.Stride
+		idx := y * w
+		for x := 0; x < w; x++ {
+			off := yoff + x*4
+			r := float64(src.Pix[off]) / 255
+			g := float64(src.Pix[off+1]) / 255
+			b := float64(src.Pix[off+2]) / 255
+			h, s, v := rgbToHSV(r, g, b)
+			hsvs[idx+x] = hsv{h: h, s: s, v: v}
+		}
+	}
+
 	neighbours := []image.Point{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
 	for y := 1; y < h-1; y++ {
 		yoff := y * src.Stride
+		idx := y * w
 		for x := 1; x < w-1; x++ {
 			off := yoff + x*4
 			c := color.RGBA{src.Pix[off], src.Pix[off+1], src.Pix[off+2], src.Pix[off+3]}
+			chsv := hsvs[idx+x]
 
 			// If this pixel is opaque and all direct neighbours are
 			// non-opaque, blur it unless it is full black.
@@ -45,8 +61,9 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 
 			for _, n := range neighbours {
 				nOff := (y+n.Y)*src.Stride + (x+n.X)*4
+				nIdx := (y+n.Y)*w + (x + n.X)
 				ncol := color.RGBA{src.Pix[nOff], src.Pix[nOff+1], src.Pix[nOff+2], src.Pix[nOff+3]}
-				dist := colourDist(c, ncol)
+				dist := colourDist(c, ncol, chsv, hsvs[nIdx])
 				if dist < 1 {
 					blend := maxPercent * math.Pow(1-dist, sharpness)
 					if blend > 0 {
@@ -66,6 +83,8 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 }
 
 var rgbaPool = sync.Pool{New: func() any { return &image.RGBA{} }}
+
+type hsv struct{ h, s, v float64 }
 
 func getTempRGBA(bounds image.Rectangle) *image.RGBA {
 	img := rgbaPool.Get().(*image.RGBA)
@@ -87,26 +106,20 @@ func putTempRGBA(img *image.RGBA) { rgbaPool.Put(img) }
 // not be blended.
 const dt = 0
 
-func colourDist(a, b color.RGBA) float64 {
+func colourDist(a, b color.RGBA, ahsv, bhsv hsv) float64 {
 	if a.A < 0xFF || b.A < 0xFF ||
 		(a.R == dt && a.G == dt && a.B == dt) ||
 		(b.R == dt && b.G == dt && b.B == dt) {
 		return 2 // sentinel > 1
 	}
 
-	r1, g1, b1 := float64(a.R)/255, float64(a.G)/255, float64(a.B)/255
-	r2, g2, b2 := float64(b.R)/255, float64(b.G)/255, float64(b.B)/255
-
-	h1, s1, v1 := rgbToHSV(r1, g1, b1)
-	h2, s2, v2 := rgbToHSV(r2, g2, b2)
-
-	dh := math.Abs(h1 - h2)
+	dh := math.Abs(ahsv.h - bhsv.h)
 	if dh > 180 {
 		dh = 360 - dh
 	}
 	dh /= 360
-	dv := math.Abs(v1 - v2)
-	avgSat := (s1 + s2) / 2
+	dv := math.Abs(ahsv.v - bhsv.v)
+	avgSat := (ahsv.s + bhsv.s) / 2
 
 	d := dh*avgSat + dv*(1-avgSat)
 	if d > 1 {
