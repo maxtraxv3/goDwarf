@@ -217,6 +217,25 @@ func exportsForPlugin(owner string) interp.Exports {
 		})
         m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
         m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
+        // Simple world overlay drawing (top-left origin, world units)
+        m["OverlayClear"] = reflect.ValueOf(func() { pluginOverlayClear(owner) })
+        m["OverlayRect"] = reflect.ValueOf(func(x, y, w, h int, r, g, b, a uint8) {
+            pluginOverlayRect(owner, x, y, w, h, r, g, b, a)
+        })
+        m["OverlayText"] = reflect.ValueOf(func(x, y int, txt string, r, g, b, a uint8) {
+            pluginOverlayText(owner, x, y, txt, r, g, b, a)
+        })
+        m["OverlayImage"] = reflect.ValueOf(func(id uint16, x, y int) {
+            pluginOverlayImage(owner, id, x, y)
+        })
+        m["WorldSize"] = reflect.ValueOf(func() (int, int) { return gameAreaSizeX, gameAreaSizeY })
+        m["ImageSize"] = reflect.ValueOf(func(id uint16) (int, int) {
+            if clImages == nil {
+                return 0, 0
+            }
+            w, h := clImages.Size(uint32(id))
+            return w, h
+        })
         m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
         m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
         m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
@@ -651,10 +670,24 @@ var (
 	pluginModTime         time.Time
 	pluginModCheck        time.Time
 	// timers per plugin owner
-	pluginTimers      = map[string][]*time.Timer{}
-	pluginTickerStops = map[string][]chan struct{}{}
-	pluginTickWaiters = map[string][]*tickWaiter{}
+    pluginTimers      = map[string][]*time.Timer{}
+    pluginTickerStops = map[string][]chan struct{}{}
+    pluginTickWaiters = map[string][]*tickWaiter{}
+
+    // Per-plugin world overlay draw operations.
+    pluginOverlayOps = map[string][]overlayOp{}
+    overlayMu        sync.RWMutex
 )
+
+// overlayOp describes a simple draw command for the world overlay.
+type overlayOp struct {
+    kind  int    // 0=rect, 1=text, 2=image
+    x, y  int    // world coordinates (top-left origin)
+    w, h  int    // for rect
+    r, g, b, a uint8
+    text  string // for text
+    id    uint16 // for image (CL_Images pict ID)
+}
 
 type tickWaiter struct {
 	remain int
@@ -926,6 +959,10 @@ func disablePlugin(owner, reason string) {
         }
     }
     chatHandlersMu.Unlock()
+    // Clear overlay ops
+    overlayMu.Lock()
+    delete(pluginOverlayOps, owner)
+    overlayMu.Unlock()
     // Stop any timers/tickers and tick waiters for this plugin
 	pluginMu.Lock()
 	if list := pluginTimers[owner]; len(list) > 0 {
@@ -1410,7 +1447,35 @@ func runConsoleTriggers(msg string) {
 }
 
 func pluginPlaySound(ids []uint16) {
-	playSound(ids)
+    playSound(ids)
+}
+
+// ---- Overlay helpers (called by plugin exports) ----
+func pluginOverlayClear(owner string) {
+    overlayMu.Lock()
+    delete(pluginOverlayOps, owner)
+    overlayMu.Unlock()
+}
+
+func pluginOverlayRect(owner string, x, y, w, h int, r, g, b, a uint8) {
+    if w <= 0 || h <= 0 { return }
+    overlayMu.Lock()
+    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 0, x: x, y: y, w: w, h: h, r: r, g: g, b: b, a: a})
+    overlayMu.Unlock()
+}
+
+func pluginOverlayText(owner string, x, y int, txt string, r, g, b, a uint8) {
+    if txt == "" { return }
+    overlayMu.Lock()
+    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 1, x: x, y: y, text: txt, r: r, g: g, b: b, a: a})
+    overlayMu.Unlock()
+}
+
+func pluginOverlayImage(owner string, id uint16, x, y int) {
+    if id == 0xffff || id == 0 { return }
+    overlayMu.Lock()
+    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
+    overlayMu.Unlock()
 }
 
 func pluginCommandsFor(owner string) []string {

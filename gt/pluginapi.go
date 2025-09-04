@@ -307,3 +307,23 @@ func AddConfig(name, typ string) {}
 // RegisterChatHandler registers a callback for any chat message.
 // The handler receives the full message text.
 func RegisterChatHandler(fn func(msg string)) {}
+
+// ---- Simple world overlay drawing ----
+
+// OverlayClear removes all overlay drawings for the calling script.
+func OverlayClear() {}
+
+// OverlayRect draws a filled rectangle at world coordinates (top-left origin).
+func OverlayRect(x, y, w, h int, r, g, b, a uint8) {}
+
+// OverlayText draws text at world coordinates using the default font.
+func OverlayText(x, y int, text string, r, g, b, a uint8) {}
+
+// OverlayImage draws a CL_Images picture by ID at world coordinates.
+func OverlayImage(id uint16, x, y int) {}
+
+// WorldSize returns the game world size in pixels (base units).
+func WorldSize() (int, int) { return 0, 0 }
+
+// ImageSize returns the width and height for a CL_Images picture ID.
+func ImageSize(id uint16) (int, int) { return 0, 0 }

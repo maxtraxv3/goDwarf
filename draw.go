@@ -165,6 +165,54 @@ func picturesSummary(pics []framePicture) string {
 	return buf.String()
 }
 
+// drawPluginOverlays renders per-plugin overlay operations onto the provided
+// world view image. Coordinates are in world units with a top-left origin
+// matching the base game area (0..gameAreaSizeX, 0..gameAreaSizeY). The
+// provided scale converts world units to worldView pixels.
+func drawPluginOverlays(worldView *ebiten.Image, scale float64) {
+    if worldView == nil || scale <= 0 {
+        return
+    }
+    overlayMu.RLock()
+    // Snapshot to avoid holding the lock while drawing
+    snap := make([]overlayOp, 0, 64)
+    for _, ops := range pluginOverlayOps {
+        snap = append(snap, ops...)
+    }
+    overlayMu.RUnlock()
+    if len(snap) == 0 {
+        return
+    }
+    for _, op := range snap {
+        switch op.kind {
+        case 0: // rect
+            if op.w > 0 && op.h > 0 {
+                vector.DrawFilledRect(worldView,
+                    float32(float64(op.x)*scale),
+                    float32(float64(op.y)*scale),
+                    float32(float64(op.w)*scale),
+                    float32(float64(op.h)*scale),
+                    color.RGBA{op.r, op.g, op.b, op.a}, false)
+            }
+        case 1: // text
+            if op.text != "" {
+                opts := &text.DrawOptions{}
+                opts.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
+                // Use mainFont (native scale), color with RGBA
+                opts.ColorScale.ScaleWithColor(color.RGBA{op.r, op.g, op.b, op.a})
+                text.Draw(worldView, op.text, mainFont, opts)
+            }
+        case 2: // image by ID
+            if img := loadImage(op.id); img != nil {
+                di := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+                di.GeoM.Scale(scale, scale)
+                di.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
+                worldView.DrawImage(img, di)
+            }
+        }
+    }
+}
+
 var (
 	pixelCountMu    sync.RWMutex
 	pixelCountCache = make(map[uint16]int)

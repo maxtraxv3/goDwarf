@@ -1241,6 +1241,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			drawMobileNameTags(worldView, snap, alpha)
 		}
 		drawSpeechBubbles(worldView, snap, alpha)
+		// Draw plugin overlays on top of the world view.
+		drawPluginOverlays(worldView, finalScale)
 		gs.GameScale = prev
 	}
 

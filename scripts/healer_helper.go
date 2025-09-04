@@ -47,13 +47,13 @@ func Init() {
 }
 
 // equipItem equips the moonstone if it isn't already in hand.
-func equipItem(item string) {
-	for _, it := range gt.Inventory() {
-		if gt.IgnoreCase(it.Name, item) {
-			if !it.Equipped {
-				gt.Equip(it.ID)
-			}
-			return
-		}
-	}
+func equipItem(name string) {
+    for _, it := range gt.Inventory() {
+        if gt.IgnoreCase(it.Name, name) {
+            if !it.Equipped {
+                gt.Equip(it.ID)
+            }
+            return
+        }
+    }
 }

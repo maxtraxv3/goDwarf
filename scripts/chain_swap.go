@@ -3,8 +3,8 @@
 package main
 
 import (
-	"gt"
-	"time"
+    "gt"
+    "time"
 )
 
 // Plugin metadata
@@ -34,27 +34,26 @@ func swapChain() {
 	}
 	lastSwap = time.Now()
 
-	var chainID uint16
-	var equipped *gt.InventoryItem
-	for _, it := range gt.Inventory() {
-		if gt.IgnoreCase(it.Name, "chain") {
-			chainID = it.ID
-		}
-		if it.Equipped && !gt.IgnoreCase(it.Name, "chain") {
-			item := it // capture for pointer
-			equipped = &item
-		}
-	}
-	if chainID == 0 {
-		// No chain? Nothing to do.
-		return
-	}
-	if equipped != nil {
-		// Remember what we unequipped so we can switch back later.
-		savedID = equipped.ID
-		gt.Equip(chainID)
-	} else if savedID != 0 {
-		// Chain already equipped, so swap back.
-		gt.Equip(savedID)
-	}
+    var chainID uint16
+    var equippedID uint16
+    for _, it := range gt.Inventory() {
+        if gt.IgnoreCase(it.Name, "chain") {
+            chainID = it.ID
+        }
+        if it.Equipped && !gt.IgnoreCase(it.Name, "chain") {
+            equippedID = it.ID
+        }
+    }
+    if chainID == 0 {
+        // No chain found.
+        return
+    }
+    if equippedID != 0 {
+        // Remember what we unequipped so we can switch back later.
+        savedID = equippedID
+        gt.Equip(chainID)
+    } else if savedID != 0 {
+        // Chain already equipped, so swap back.
+        gt.Equip(savedID)
+    }
 }
