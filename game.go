@@ -605,6 +605,7 @@ func (g *Game) Update() error {
 	checkPluginMods()
 	updateNotifications()
 	updateThinkMessages()
+	requestPlayersData()
 
 	mx, my := eui.PointerPosition()
 	origX, origY, worldScale := worldDrawInfo()

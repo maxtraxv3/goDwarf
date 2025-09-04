@@ -144,13 +144,6 @@ func sendPlayerInput(connection net.Conn, mouseX, mouseY int16, mouseDown bool, 
 	}
 
 	nextCommand()
-	// Before reading the pending command, give background queues
-	// a chance to schedule maintenance commands.
-	if pendingCommand == "" {
-		if !maybeEnqueueInfo() {
-			_ = maybeEnqueueWho()
-		}
-	}
 	cmd := pendingCommand
 	cmdBytes := encodeMacRoman(cmd)
 	packet := make([]byte, 20+len(cmdBytes)+1)
