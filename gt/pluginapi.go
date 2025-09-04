@@ -281,6 +281,9 @@ func EquippedItems() []InventoryItem { return nil }
 // HasItem reports whether an inventory item with the given name exists.
 func HasItem(name string) bool { return false }
 
+// IsEquipped reports whether an equipped item with the given name exists.
+func IsEquipped(name string) bool { return false }
+
 // StorageGet retrieves a value previously stored with StorageSet.
 func StorageGet(key string) any { return nil }
 

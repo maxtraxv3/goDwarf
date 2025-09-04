@@ -33,6 +33,7 @@ Common API calls:
 - gt.Inventory() – slice of inventory items.
 - gt.EquippedItems() – list of currently equipped items.
 - gt.HasItem(name) – whether your inventory has an item by name.
+- gt.IsEquipped(name) – whether an item by name is equipped.
 - gt.MouseWheel() – get scroll wheel movement since last frame.
 - gt.KeyJustPressed(name) – check keyboard keys.
 - gt.SetInputText(txt) and gt.InputText() – set or read the chat input box.
@@ -98,4 +99,3 @@ Numpad8, Numpad9, NumpadAdd, NumpadDecimal, NumpadDivide, NumpadEnter,
 NumpadEqual, NumpadMultiply, NumpadSubtract, O, P, PageDown, PageUp, Pause,
 Period, PrintScreen, Q, Quote, R, S, ScrollLock, Semicolon, Shift, ShiftLeft,
 ShiftRight, Slash, Space, T, Tab, U, V, W, X, Y, Z
-

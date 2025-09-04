@@ -94,13 +94,24 @@ func pluginEquippedItems() []InventoryItem {
 }
 
 func pluginHasItem(name string) bool {
-	n := strings.ToLower(name)
-	for _, it := range getInventory() {
-		if strings.ToLower(it.Name) == n {
-			return true
-		}
-	}
-	return false
+    n := strings.ToLower(name)
+    for _, it := range getInventory() {
+        if strings.ToLower(it.Name) == n {
+            return true
+        }
+    }
+    return false
+}
+
+// pluginIsEquipped reports whether any equipped item matches the given name.
+func pluginIsEquipped(name string) bool {
+    n := strings.ToLower(name)
+    for _, it := range getInventory() {
+        if it.Equipped && strings.ToLower(it.Name) == n {
+            return true
+        }
+    }
+    return false
 }
 
 func pluginFrameNumber() int {

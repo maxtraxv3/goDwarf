@@ -79,6 +79,7 @@ var basePluginExports = interp.Exports{
 		"Mobile":           reflect.ValueOf((*Mobile)(nil)),
 		"EquippedItems":    reflect.ValueOf(pluginEquippedItems),
 		"HasItem":          reflect.ValueOf(pluginHasItem),
+		"IsEquipped":       reflect.ValueOf(pluginIsEquipped),
 		"IgnoreCase":       reflect.ValueOf(pluginIgnoreCase),
 		"StartsWith":       reflect.ValueOf(pluginStartsWith),
 		"EndsWith":         reflect.ValueOf(pluginEndsWith),
