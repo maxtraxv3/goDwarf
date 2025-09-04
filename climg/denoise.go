@@ -55,7 +55,7 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 					}
 				}
 				if isolated {
-					c = mixColour(c, color.RGBA{}, maxPercent)
+					c = mixColour(c, color.RGBA{}, float32(maxPercent))
 				}
 			}
 
@@ -67,7 +67,7 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 				if dist < 1 {
 					blend := maxPercent * math.Pow(1-dist, sharpness)
 					if blend > 0 {
-						c = mixColour(c, ncol, blend)
+						c = mixColour(c, ncol, float32(blend))
 					}
 				}
 			}
@@ -157,12 +157,12 @@ func rgbToHSV(r, g, b float64) (h, s, v float64) {
 }
 
 // mixColour blends two colours together by the provided percentage.
-func mixColour(a, b color.RGBA, p float64) color.RGBA {
+func mixColour(a, b color.RGBA, p float32) color.RGBA {
 	inv := 1 - p
 	return color.RGBA{
-		R: uint8(float64(a.R)*inv + float64(b.R)*p),
-		G: uint8(float64(a.G)*inv + float64(b.G)*p),
-		B: uint8(float64(a.B)*inv + float64(b.B)*p),
-		A: uint8(float64(a.A)*inv + float64(b.A)*p),
+		R: uint8(float32(a.R)*inv + float32(b.R)*p),
+		G: uint8(float32(a.G)*inv + float32(b.G)*p),
+		B: uint8(float32(a.B)*inv + float32(b.B)*p),
+		A: uint8(float32(a.A)*inv + float32(b.A)*p),
 	}
 }
