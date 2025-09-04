@@ -1398,13 +1398,10 @@ func pluginSource(owner string) string {
 }
 
 func refreshPluginMod() {
-	dirs := []string{userScriptsDir(), "scripts"}
+	dir := userScriptsDir()
 	latest := time.Time{}
-	for _, dir := range dirs {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
+	entries, err := os.ReadDir(dir)
+	if err == nil {
 		for _, e := range entries {
 			if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
 				continue
@@ -1533,8 +1530,8 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 }
 
 func rescanPlugins() {
-	pluginDirs := []string{userScriptsDir(), "scripts"}
-	scanned := scanPlugins(pluginDirs, nil)
+	dir := userScriptsDir()
+	scanned := scanPlugins([]string{dir}, nil)
 
 	pluginMu.RLock()
 	oldDisabled := make(map[string]bool, len(pluginDisabled))
@@ -1615,9 +1612,8 @@ func checkPluginMods() {
 func loadPlugins() {
 	ensureScriptsDir()
 	ensureDefaultScripts()
-
-	pluginDirs := []string{userScriptsDir(), "scripts"}
-	scanned := scanPlugins(pluginDirs, func(name, path string) {
+	dir := userScriptsDir()
+	scanned := scanPlugins([]string{dir}, func(name, path string) {
 		log.Printf("plugin %s duplicate name %s", path, name)
 		consoleMessage("[plugin] duplicate name: " + name)
 	})
