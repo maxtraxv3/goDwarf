@@ -1398,26 +1398,10 @@ func pluginSource(owner string) string {
 }
 
 func refreshPluginMod() {
-	dirs := []string{userScriptsDir(), "scripts"}
-	seen := map[string]bool{}
-	uniq := make([]string, 0, len(dirs))
-	for _, d := range dirs {
-		abs, err := filepath.Abs(d)
-		if err != nil {
-			abs = d
-		}
-		if seen[abs] {
-			continue
-		}
-		seen[abs] = true
-		uniq = append(uniq, abs)
-	}
+	dir := userScriptsDir()
 	latest := time.Time{}
-	for _, dir := range uniq {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue
-		}
+	entries, err := os.ReadDir(dir)
+	if err == nil {
 		for _, e := range entries {
 			if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
 				continue
@@ -1546,21 +1530,8 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 }
 
 func rescanPlugins() {
-	dirs := []string{userScriptsDir(), "scripts"}
-	pluginDirs := make([]string, 0, len(dirs))
-	seen := map[string]bool{}
-	for _, d := range dirs {
-		abs, err := filepath.Abs(d)
-		if err != nil {
-			abs = d
-		}
-		if seen[abs] {
-			continue
-		}
-		seen[abs] = true
-		pluginDirs = append(pluginDirs, abs)
-	}
-	scanned := scanPlugins(pluginDirs, nil)
+	dir := userScriptsDir()
+	scanned := scanPlugins([]string{dir}, nil)
 
 	pluginMu.RLock()
 	oldDisabled := make(map[string]bool, len(pluginDisabled))
@@ -1641,22 +1612,8 @@ func checkPluginMods() {
 func loadPlugins() {
 	ensureScriptsDir()
 	ensureDefaultScripts()
-	dirs := []string{userScriptsDir(), "scripts"}
-	pluginDirs := make([]string, 0, len(dirs))
-	seen := map[string]bool{}
-	for _, d := range dirs {
-		abs, err := filepath.Abs(d)
-		if err != nil {
-			abs = d
-		}
-		if seen[abs] {
-			continue
-		}
-		seen[abs] = true
-		pluginDirs = append(pluginDirs, abs)
-	}
-
-	scanned := scanPlugins(pluginDirs, func(name, path string) {
+	dir := userScriptsDir()
+	scanned := scanPlugins([]string{dir}, func(name, path string) {
 		log.Printf("plugin %s duplicate name %s", path, name)
 		consoleMessage("[plugin] duplicate name: " + name)
 	})
