@@ -1200,24 +1200,21 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 			state.prevMobiles[idx] = m
 		}
 	}
-	needAnimUpdate := (gs.MotionSmoothing || (gs.BlendMobiles && changed)) && ok && !seekingMov
-	if needAnimUpdate {
-		frameMu.Lock()
-		interval := frameInterval
-		frameMu.Unlock()
-		if !state.prevTime.IsZero() && !state.curTime.IsZero() {
-			if d := state.curTime.Sub(state.prevTime); d > 0 {
-				interval = d
-			}
-		}
-		if interval <= 0 {
-			interval = time.Second / 5
-		}
-		interval *= time.Duration(extra + 1)
-		//logDebug("interp mobiles interval=%v extra=%d", interval, extra)
-		state.prevTime = time.Now()
-		state.curTime = state.prevTime.Add(interval)
-	}
+    needAnimUpdate := (gs.MotionSmoothing || (gs.BlendMobiles && changed)) && ok && !seekingMov
+    if needAnimUpdate {
+        // Use the latest measured server interval; do not reuse the previous
+        // cur-prev duration as that can get stuck until a hard reset (e.g.,
+        // background change) occurs.
+        frameMu.Lock()
+        interval := frameInterval
+        frameMu.Unlock()
+        if interval <= 0 {
+            interval = time.Second / 5
+        }
+        interval *= time.Duration(extra + 1)
+        state.prevTime = time.Now()
+        state.curTime = state.prevTime.Add(interval)
+    }
 
 	// Carry over previous-frame mobiles that disappear at the edge to avoid
 	// premature culling from interpolation.
