@@ -73,9 +73,10 @@ var basePluginExports = interp.Exports{
 		"SetInputText":     reflect.ValueOf(pluginSetInputText),
 		"KeyJustPressed":   reflect.ValueOf(pluginKeyJustPressed),
 		"MouseJustPressed": reflect.ValueOf(pluginMouseJustPressed),
-		"MouseWheel":       reflect.ValueOf(pluginMouseWheel),
-		"ClickInfo":        reflect.ValueOf((*ClickInfo)(nil)),
-		"Mobile":           reflect.ValueOf((*Mobile)(nil)),
+			"MouseWheel":       reflect.ValueOf(pluginMouseWheel),
+			"LastClick":        reflect.ValueOf(pluginLastClick),
+			"ClickInfo":        reflect.ValueOf((*ClickInfo)(nil)),
+			"Mobile":           reflect.ValueOf((*Mobile)(nil)),
 		"EquippedItems":    reflect.ValueOf(pluginEquippedItems),
 		"HasItem":          reflect.ValueOf(pluginHasItem),
 		"IgnoreCase":       reflect.ValueOf(pluginIgnoreCase),
@@ -104,12 +105,12 @@ var basePluginExports = interp.Exports{
 }
 
 func exportsForPlugin(owner string) interp.Exports {
-	ex := make(interp.Exports)
-	for pkg, symbols := range basePluginExports {
-		m := map[string]reflect.Value{}
-		for k, v := range symbols {
-			m[k] = v
-		}
+    ex := make(interp.Exports)
+    for pkg, symbols := range basePluginExports {
+        m := map[string]reflect.Value{}
+        for k, v := range symbols {
+            m[k] = v
+        }
 		m["Equip"] = reflect.ValueOf(func(id uint16) { pluginEquip(owner, id) })
 		m["Unequip"] = reflect.ValueOf(func(id uint16) { pluginUnequip(owner, id) })
 		m["AddHotkey"] = reflect.ValueOf(func(combo, command string) { pluginAddHotkey(owner, combo, command) })
@@ -214,12 +215,13 @@ func exportsForPlugin(owner string) interp.Exports {
 				pluginRegisterConsole(owner, []string{p}, handler)
 			}
 		})
-		m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
-		m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
-		m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
-		m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
-		m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
-		m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
+        m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
+        m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
+        m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
+        m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
+        m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
+        m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
+        m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
 		m["AddConfig"] = reflect.ValueOf(func(name, typ string) { pluginAddConfig(owner, name, typ) })
 
 		// Timers
@@ -613,8 +615,14 @@ type triggerHandler struct {
 }
 
 type inputHandler struct {
-	owner string
-	fn    func(string) string
+    owner string
+    fn    func(string) string
+}
+
+// chatHandler holds a plugin-owned handler for all chat messages.
+type chatHandler struct {
+    owner string
+    fn    func(string)
 }
 
 var (
@@ -632,8 +640,11 @@ var (
 	pluginTerminators     = map[string]func(){}
 	pluginTriggers        = map[string][]triggerHandler{}
 	pluginConsoleTriggers = map[string][]triggerHandler{}
-	triggerHandlersMu     sync.RWMutex
-	pluginInputHandlers   []inputHandler
+    triggerHandlersMu     sync.RWMutex
+    // Handlers that receive every chat message (no phrase filtering)
+    pluginChatHandlers []chatHandler
+    chatHandlersMu     sync.RWMutex
+    pluginInputHandlers   []inputHandler
 	inputHandlersMu       sync.RWMutex
 	pluginCommandOwners   = map[string]string{}
 	pluginSendHistory     = map[string][]time.Time{}
@@ -906,8 +917,16 @@ func disablePlugin(owner, reason string) {
 			pluginPlayerHandlers = append(pluginPlayerHandlers[:i], pluginPlayerHandlers[i+1:]...)
 		}
 	}
-	playerHandlersMu.Unlock()
-	// Stop any timers/tickers and tick waiters for this plugin
+    playerHandlersMu.Unlock()
+    // Remove all-chat handlers for this plugin
+    chatHandlersMu.Lock()
+    for i := len(pluginChatHandlers) - 1; i >= 0; i-- {
+        if pluginChatHandlers[i].owner == owner {
+            pluginChatHandlers = append(pluginChatHandlers[:i], pluginChatHandlers[i+1:]...)
+        }
+    }
+    chatHandlersMu.Unlock()
+    // Stop any timers/tickers and tick waiters for this plugin
 	pluginMu.Lock()
 	if list := pluginTimers[owner]; len(list) > 0 {
 		for _, t := range list {
@@ -1282,12 +1301,22 @@ func pluginRegisterTrigger(owner string, phrase string, fn func(string)) {
 }
 
 func pluginRegisterPlayerHandler(owner string, fn func(Player)) {
-	if pluginIsDisabled(owner) || fn == nil {
-		return
-	}
-	playerHandlersMu.Lock()
-	pluginPlayerHandlers = append(pluginPlayerHandlers, playerHandler{owner: owner, fn: fn})
-	playerHandlersMu.Unlock()
+    if pluginIsDisabled(owner) || fn == nil {
+        return
+    }
+    playerHandlersMu.Lock()
+    pluginPlayerHandlers = append(pluginPlayerHandlers, playerHandler{owner: owner, fn: fn})
+    playerHandlersMu.Unlock()
+}
+
+// pluginRegisterChatHandler registers a callback invoked for every chat message.
+func pluginRegisterChatHandler(owner string, fn func(string)) {
+    if pluginIsDisabled(owner) || fn == nil {
+        return
+    }
+    chatHandlersMu.Lock()
+    pluginChatHandlers = append(pluginChatHandlers, chatHandler{owner: owner, fn: fn})
+    chatHandlersMu.Unlock()
 }
 
 func runInputHandlers(txt string) string {
@@ -1306,10 +1335,10 @@ func runInputHandlers(txt string) string {
 }
 
 func runChatTriggers(msg string) {
-	triggerHandlersMu.RLock()
-	// Determine message flags and speaker for filtering.
-	speaker := chatSpeaker(msg)
-	msgFlags := ChatAny
+    triggerHandlersMu.RLock()
+    // Determine message flags and speaker for filtering.
+    speaker := chatSpeaker(msg)
+    msgFlags := ChatAny
 	if strings.EqualFold(speaker, playerName) && playerName != "" {
 		msgFlags |= ChatSelf
 	} else {
@@ -1349,8 +1378,21 @@ func runChatTriggers(msg string) {
 				}
 			}
 		}
-	}
-	triggerHandlersMu.RUnlock()
+    }
+    triggerHandlersMu.RUnlock()
+
+    // Dispatch all-chat handlers (no phrase filtering).
+    chatHandlersMu.RLock()
+    handlers := make([]func(string), 0, len(pluginChatHandlers))
+    for _, h := range pluginChatHandlers {
+        handlers = append(handlers, h.fn)
+    }
+    chatHandlersMu.RUnlock()
+    for _, h := range handlers {
+        if h != nil {
+            go h(msg)
+        }
+    }
 }
 
 func runConsoleTriggers(msg string) {

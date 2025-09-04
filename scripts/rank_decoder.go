@@ -72,7 +72,12 @@ var rankMessages = map[string]string{
 }
 
 func Init() {
-	gt.Chat("", rankDecodeChat)
+    // Register a chat trigger for each known trainer phrase.
+    // Passing an empty phrase to gt.Chat is a no-op, so we must
+    // explicitly register each phrase we care about.
+    for phrase := range rankMessages {
+        gt.Chat(phrase, rankDecodeChat)
+    }
 }
 
 func rankDecodeChat(msg string) {
