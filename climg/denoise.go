@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"runtime"
 	"sync"
 )
 
@@ -35,49 +36,66 @@ func denoiseImage(img *image.RGBA, sharpness, maxPercent float64) {
 	}
 
 	neighbours := []image.Point{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
-	for y := 1; y < h-1; y++ {
-		yoff := y * src.Stride
-		idx := y * w
-		for x := 1; x < w-1; x++ {
-			off := yoff + x*4
-			c := color.RGBA{src.Pix[off], src.Pix[off+1], src.Pix[off+2], src.Pix[off+3]}
-			chsv := hsvs[idx+x]
-
-			// If this pixel is opaque and all direct neighbours are
-			// non-opaque, blur it unless it is full black.
-			if c.A == 0xFF && (c.R != 0 || c.G != 0 || c.B != 0) {
-				isolated := true
-				for _, n := range neighbours {
-					nOff := (y+n.Y)*src.Stride + (x+n.X)*4
-					if src.Pix[nOff+3] == 0xFF {
-						isolated = false
-						break
-					}
-				}
-				if isolated {
-					c = mixColour(c, color.RGBA{}, float32(maxPercent))
-				}
-			}
-
-			for _, n := range neighbours {
-				nOff := (y+n.Y)*src.Stride + (x+n.X)*4
-				nIdx := (y+n.Y)*w + (x + n.X)
-				ncol := color.RGBA{src.Pix[nOff], src.Pix[nOff+1], src.Pix[nOff+2], src.Pix[nOff+3]}
-				dist := colourDist(c, ncol, chsv, hsvs[nIdx])
-				if dist < 1 {
-					blend := maxPercent * math.Pow(1-dist, sharpness)
-					if blend > 0 {
-						c = mixColour(c, ncol, float32(blend))
-					}
-				}
-			}
-
-			dstOff := y*img.Stride + x*4
-			img.Pix[dstOff] = c.R
-			img.Pix[dstOff+1] = c.G
-			img.Pix[dstOff+2] = c.B
-			img.Pix[dstOff+3] = c.A
+	rows := h - 2
+	if rows > 0 {
+		workers := runtime.NumCPU()
+		if workers > rows {
+			workers = rows
 		}
+		var wg sync.WaitGroup
+		for i := 0; i < workers; i++ {
+			start := 1 + i*rows/workers
+			end := 1 + (i+1)*rows/workers
+			wg.Add(1)
+			go func(start, end int) {
+				defer wg.Done()
+				for y := start; y < end; y++ {
+					yoff := y * src.Stride
+					idx := y * w
+					for x := 1; x < w-1; x++ {
+						off := yoff + x*4
+						c := color.RGBA{src.Pix[off], src.Pix[off+1], src.Pix[off+2], src.Pix[off+3]}
+						chsv := hsvs[idx+x]
+
+						// If this pixel is opaque and all direct neighbours are
+						// non-opaque, blur it unless it is full black.
+						if c.A == 0xFF && (c.R != 0 || c.G != 0 || c.B != 0) {
+							isolated := true
+							for _, n := range neighbours {
+								nOff := (y+n.Y)*src.Stride + (x+n.X)*4
+								if src.Pix[nOff+3] == 0xFF {
+									isolated = false
+									break
+								}
+							}
+							if isolated {
+								c = mixColour(c, color.RGBA{}, float32(maxPercent))
+							}
+						}
+
+						for _, n := range neighbours {
+							nOff := (y+n.Y)*src.Stride + (x+n.X)*4
+							nIdx := (y+n.Y)*w + (x + n.X)
+							ncol := color.RGBA{src.Pix[nOff], src.Pix[nOff+1], src.Pix[nOff+2], src.Pix[nOff+3]}
+							dist := colourDist(c, ncol, chsv, hsvs[nIdx])
+							if dist < 1 {
+								blend := maxPercent * math.Pow(1-dist, sharpness)
+								if blend > 0 {
+									c = mixColour(c, ncol, float32(blend))
+								}
+							}
+						}
+
+						dstOff := y*img.Stride + x*4
+						img.Pix[dstOff] = c.R
+						img.Pix[dstOff+1] = c.G
+						img.Pix[dstOff+2] = c.B
+						img.Pix[dstOff+3] = c.A
+					}
+				}
+			}(start, end)
+		}
+		wg.Wait()
 	}
 	putTempRGBA(src)
 }
