@@ -1153,38 +1153,56 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		}
 	}
 
-	// Carry over previous-frame ground sprites that are missing this frame.
-	// Advance them by the detected picture shift and keep them while visible
-	// to prevent flashes of black at the viewport edges during camera motion.
-	if (state.picShiftX != 0 || state.picShiftY != 0) && len(prevPics) > 0 {
-		for _, pp := range prevPics {
-			if pp.Owned {
-				continue // already matched/present
-			}
-			// Only carry ground/static sprites (not marked moving)
-			if pp.Moving {
-				continue
-			}
-			// Don't include these
-			if pp.Again {
-				continue
-			}
-			// Only carry if the previous position's bounding box was on-screen.
-			oldH, oldV := pp.H, pp.V
-			if !pictureOnEdge(pp) {
-				continue
-			}
-			// Advance by detected picture shift for this frame.
-			pp.H = int16(int(pp.H) + state.picShiftX)
-			pp.V = int16(int(pp.V) + state.picShiftY)
-			pp.PrevH = oldH
-			pp.PrevV = oldV
-			pp.Moving = false
-			pp.Background = true
-			pp.Again = true
-			newPics = append(newPics, pp)
-		}
-	}
+    // Carry over previous-frame ground sprites that are missing this frame.
+    // Advance them by the detected picture shift and keep them one extra
+    // update to prevent edge flicker during camera motion.
+    //
+    // Previously this only triggered when a sprite was classified as
+    // "on edge" (>=70% off-screen). That was too strict and could miss
+    // legitimate ground tiles. Now we carry if the previous sprite was
+    // marked Background and still visible, or fall back to the stricter
+    // edge test for unclassified cases.
+    if (state.picShiftX != 0 || state.picShiftY != 0) && len(prevPics) > 0 {
+        for _, pp := range prevPics {
+            if pp.Owned {
+                continue // already matched/present
+            }
+            // Only carry ground/static sprites (not marked moving)
+            if pp.Moving {
+                continue
+            }
+            // Don't include these
+            if pp.Again {
+                continue
+            }
+            // Carry when the previous sprite was background and still visible,
+            // otherwise fall back to stricter edge classification.
+            if !pictureVisible(pp) {
+                continue
+            }
+            if !pp.Background {
+                if !pictureOnEdge(pp) {
+                    continue
+                }
+            }
+            // Skip very large images to avoid overdraw surprises.
+            if clImages != nil {
+                if w, h := clImages.Size(uint32(pp.PictID)); w > maxPersistImageSize || h > maxPersistImageSize {
+                    continue
+                }
+            }
+            oldH, oldV := pp.H, pp.V
+            // Advance by detected picture shift for this frame.
+            pp.H = int16(int(pp.H) + state.picShiftX)
+            pp.V = int16(int(pp.V) + state.picShiftY)
+            pp.PrevH = oldH
+            pp.PrevV = oldV
+            pp.Moving = false
+            pp.Background = true
+            pp.Again = true
+            newPics = append(newPics, pp)
+        }
+    }
 
 	// Save previous pictures for pinning/interpolation decisions
 	state.prevPictures = append([]framePicture(nil), prevPics...)
