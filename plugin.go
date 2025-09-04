@@ -73,10 +73,10 @@ var basePluginExports = interp.Exports{
 		"SetInputText":     reflect.ValueOf(pluginSetInputText),
 		"KeyJustPressed":   reflect.ValueOf(pluginKeyJustPressed),
 		"MouseJustPressed": reflect.ValueOf(pluginMouseJustPressed),
-			"MouseWheel":       reflect.ValueOf(pluginMouseWheel),
-			"LastClick":        reflect.ValueOf(pluginLastClick),
-			"ClickInfo":        reflect.ValueOf((*ClickInfo)(nil)),
-			"Mobile":           reflect.ValueOf((*Mobile)(nil)),
+		"MouseWheel":       reflect.ValueOf(pluginMouseWheel),
+		"LastClick":        reflect.ValueOf(pluginLastClick),
+		"ClickInfo":        reflect.ValueOf((*ClickInfo)(nil)),
+		"Mobile":           reflect.ValueOf((*Mobile)(nil)),
 		"EquippedItems":    reflect.ValueOf(pluginEquippedItems),
 		"HasItem":          reflect.ValueOf(pluginHasItem),
 		"IgnoreCase":       reflect.ValueOf(pluginIgnoreCase),
@@ -209,38 +209,59 @@ func exportsForPlugin(owner string) interp.Exports {
 		// Sleep for game ticks (blocks current goroutine only)
 		m["SleepTicks"] = reflect.ValueOf(func(ticks int) { pluginSleepTicks(owner, ticks) })
 		// Simpler alias: Console("text", fn)
-		m["Console"] = reflect.ValueOf(func(phrase string, handler func(string)) {
-			p := strings.TrimSpace(phrase)
-			if p != "" {
-				pluginRegisterConsole(owner, []string{p}, handler)
-			}
-		})
-        m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
-        m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
-        // Simple world overlay drawing (top-left origin, world units)
-        m["OverlayClear"] = reflect.ValueOf(func() { pluginOverlayClear(owner) })
-        m["OverlayRect"] = reflect.ValueOf(func(x, y, w, h int, r, g, b, a uint8) {
-            pluginOverlayRect(owner, x, y, w, h, r, g, b, a)
-        })
-        m["OverlayText"] = reflect.ValueOf(func(x, y int, txt string, r, g, b, a uint8) {
-            pluginOverlayText(owner, x, y, txt, r, g, b, a)
-        })
-        m["OverlayImage"] = reflect.ValueOf(func(id uint16, x, y int) {
-            pluginOverlayImage(owner, id, x, y)
-        })
-        m["WorldSize"] = reflect.ValueOf(func() (int, int) { return gameAreaSizeX, gameAreaSizeY })
-        m["ImageSize"] = reflect.ValueOf(func(id uint16) (int, int) {
-            if clImages == nil {
-                return 0, 0
+        m["Console"] = reflect.ValueOf(func(phrase string, handler func(string)) {
+            p := strings.TrimSpace(phrase)
+            if p != "" {
+                pluginRegisterConsole(owner, []string{p}, handler)
             }
-            w, h := clImages.Size(uint32(id))
-            return w, h
         })
-        m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
-        m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
-        m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
-        m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
-        m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
+        // Back-compat registrations matching gt stubs
+        m["RegisterTriggers"] = reflect.ValueOf(func(name string, phrases []string, fn func(string)) {
+            if fn == nil || len(phrases) == 0 {
+                return
+            }
+            pluginRegisterChat(owner, name, phrases, ChatAny, fn)
+        })
+        m["RegisterConsoleTriggers"] = reflect.ValueOf(func(phrases []string, fn func()) {
+            if fn == nil || len(phrases) == 0 {
+                return
+            }
+            pluginRegisterConsoleTriggers(owner, phrases, fn)
+        })
+        m["RegisterTrigger"] = reflect.ValueOf(func(name, phrase string, fn func()) {
+            p := strings.TrimSpace(phrase)
+            if p == "" || fn == nil {
+                return
+            }
+            pluginRegisterChat(owner, name, []string{p}, ChatAny, func(string) { fn() })
+        })
+        m["RegisterPlayerHandler"] = reflect.ValueOf(func(fn func(Player)) { pluginRegisterPlayerHandler(owner, fn) })
+		m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
+		m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
+		// Simple world overlay drawing (top-left origin, world units)
+		m["OverlayClear"] = reflect.ValueOf(func() { pluginOverlayClear(owner) })
+		m["OverlayRect"] = reflect.ValueOf(func(x, y, w, h int, r, g, b, a uint8) {
+			pluginOverlayRect(owner, x, y, w, h, r, g, b, a)
+		})
+		m["OverlayText"] = reflect.ValueOf(func(x, y int, txt string, r, g, b, a uint8) {
+			pluginOverlayText(owner, x, y, txt, r, g, b, a)
+		})
+		m["OverlayImage"] = reflect.ValueOf(func(id uint16, x, y int) {
+			pluginOverlayImage(owner, id, x, y)
+		})
+		m["WorldSize"] = reflect.ValueOf(func() (int, int) { return gameAreaSizeX, gameAreaSizeY })
+		m["ImageSize"] = reflect.ValueOf(func(id uint16) (int, int) {
+			if clImages == nil {
+				return 0, 0
+			}
+			w, h := clImages.Size(uint32(id))
+			return w, h
+		})
+		m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
+		m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
+		m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
+		m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
+		m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
 		m["AddConfig"] = reflect.ValueOf(func(name, typ string) { pluginAddConfig(owner, name, typ) })
 
 		// Timers
@@ -334,6 +355,9 @@ func userScriptsDir() string {
 	}
 	return filepath.Join(filepath.Dir(exe), "scripts")
 }
+
+// scriptSearchDirs returns only the scripts/ folder next to the executable.
+func scriptSearchDirs() []string { return []string{userScriptsDir()} }
 
 // ensureScriptsDir creates the scripts directory next to the executable and
 // populates it with the embedded scripts if it is missing.
@@ -634,14 +658,14 @@ type triggerHandler struct {
 }
 
 type inputHandler struct {
-    owner string
-    fn    func(string) string
+	owner string
+	fn    func(string) string
 }
 
 // chatHandler holds a plugin-owned handler for all chat messages.
 type chatHandler struct {
-    owner string
-    fn    func(string)
+	owner string
+	fn    func(string)
 }
 
 var (
@@ -659,34 +683,34 @@ var (
 	pluginTerminators     = map[string]func(){}
 	pluginTriggers        = map[string][]triggerHandler{}
 	pluginConsoleTriggers = map[string][]triggerHandler{}
-    triggerHandlersMu     sync.RWMutex
-    // Handlers that receive every chat message (no phrase filtering)
-    pluginChatHandlers []chatHandler
-    chatHandlersMu     sync.RWMutex
-    pluginInputHandlers   []inputHandler
-	inputHandlersMu       sync.RWMutex
-	pluginCommandOwners   = map[string]string{}
-	pluginSendHistory     = map[string][]time.Time{}
-	pluginModTime         time.Time
-	pluginModCheck        time.Time
+	triggerHandlersMu     sync.RWMutex
+	// Handlers that receive every chat message (no phrase filtering)
+	pluginChatHandlers  []chatHandler
+	chatHandlersMu      sync.RWMutex
+	pluginInputHandlers []inputHandler
+	inputHandlersMu     sync.RWMutex
+	pluginCommandOwners = map[string]string{}
+	pluginSendHistory   = map[string][]time.Time{}
+	pluginModTime       time.Time
+	pluginModCheck      time.Time
 	// timers per plugin owner
-    pluginTimers      = map[string][]*time.Timer{}
-    pluginTickerStops = map[string][]chan struct{}{}
-    pluginTickWaiters = map[string][]*tickWaiter{}
+	pluginTimers      = map[string][]*time.Timer{}
+	pluginTickerStops = map[string][]chan struct{}{}
+	pluginTickWaiters = map[string][]*tickWaiter{}
 
-    // Per-plugin world overlay draw operations.
-    pluginOverlayOps = map[string][]overlayOp{}
-    overlayMu        sync.RWMutex
+	// Per-plugin world overlay draw operations.
+	pluginOverlayOps = map[string][]overlayOp{}
+	overlayMu        sync.RWMutex
 )
 
 // overlayOp describes a simple draw command for the world overlay.
 type overlayOp struct {
-    kind  int    // 0=rect, 1=text, 2=image
-    x, y  int    // world coordinates (top-left origin)
-    w, h  int    // for rect
-    r, g, b, a uint8
-    text  string // for text
-    id    uint16 // for image (CL_Images pict ID)
+	kind       int // 0=rect, 1=text, 2=image
+	x, y       int // world coordinates (top-left origin)
+	w, h       int // for rect
+	r, g, b, a uint8
+	text       string // for text
+	id         uint16 // for image (CL_Images pict ID)
 }
 
 type tickWaiter struct {
@@ -802,21 +826,23 @@ func pluginEnqueueCommand(owner, cmd string) {
 }
 
 func loadPluginSource(owner, name, path string, src []byte, restricted interp.Exports) {
-	pluginRemoveConfig(owner)
-	i := interp.New(interp.Options{})
-	if len(restricted) > 0 {
-		i.Use(restricted)
-	}
-	i.Use(exportsForPlugin(owner))
-	pluginMu.Lock()
-	pluginDisabled[owner] = false
-	pluginMu.Unlock()
-	if _, err := i.Eval(string(src)); err != nil {
-		log.Printf("plugin %s: %v", path, err)
-		consoleMessage("[plugin] load error for " + path + ": " + err.Error())
-		disablePlugin(owner, "load error")
-		return
-	}
+    pluginRemoveConfig(owner)
+    i := interp.New(interp.Options{})
+    if len(restricted) > 0 {
+        i.Use(restricted)
+    }
+    i.Use(exportsForPlugin(owner))
+    pluginMu.Lock()
+    pluginDisabled[owner] = false
+    pluginMu.Unlock()
+    // Strip build tags like //go:build which are for the Go toolchain only.
+    src = stripGoBuildDirectives(src)
+    if _, err := i.Eval(string(src)); err != nil {
+        log.Printf("plugin %s: %v", path, err)
+        consoleMessage("[plugin] load error for " + path + ": " + err.Error())
+        disablePlugin(owner, "load error")
+        return
+    }
 	if v, err := i.Eval("Terminate"); err == nil {
 		if fn, ok := v.Interface().(func()); ok {
 			pluginMu.Lock()
@@ -830,7 +856,33 @@ func loadPluginSource(owner, name, path string, src []byte, restricted interp.Ex
 		}
 	}
 	log.Printf("loaded plugin %s", path)
-	consoleMessage("[plugin] loaded: " + name)
+    consoleMessage("[plugin] loaded: " + name)
+}
+
+// stripGoBuildDirectives removes leading build constraints (//go:build, // +build)
+// which are meaningful to the Go toolchain but can confuse the interpreter.
+func stripGoBuildDirectives(src []byte) []byte {
+    lines := strings.Split(string(src), "\n")
+    out := make([]string, 0, len(lines))
+    i := 0
+    // Skip initial build constraint lines and following blank lines until package clause
+    for i < len(lines) {
+        l := strings.TrimSpace(lines[i])
+        if strings.HasPrefix(l, "package ") {
+            break
+        }
+        if strings.HasPrefix(l, "//go:build") || strings.HasPrefix(l, "// +build") || l == "" {
+            i++
+            continue
+        }
+        // Any other pre-package content: keep it
+        break
+    }
+    if i > 0 {
+        out = append(out, lines[i:]...)
+        return []byte(strings.Join(out, "\n"))
+    }
+    return src
 }
 
 func enablePlugin(owner string) {
@@ -950,20 +1002,20 @@ func disablePlugin(owner, reason string) {
 			pluginPlayerHandlers = append(pluginPlayerHandlers[:i], pluginPlayerHandlers[i+1:]...)
 		}
 	}
-    playerHandlersMu.Unlock()
-    // Remove all-chat handlers for this plugin
-    chatHandlersMu.Lock()
-    for i := len(pluginChatHandlers) - 1; i >= 0; i-- {
-        if pluginChatHandlers[i].owner == owner {
-            pluginChatHandlers = append(pluginChatHandlers[:i], pluginChatHandlers[i+1:]...)
-        }
-    }
-    chatHandlersMu.Unlock()
-    // Clear overlay ops
-    overlayMu.Lock()
-    delete(pluginOverlayOps, owner)
-    overlayMu.Unlock()
-    // Stop any timers/tickers and tick waiters for this plugin
+	playerHandlersMu.Unlock()
+	// Remove all-chat handlers for this plugin
+	chatHandlersMu.Lock()
+	for i := len(pluginChatHandlers) - 1; i >= 0; i-- {
+		if pluginChatHandlers[i].owner == owner {
+			pluginChatHandlers = append(pluginChatHandlers[:i], pluginChatHandlers[i+1:]...)
+		}
+	}
+	chatHandlersMu.Unlock()
+	// Clear overlay ops
+	overlayMu.Lock()
+	delete(pluginOverlayOps, owner)
+	overlayMu.Unlock()
+	// Stop any timers/tickers and tick waiters for this plugin
 	pluginMu.Lock()
 	if list := pluginTimers[owner]; len(list) > 0 {
 		for _, t := range list {
@@ -1338,22 +1390,22 @@ func pluginRegisterTrigger(owner string, phrase string, fn func(string)) {
 }
 
 func pluginRegisterPlayerHandler(owner string, fn func(Player)) {
-    if pluginIsDisabled(owner) || fn == nil {
-        return
-    }
-    playerHandlersMu.Lock()
-    pluginPlayerHandlers = append(pluginPlayerHandlers, playerHandler{owner: owner, fn: fn})
-    playerHandlersMu.Unlock()
+	if pluginIsDisabled(owner) || fn == nil {
+		return
+	}
+	playerHandlersMu.Lock()
+	pluginPlayerHandlers = append(pluginPlayerHandlers, playerHandler{owner: owner, fn: fn})
+	playerHandlersMu.Unlock()
 }
 
 // pluginRegisterChatHandler registers a callback invoked for every chat message.
 func pluginRegisterChatHandler(owner string, fn func(string)) {
-    if pluginIsDisabled(owner) || fn == nil {
-        return
-    }
-    chatHandlersMu.Lock()
-    pluginChatHandlers = append(pluginChatHandlers, chatHandler{owner: owner, fn: fn})
-    chatHandlersMu.Unlock()
+	if pluginIsDisabled(owner) || fn == nil {
+		return
+	}
+	chatHandlersMu.Lock()
+	pluginChatHandlers = append(pluginChatHandlers, chatHandler{owner: owner, fn: fn})
+	chatHandlersMu.Unlock()
 }
 
 func runInputHandlers(txt string) string {
@@ -1372,10 +1424,10 @@ func runInputHandlers(txt string) string {
 }
 
 func runChatTriggers(msg string) {
-    triggerHandlersMu.RLock()
-    // Determine message flags and speaker for filtering.
-    speaker := chatSpeaker(msg)
-    msgFlags := ChatAny
+	triggerHandlersMu.RLock()
+	// Determine message flags and speaker for filtering.
+	speaker := chatSpeaker(msg)
+	msgFlags := ChatAny
 	if strings.EqualFold(speaker, playerName) && playerName != "" {
 		msgFlags |= ChatSelf
 	} else {
@@ -1415,21 +1467,21 @@ func runChatTriggers(msg string) {
 				}
 			}
 		}
-    }
-    triggerHandlersMu.RUnlock()
+	}
+	triggerHandlersMu.RUnlock()
 
-    // Dispatch all-chat handlers (no phrase filtering).
-    chatHandlersMu.RLock()
-    handlers := make([]func(string), 0, len(pluginChatHandlers))
-    for _, h := range pluginChatHandlers {
-        handlers = append(handlers, h.fn)
-    }
-    chatHandlersMu.RUnlock()
-    for _, h := range handlers {
-        if h != nil {
-            go h(msg)
-        }
-    }
+	// Dispatch all-chat handlers (no phrase filtering).
+	chatHandlersMu.RLock()
+	handlers := make([]func(string), 0, len(pluginChatHandlers))
+	for _, h := range pluginChatHandlers {
+		handlers = append(handlers, h.fn)
+	}
+	chatHandlersMu.RUnlock()
+	for _, h := range handlers {
+		if h != nil {
+			go h(msg)
+		}
+	}
 }
 
 func runConsoleTriggers(msg string) {
@@ -1447,35 +1499,41 @@ func runConsoleTriggers(msg string) {
 }
 
 func pluginPlaySound(ids []uint16) {
-    playSound(ids)
+	playSound(ids)
 }
 
 // ---- Overlay helpers (called by plugin exports) ----
 func pluginOverlayClear(owner string) {
-    overlayMu.Lock()
-    delete(pluginOverlayOps, owner)
-    overlayMu.Unlock()
+	overlayMu.Lock()
+	delete(pluginOverlayOps, owner)
+	overlayMu.Unlock()
 }
 
 func pluginOverlayRect(owner string, x, y, w, h int, r, g, b, a uint8) {
-    if w <= 0 || h <= 0 { return }
-    overlayMu.Lock()
-    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 0, x: x, y: y, w: w, h: h, r: r, g: g, b: b, a: a})
-    overlayMu.Unlock()
+	if w <= 0 || h <= 0 {
+		return
+	}
+	overlayMu.Lock()
+	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 0, x: x, y: y, w: w, h: h, r: r, g: g, b: b, a: a})
+	overlayMu.Unlock()
 }
 
 func pluginOverlayText(owner string, x, y int, txt string, r, g, b, a uint8) {
-    if txt == "" { return }
-    overlayMu.Lock()
-    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 1, x: x, y: y, text: txt, r: r, g: g, b: b, a: a})
-    overlayMu.Unlock()
+	if txt == "" {
+		return
+	}
+	overlayMu.Lock()
+	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 1, x: x, y: y, text: txt, r: r, g: g, b: b, a: a})
+	overlayMu.Unlock()
 }
 
 func pluginOverlayImage(owner string, id uint16, x, y int) {
-    if id == 0xffff || id == 0 { return }
-    overlayMu.Lock()
-    pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
-    overlayMu.Unlock()
+	if id == 0xffff || id == 0 {
+		return
+	}
+	overlayMu.Lock()
+	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
+	overlayMu.Unlock()
 }
 
 func pluginCommandsFor(owner string) []string {
@@ -1505,10 +1563,12 @@ func pluginSource(owner string) string {
 }
 
 func refreshPluginMod() {
-	dir := userScriptsDir()
 	latest := time.Time{}
-	entries, err := os.ReadDir(dir)
-	if err == nil {
+	for _, dir := range scriptSearchDirs() {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
 		for _, e := range entries {
 			if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
 				continue
@@ -1637,8 +1697,7 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 }
 
 func rescanPlugins() {
-	dir := userScriptsDir()
-	scanned := scanPlugins([]string{dir}, nil)
+	scanned := scanPlugins(scriptSearchDirs(), nil)
 
 	pluginMu.RLock()
 	oldDisabled := make(map[string]bool, len(pluginDisabled))
@@ -1719,8 +1778,7 @@ func checkPluginMods() {
 func loadPlugins() {
 	ensureScriptsDir()
 	ensureDefaultScripts()
-	dir := userScriptsDir()
-	scanned := scanPlugins([]string{dir}, func(name, path string) {
+	scanned := scanPlugins(scriptSearchDirs(), func(name, path string) {
 		log.Printf("plugin %s duplicate name %s", path, name)
 		consoleMessage("[plugin] duplicate name: " + name)
 	})
