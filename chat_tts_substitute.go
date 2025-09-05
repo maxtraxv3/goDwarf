@@ -1,7 +1,7 @@
 package main
 
 import (
-	"embed"
+	_ "embed"
 	"os"
 	"path/filepath"
 	"strings"

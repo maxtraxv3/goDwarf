@@ -2647,6 +2647,7 @@ func makeSettingsWindow() {
 	left.AddItem(styleDD)
 	accLabel, _ := eui.NewText()
 	accLabel.Text = "Accent Color"
+	accLabel.FontSize = 12
 	accLabel.Size = eui.Point{X: panelWidth, Y: 20}
 	left.AddItem(accLabel)
 	left.AddItem(accentWheel)
