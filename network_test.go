@@ -122,6 +122,44 @@ func TestSendPlayerInputCommandNumIncrementsWithCommand(t *testing.T) {
 	}
 }
 
+func TestSendPlayerInputPrefersPlayerCommand(t *testing.T) {
+	oldCommandNum := commandNum
+	oldPending := pendingCommand
+	oldQueue := commandQueue
+	defer func() {
+		commandNum = oldCommandNum
+		pendingCommand = oldPending
+		commandQueue = oldQueue
+	}()
+
+	commandNum = 1
+	pendingCommand = "/say"
+	commandQueue = []string{"/wave"}
+
+	conn := &bufConn{}
+	if err := sendPlayerInput(conn, 0, 0, false, false); err != nil {
+		t.Fatalf("sendPlayerInput: %v", err)
+	}
+	data := conn.Bytes()
+	size := binary.BigEndian.Uint16(data[:2])
+	pkt := data[2 : 2+size]
+	cmdField := pkt[20:]
+	nul := bytes.IndexByte(cmdField, 0)
+	if nul < 0 {
+		t.Fatalf("missing terminator")
+	}
+	gotCmd := string(cmdField[:nul])
+	if gotCmd != "/say" {
+		t.Fatalf("sent %q want %q", gotCmd, "/say")
+	}
+	if pendingCommand != "/wave" {
+		t.Fatalf("pendingCommand %q want %q", pendingCommand, "/wave")
+	}
+	if len(commandQueue) != 0 {
+		t.Fatalf("commandQueue not empty: %v", commandQueue)
+	}
+}
+
 func TestReadUDPMessageFragmented(t *testing.T) {
 	udpBuffer = nil
 	msg := []byte{0x00, 0x03, 0xde, 0xad, 0xbe, 0xef}
