@@ -3827,11 +3827,11 @@ func makeQualityWindow() {
 	shaderQualityCB, shaderQualityEv := eui.NewCheckbox()
 	shaderQualityCB.Text = "Shader Lighting Effects"
 	shaderQualityCB.Size = eui.Point{X: width, Y: 24}
-	shaderQualityCB.Checked = gs.shaderLighting
+	shaderQualityCB.Checked = gs.ShaderLighting
 	shaderQualityCB.Tooltip = "Enable shader-based lighting (disabled in Low/Ultra-Low presets)"
 	shaderQualityEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.shaderLighting = ev.Checked
+			gs.ShaderLighting = ev.Checked
 			settingsDirty = true
 			if qualityPresetDD != nil {
 				qualityPresetDD.Selected = detectQualityPreset()
@@ -3857,7 +3857,7 @@ func makeQualityWindow() {
 	shaderLightSlider.IntOnly = true
 	shaderLightSlider.Value = float32(gs.ShaderLightStrength * 100)
 	shaderLightSlider.Size = eui.Point{X: width - 10, Y: 24}
-	shaderLightSlider.Disabled = !gs.shaderLighting
+	shaderLightSlider.Disabled = !gs.ShaderLighting
 	shaderLightSlider.Tooltip = "Adjust intensity of shader lighting"
 	shaderLightEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
@@ -3878,7 +3878,7 @@ func makeQualityWindow() {
 	shaderGlowSlider.IntOnly = true
 	shaderGlowSlider.Value = float32(gs.ShaderGlowStrength * 100)
 	shaderGlowSlider.Size = eui.Point{X: width - 10, Y: 24}
-	shaderGlowSlider.Disabled = !gs.shaderLighting
+	shaderGlowSlider.Disabled = !gs.ShaderLighting
 	shaderGlowSlider.Tooltip = "Adjust strength of glow halos"
 	shaderGlowEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
@@ -4333,11 +4333,11 @@ func makeDebugWindow() {
 	shaderCB, shaderEvents := eui.NewCheckbox()
 	shaderCB.Text = "Shader lighting"
 	shaderCB.Size = eui.Point{X: width - 90, Y: 24}
-	shaderCB.Checked = gs.shaderLighting
+	shaderCB.Checked = gs.ShaderLighting
 	shaderCB.Tooltip = "Experimental shader-based light and dark rendering"
 	shaderEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.shaderLighting = ev.Checked
+			gs.ShaderLighting = ev.Checked
 			settingsDirty = true
 		}
 	}
