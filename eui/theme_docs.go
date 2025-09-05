@@ -1,7 +1,7 @@
 package eui
 
 import (
-	"embed"
+	_ "embed"
 	"errors"
 	"log"
 	"os"
