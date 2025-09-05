@@ -90,3 +90,11 @@ Use `eui.ListThemes()` and `eui.ListStyles()` to get these names at runtime.
 3. Save the file under the appropriate directory with a new name.
 4. Call `eui.LoadTheme("YourTheme")` and `eui.LoadStyle("YourStyle")` to apply them. Enabling `eui.AutoReload` helps when iterating on your design.
 
+On first run the client writes an `Example.json` palette and style alongside this README. Copy and modify them to get started quickly.
+
+## Other Customizations
+
+- **Background and splash images** – place `background.png` and/or `splash.png` in the `data/` directory to override the startup visuals.
+- **Sound font** – drop a `soundfont.sf2` file into `data/` to replace the default music instrument set. The Download Files window can fetch a recommended one or you can supply any General MIDI sound font.
+- **TTS voices** – download Piper voices ( `.tar.gz` archives or `.onnx` with matching `.onnx.json`) and place them in `data/piper/voices`. Use the Download Files window for English voices or fetch others from online voice collections.
+
