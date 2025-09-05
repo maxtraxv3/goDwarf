@@ -119,7 +119,7 @@ var gsdef settings = settings{
 	EnabledPlugins:  map[string]any{},
 	vsync:           true,
 	nightEffect:     true,
-	shaderLighting:  true,
+	ShaderLighting:  true,
 	throttleSounds:  true,
 }
 
@@ -233,7 +233,7 @@ type settings struct {
 	EnabledPlugins      map[string]any
 	vsync               bool
 	nightEffect         bool
-	shaderLighting      bool
+	ShaderLighting      bool
 	precacheSounds      bool
 	precacheImages      bool
 	throttleSounds      bool
@@ -659,7 +659,7 @@ func applyQualityPreset(name string) {
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
 	gs.NoCaching = p.NoCaching
-	gs.shaderLighting = p.ShaderLighting
+	gs.ShaderLighting = p.ShaderLighting
 	if gs.NoCaching {
 		gs.precacheSounds = false
 		gs.precacheImages = false
@@ -706,10 +706,10 @@ func applyQualityPreset(name string) {
 		debugWin.Refresh()
 	}
 	if shaderLightSlider != nil {
-		shaderLightSlider.Disabled = !gs.shaderLighting
+		shaderLightSlider.Disabled = !gs.ShaderLighting
 	}
 	if shaderGlowSlider != nil {
-		shaderGlowSlider.Disabled = !gs.shaderLighting
+		shaderGlowSlider.Disabled = !gs.ShaderLighting
 	}
 }
 
@@ -719,7 +719,7 @@ func matchesPreset(p qualityPreset) bool {
 		gs.BlendMobiles == p.BlendMobiles &&
 		gs.BlendPicts == p.BlendPicts &&
 		gs.NoCaching == p.NoCaching &&
-		gs.shaderLighting == p.ShaderLighting
+		gs.ShaderLighting == p.ShaderLighting
 }
 
 func detectQualityPreset() int {

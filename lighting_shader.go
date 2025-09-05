@@ -1,13 +1,13 @@
 package main
 
 import (
-    _ "embed"
-    "gothoom/climg"
-    "image"
-    "math"
-    "os"
+	_ "embed"
+	"gothoom/climg"
+	"image"
+	"math"
+	"os"
 
-    "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const maxLights = 128
@@ -16,15 +16,15 @@ const maxLights = 128
 var lightShaderSrc []byte
 
 var (
-    lightingShader *ebiten.Shader
-    lightingTmp    *ebiten.Image
-    frameLights    []lightSource
-    frameDarks     []darkSource
-    // Reused shader data to avoid per-frame allocations
-    lposX, lposY, lradius, lr, lg, lb, lint [maxLights]float32
-    dposX, dposY, dradius, da, dint        [maxLights]float32
-    lightingUniforms                       map[string]any
-    lightingOp                             ebiten.DrawRectShaderOptions
+	lightingShader *ebiten.Shader
+	lightingTmp    *ebiten.Image
+	frameLights    []lightSource
+	frameDarks     []darkSource
+	// Reused shader data to avoid per-frame allocations
+	lposX, lposY, lradius, lr, lg, lb, lint [maxLights]float32
+	dposX, dposY, dradius, da, dint         [maxLights]float32
+	lightingUniforms                        map[string]any
+	lightingOp                              ebiten.DrawRectShaderOptions
 )
 
 // Global multipliers to make lights/darks reach farther on screen.
@@ -49,31 +49,31 @@ const (
 )
 
 func init() {
-    if err := ReloadLightingShader(); err != nil {
-        panic(err)
-    }
-    // Initialize reusable uniforms and options
-    lightingUniforms = map[string]any{
-        "LightCount":      0,
-        "DarkCount":       0,
-        "LightPosX":       lposX[:],
-        "LightPosY":       lposY[:],
-        "LightRadius":     lradius[:],
-        "LightR":          lr[:],
-        "LightG":          lg[:],
-        "LightB":          lb[:],
-        "LightIntensity":  lint[:],
-        "DarkPosX":        dposX[:],
-        "DarkPosY":        dposY[:],
-        "DarkRadius":      dradius[:],
-        "DarkAlpha":       da[:],
-        "DarkIntensity":   dint[:],
-        "LightStrength":   float32(1),
-        "GlowStrength":    float32(1),
-        "NightFactor":     float32(0),
-    }
-    lightingOp = ebiten.DrawRectShaderOptions{}
-    lightingOp.Uniforms = lightingUniforms
+	if err := ReloadLightingShader(); err != nil {
+		panic(err)
+	}
+	// Initialize reusable uniforms and options
+	lightingUniforms = map[string]any{
+		"LightCount":     0,
+		"DarkCount":      0,
+		"LightPosX":      lposX[:],
+		"LightPosY":      lposY[:],
+		"LightRadius":    lradius[:],
+		"LightR":         lr[:],
+		"LightG":         lg[:],
+		"LightB":         lb[:],
+		"LightIntensity": lint[:],
+		"DarkPosX":       dposX[:],
+		"DarkPosY":       dposY[:],
+		"DarkRadius":     dradius[:],
+		"DarkAlpha":      da[:],
+		"DarkIntensity":  dint[:],
+		"LightStrength":  float32(1),
+		"GlowStrength":   float32(1),
+		"NightFactor":    float32(0),
+	}
+	lightingOp = ebiten.DrawRectShaderOptions{}
+	lightingOp.Uniforms = lightingUniforms
 }
 
 // ReloadLightingShader recompiles the lighting shader from disk and swaps it in.
@@ -120,82 +120,82 @@ type darkSource struct {
 }
 
 func ensureLightingTmp(w, h int) {
-    if lightingTmp == nil || lightingTmp.Bounds().Dx() != w || lightingTmp.Bounds().Dy() != h {
-        // Use unmanaged image for the lighting intermediate to reduce
-        // driver sync and improve throughput on this path.
-        lightingTmp = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
-    }
+	if lightingTmp == nil || lightingTmp.Bounds().Dx() != w || lightingTmp.Bounds().Dy() != h {
+		// Use unmanaged image for the lighting intermediate to reduce
+		// driver sync and improve throughput on this path.
+		lightingTmp = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+	}
 }
 
 func applyLightingShader(dst *ebiten.Image, lights []lightSource, darks []darkSource, t float32) {
-    w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
-    ensureLightingTmp(w, h)
-    lightingTmp.DrawImage(dst, nil)
+	w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
+	ensureLightingTmp(w, h)
+	lightingTmp.DrawImage(dst, nil)
 
-    // Use already-interpolated positions and smooth attributes
-    il := interpolateLights(lights, t)
-    id := interpolateDarks(darks, t)
+	// Use already-interpolated positions and smooth attributes
+	il := interpolateLights(lights, t)
+	id := interpolateDarks(darks, t)
 
-    // Update counts
-    lightingUniforms["LightCount"] = len(il)
-    lightingUniforms["DarkCount"] = len(id)
+	// Update counts
+	lightingUniforms["LightCount"] = len(il)
+	lightingUniforms["DarkCount"] = len(id)
 
-    // Fill light arrays
-    for i := 0; i < len(il) && i < maxLights; i++ {
-        ls := il[i]
-        lposX[i] = ls.X
-        lposY[i] = ls.Y
-        lradius[i] = ls.Radius * float32(lightRadiusScale)
-        lr[i] = ls.R
-        lg[i] = ls.G
-        lb[i] = ls.B
-        if ls.Intensity <= 0 {
-            lint[i] = 0
-        } else if ls.Intensity >= 1 {
-            lint[i] = 1
-        } else {
-            lint[i] = ls.Intensity
-        }
-    }
-    // Fill dark arrays
-    for i := 0; i < len(id) && i < maxLights; i++ {
-        ds := id[i]
-        dposX[i] = ds.X
-        dposY[i] = ds.Y
-        dradius[i] = ds.Radius * float32(darkRadiusScale)
-        da[i] = ds.Alpha
-        if ds.Intensity <= 0 {
-            dint[i] = 0
-        } else if ds.Intensity >= 1 {
-            dint[i] = 1
-        } else {
-            dint[i] = ds.Intensity
-        }
-    }
+	// Fill light arrays
+	for i := 0; i < len(il) && i < maxLights; i++ {
+		ls := il[i]
+		lposX[i] = ls.X
+		lposY[i] = ls.Y
+		lradius[i] = ls.Radius * float32(lightRadiusScale)
+		lr[i] = ls.R
+		lg[i] = ls.G
+		lb[i] = ls.B
+		if ls.Intensity <= 0 {
+			lint[i] = 0
+		} else if ls.Intensity >= 1 {
+			lint[i] = 1
+		} else {
+			lint[i] = ls.Intensity
+		}
+	}
+	// Fill dark arrays
+	for i := 0; i < len(id) && i < maxLights; i++ {
+		ds := id[i]
+		dposX[i] = ds.X
+		dposY[i] = ds.Y
+		dradius[i] = ds.Radius * float32(darkRadiusScale)
+		da[i] = ds.Alpha
+		if ds.Intensity <= 0 {
+			dint[i] = 0
+		} else if ds.Intensity >= 1 {
+			dint[i] = 1
+		} else {
+			dint[i] = ds.Intensity
+		}
+	}
 
-    // Scalars
-    lightingUniforms["LightStrength"] = float32(gs.ShaderLightStrength)
-    lightingUniforms["GlowStrength"] = float32(gs.ShaderGlowStrength)
+	// Scalars
+	lightingUniforms["LightStrength"] = float32(gs.ShaderLightStrength)
+	lightingUniforms["GlowStrength"] = float32(gs.ShaderGlowStrength)
 
-    // Smoothed night factor (0..1)
-    nightFactor := float32(0)
-    if nightAlphaInited {
-        nf := lerpf(nightPrevTarget, nightCurTarget, ease(t)) / float32(shaderNightStrength)
-        if nf < 0 {
-            nf = 0
-        } else if nf > 1 {
-            nf = 1
-        }
-        nightFactor = nf
-    } else {
-        lvl := currentNightLevel()
-        nightFactor = float32(lvl) / 100
-    }
-    lightingUniforms["NightFactor"] = nightFactor
+	// Smoothed night factor (0..1)
+	nightFactor := float32(0)
+	if nightAlphaInited {
+		nf := lerpf(nightPrevTarget, nightCurTarget, ease(t)) / float32(shaderNightStrength)
+		if nf < 0 {
+			nf = 0
+		} else if nf > 1 {
+			nf = 1
+		}
+		nightFactor = nf
+	} else {
+		lvl := currentNightLevel()
+		nightFactor = float32(lvl) / 100
+	}
+	lightingUniforms["NightFactor"] = nightFactor
 
-    // Bind source and draw
-    lightingOp.Images[0] = lightingTmp
-    dst.DrawRectShader(w, h, lightingShader, &lightingOp)
+	// Bind source and draw
+	lightingOp.Images[0] = lightingTmp
+	dst.DrawRectShader(w, h, lightingShader, &lightingOp)
 }
 
 // min helper to avoid importing math just for ints
@@ -265,7 +265,7 @@ func addNightDarkSources(w, h int, t float32) {
 }
 
 func addLightSource(pictID uint32, x, y float64, size int) {
-	if !gs.shaderLighting || clImages == nil {
+	if !gs.ShaderLighting || clImages == nil {
 		return
 	}
 	flags := clImages.Flags(pictID)
