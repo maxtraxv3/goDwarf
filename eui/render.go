@@ -835,12 +835,13 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 			}
 			sbW := currentStyle.BorderPad.Slider * 2
 			if len(item.ScrollMarks) > 0 {
+				markCol := AccentColor().ToRGBA()
 				for _, m := range item.ScrollMarks {
 					if m < 0 || m > 1 {
 						continue
 					}
 					y := drawRect.Y0 + m*size.Y
-					drawFilledRect(subImg, drawRect.X1-sbW, y, sbW, uiScale, NewColor(255, 255, 0, 255).ToRGBA(), false)
+					drawFilledRect(subImg, drawRect.X1-sbW, y, sbW, uiScale, markCol, false)
 				}
 			}
 			col := NewColor(96, 96, 96, 192)
