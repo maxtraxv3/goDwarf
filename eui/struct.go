@@ -123,9 +123,10 @@ type itemData struct {
 
 	Hovered, Checked, Focused,
 	Disabled, Invisible bool
-	Clicked  time.Time
-	FlowType flowType
-	Scroll   point
+	Clicked     time.Time
+	FlowType    flowType
+	Scroll      point
+	ScrollMarks []float32
 
 	// Dropdown specific
 	Options    []string

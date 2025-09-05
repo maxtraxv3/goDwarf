@@ -26,6 +26,7 @@ func updateConsoleWindow() {
 
 	msgs := getConsoleMessages()
 	updateTextWindow(consoleWin, messagesFlow, inputFlow, msgs, gs.ConsoleFontSize, inputMsg, nil)
+	searchTextWindow(consoleWin, messagesFlow, consoleWin.SearchText)
 	if inputFlow != nil && len(inputFlow.Contents) > 0 {
 		inputItem := inputFlow.Contents[0]
 		inputItem.Focused = inputActive
@@ -47,6 +48,8 @@ func makeConsoleWindow() {
 		return
 	}
 	consoleWin, messagesFlow, inputFlow = newTextWindow("Console", eui.HZoneLeft, eui.VZoneBottom, true, updateConsoleWindow)
+	consoleWin.Searchable = true
+	consoleWin.OnSearch = func(s string) { searchTextWindow(consoleWin, messagesFlow, s) }
 	consoleMessage("Starting...")
 	updateConsoleWindow()
 }
