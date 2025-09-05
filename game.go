@@ -1221,15 +1221,25 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		haveSnap = true
 	}
 
-	// Composite worldRT into the gameImage buffer: scale/center
-	scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
-	drawW := float64(offW) * scaleDown
-	drawH := float64(offH) * scaleDown
-	tx := (float64(bufW) - drawW) / 2
-	ty := (float64(bufH) - drawH) / 2
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
-	op.GeoM.Scale(scaleDown, scaleDown)
-	op.GeoM.Translate(tx, ty)
+    // Composite worldRT into the gameImage buffer: scale/center
+    scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
+    // Prefer nearest-neighbor when the composite scale is an exact integer to reduce cost
+    // and keep pixels crisp; otherwise apply a half-texel nudge to minimize seams.
+    sx, sy := scaleForFiltering(scaleDown, offW, offH)
+    // If scaleDown is an exact integer, switch to nearest filtering
+    _, isExactInt := exactScale(scaleDown, 1, 1e-6)
+    drawW := float64(offW) * sx
+    drawH := float64(offH) * sy
+    tx := (float64(bufW) - drawW) / 2
+    ty := (float64(bufH) - drawH) / 2
+    op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+    if isExactInt {
+        op.Filter = ebiten.FilterNearest
+    }
+    // worldView was cleared and fully redrawn; a copy avoids extra blending cost.
+    op.Blend = ebiten.BlendCopy
+    op.GeoM.Scale(sx, sy)
+    op.GeoM.Translate(tx, ty)
     gameImage.DrawImage(worldView, op)
 	if haveSnap {
 		prev := gs.GameScale
@@ -1932,49 +1942,45 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 				}
 			}
 			playersMu.RUnlock()
-			if m.nameTag != nil && m.nameTagKey.FontGen == fontGen && m.nameTagKey.Opacity == nameAlpha && m.nameTagKey.Text == d.Name && m.nameTagKey.Colors == m.Colors && m.nameTagKey.Style == style {
-				top := y + int(offset)
-				left := x - int(float64(m.nameTagW)/2)
-				op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-				op.GeoM.Translate(float64(left), float64(top))
-				screen.DrawImage(m.nameTag, op)
-			} else {
-				textClr, bgClr, frameClr := mobileNameColors(m.Colors)
-				if gs.NameTagLabelColors {
-					playersMu.RLock()
-					if p, ok := players[d.Name]; ok && p.FriendLabel > 0 && p.FriendLabel <= len(labelColors) {
-						lc := labelColors[p.FriendLabel-1]
-						frameClr = color.RGBA{lc.R, lc.G, lc.B, frameClr.A}
-					}
-					playersMu.RUnlock()
-				}
-				bgClr.A = nameAlpha
-				frameClr.A = nameAlpha
-				face := mainFont
-				switch style {
-				case styleBold:
-					face = mainFontBold
-				case styleItalic:
-					face = mainFontItalic
-				case styleBoldItalic:
-					face = mainFontBoldItalic
-				}
-				w, h := text.Measure(d.Name, face, 0)
-				iw := int(math.Ceil(w))
-				ih := int(math.Ceil(h))
-				top := y + int(offset)
-				left := x - int(float64(iw)/2)
-				op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-				op.GeoM.Scale(float64(iw+5), float64(ih))
-				op.GeoM.Translate(float64(left), float64(top))
-				op.ColorScale.ScaleWithColor(bgClr)
-				screen.DrawImage(whiteImage, op)
-				vector.StrokeRect(screen, float32(left), float32(top), float32(iw+5), float32(ih), 1, frameClr, false)
-				opTxt := &text.DrawOptions{}
-				opTxt.GeoM.Translate(float64(left)+2, float64(top)+2)
-				opTxt.ColorScale.ScaleWithColor(textClr)
-				text.Draw(screen, d.Name, face, opTxt)
-			}
+            if m.nameTag != nil && m.nameTagKey.FontGen == fontGen && m.nameTagKey.Opacity == nameAlpha && m.nameTagKey.Text == d.Name && m.nameTagKey.Colors == m.Colors && m.nameTagKey.Style == style {
+                top := y + int(offset)
+                left := x - int(float64(m.nameTagW)/2)
+                op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+                op.GeoM.Translate(float64(left), float64(top))
+                screen.DrawImage(m.nameTag, op)
+            } else {
+                // Rebuild the cached name tag image on mismatch to avoid per-frame vector draws.
+                // Respect label color frames if enabled.
+                _, _, frameClr := mobileNameColors(m.Colors)
+                if gs.NameTagLabelColors {
+                    playersMu.RLock()
+                    if p, ok := players[d.Name]; ok && p.FriendLabel > 0 && p.FriendLabel <= len(labelColors) {
+                        lc := labelColors[p.FriendLabel-1]
+                        frameClr = color.RGBA{lc.R, lc.G, lc.B, 0xff}
+                    }
+                    playersMu.RUnlock()
+                }
+                frameClr.A = nameAlpha
+                img, iw, ih := buildNameTagImage(d.Name, m.Colors, nameAlpha, style, frameClr)
+                if img != nil {
+                    // Update shared cache so next frames reuse this image.
+                    stateMu.Lock()
+                    if sm, ok := state.mobiles[m.Index]; ok {
+                        sm.nameTag = img
+                        sm.nameTagW = iw
+                        sm.nameTagH = ih
+                        sm.nameTagKey = nameTagKey{Text: d.Name, Colors: m.Colors, Opacity: nameAlpha, FontGen: fontGen, Style: style}
+                        state.mobiles[m.Index] = sm
+                    }
+                    stateMu.Unlock()
+
+                    top := y + int(offset)
+                    left := x - int(float64(iw)/2)
+                    op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+                    op.GeoM.Translate(float64(left), float64(top))
+                    screen.DrawImage(img, op)
+                }
+            }
 		} else {
 			back := int((m.Colors >> 4) & 0x0f)
 			if back != kColorCodeBackWhite && back != kColorCodeBackBlue && !(back == kColorCodeBackBlack && d.Type == kDescMonster) {
