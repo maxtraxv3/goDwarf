@@ -26,7 +26,7 @@ func updateChatWindow() {
 	if chatList != nil {
 		for i, msg := range msgs {
 			if chatHasPlayerTag(msg) {
-				chatList.Contents[i].TextColor = eui.ColorBlue
+				chatList.Contents[i].TextColor = eui.AccentColor()
 				chatList.Contents[i].ForceTextColor = true
 			} else {
 				chatList.Contents[i].ForceTextColor = false
