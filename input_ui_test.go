@@ -66,3 +66,17 @@ func TestTypingInUI(t *testing.T) {
 		t.Fatalf("typingInUI should detect focused input")
 	}
 }
+
+func TestTypingInUISearch(t *testing.T) {
+	for _, w := range eui.Windows() {
+		w.Close()
+	}
+	win := eui.NewWindow()
+	win.Searchable = true
+	win.MarkOpen()
+	eui.SetActiveSearchForTest(win)
+	if !typingInUI() {
+		t.Fatalf("typingInUI should detect active search")
+	}
+	eui.SetActiveSearchForTest(nil)
+}
