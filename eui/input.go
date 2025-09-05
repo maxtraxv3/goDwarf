@@ -537,56 +537,56 @@ func Update() error {
 			activeSearch.markDirty()
 			activeSearch = nil
 		}
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyKPEnter) {
-		if activeWindow != nil && activeWindow.Open && activeWindow.DefaultButton != nil {
-			btn := activeWindow.DefaultButton
-			if !btn.Disabled && !btn.Invisible {
-				activeItem = btn
-				btn.Clicked = time.Now()
-				if btn.Handler != nil {
-					btn.Handler.Emit(UIEvent{Item: btn, Type: EventClick})
+	} else {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyKPEnter) {
+			if activeWindow != nil && activeWindow.Open && activeWindow.DefaultButton != nil {
+				btn := activeWindow.DefaultButton
+				if !btn.Disabled && !btn.Invisible {
+					activeItem = btn
+					btn.Clicked = time.Now()
+					if btn.Handler != nil {
+						btn.Handler.Emit(UIEvent{Item: btn, Type: EventClick})
+					}
+					btn.markDirty()
 				}
-				btn.markDirty()
 			}
 		}
-	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		if activeWindow != nil && activeWindow.Open {
-			var inputs []*itemData
-			collectInputs(activeWindow.Contents, &inputs)
-			if len(inputs) > 0 {
-				idx := -1
-				for i, it := range inputs {
-					if it == focusedItem {
-						idx = i
-						break
+		if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+			if activeWindow != nil && activeWindow.Open {
+				var inputs []*itemData
+				collectInputs(activeWindow.Contents, &inputs)
+				if len(inputs) > 0 {
+					idx := -1
+					for i, it := range inputs {
+						if it == focusedItem {
+							idx = i
+							break
+						}
 					}
-				}
-				next := 0
-				if ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
-					if idx == -1 {
-						next = len(inputs) - 1
+					next := 0
+					if ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
+						if idx == -1 {
+							next = len(inputs) - 1
+						} else {
+							next = (idx - 1 + len(inputs)) % len(inputs)
+						}
 					} else {
-						next = (idx - 1 + len(inputs)) % len(inputs)
+						if idx == -1 {
+							next = 0
+						} else {
+							next = (idx + 1) % len(inputs)
+						}
 					}
-				} else {
-					if idx == -1 {
-						next = 0
-					} else {
-						next = (idx + 1) % len(inputs)
+					if focusedItem != nil {
+						focusedItem.Focused = false
+						focusedItem.markDirty()
 					}
-				}
-				if focusedItem != nil {
-					focusedItem.Focused = false
+					focusedItem = inputs[next]
+					focusedItem.CursorPos = len([]rune(focusedItem.Text))
+					focusedItem.Focused = true
 					focusedItem.markDirty()
 				}
-				focusedItem = inputs[next]
-				focusedItem.CursorPos = len([]rune(focusedItem.Text))
-				focusedItem.Focused = true
-				focusedItem.markDirty()
 			}
 		}
 	}
@@ -1542,4 +1542,9 @@ func scrollContextMenus(mpos point, delta point) bool {
 		}
 	}
 	return false
+}
+
+// SearchActive reports whether a window search box currently has focus.
+func SearchActive() bool {
+	return activeSearch != nil
 }

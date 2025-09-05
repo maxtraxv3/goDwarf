@@ -86,6 +86,9 @@ func pointInItems(items []*eui.ItemData, fx, fy float32) bool {
 // typingInUI reports whether any EUI text input other than the console input bar
 // currently has focus.
 func typingInUI() bool {
+	if eui.SearchActive() {
+		return true
+	}
 	var inputItem *eui.ItemData
 	if inputFlow != nil && len(inputFlow.Contents) > 0 {
 		inputItem = inputFlow.Contents[0]
