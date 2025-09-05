@@ -93,6 +93,9 @@ func updateInventoryWindow() {
 		return
 	}
 
+	accent := eui.Color{}
+	_ = accent.UnmarshalJSON([]byte("\"accent\""))
+
 	prevScroll := inventoryList.Scroll
 
 	// Build a unique list of items while counting duplicates and tracking
@@ -305,9 +308,7 @@ func updateInventoryWindow() {
 		}
 		if idCopy == selectedInvID && idxCopy == selectedInvIdx {
 			row.Filled = true
-			if inventoryWin != nil && inventoryWin.Theme != nil {
-				row.Color = inventoryWin.Theme.Button.SelectedColor
-			}
+			row.Color = accent
 		}
 		click := func() { handleInventoryClick(idCopy, idxCopy) }
 		icon.Action = click
