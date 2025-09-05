@@ -351,8 +351,19 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleColor)
 			text.Draw(screen, win.SearchText, face, top)
 			cr := win.searchCloseRect()
-			strokeLine(screen, cr.X0+uiScale, cr.Y0+uiScale, cr.X1-uiScale, cr.Y1-uiScale, uiScale, win.Theme.Window.TitleColor, true)
-			strokeLine(screen, cr.X0+uiScale, cr.Y1-uiScale, cr.X1-uiScale, cr.Y0+uiScale, uiScale, win.Theme.Window.TitleColor, true)
+			xpad := (cr.X1 - cr.X0) / 3
+			strokeLine(screen,
+				cr.X0+xpad,
+				cr.Y0+xpad,
+				cr.X1-xpad,
+				cr.Y1-xpad,
+				uiScale, win.Theme.Window.TitleColor, true)
+			strokeLine(screen,
+				cr.X0+xpad,
+				cr.Y1-xpad,
+				cr.X1-xpad,
+				cr.Y0+xpad,
+				uiScale, win.Theme.Window.TitleColor, true)
 		}
 
 		//Close, Maximize, Search, and Pin icons

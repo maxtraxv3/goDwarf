@@ -117,6 +117,7 @@ func Update() error {
 		sizeCh := posCh
 
 		var part dragType
+		handled := false
 		if dragPart != PART_NONE && dragWin == win {
 			part = dragPart
 		} else {
@@ -287,13 +288,36 @@ func Update() error {
 				}
 				break
 			}
+		} else if win.searchOpen {
+			if dragPart == PART_NONE && c == ebiten.CursorShapeDefault {
+				if win.searchBoxRect().containsPoint(mpos) {
+					c = ebiten.CursorShapeText
+				} else if win.searchCloseRect().containsPoint(mpos) {
+					c = ebiten.CursorShapePointer
+				}
+			}
+			if click && dragPart == PART_NONE && downWin == win {
+				if win.searchCloseRect().containsPoint(mpos) {
+					win.searchOpen = false
+					if activeSearch == win {
+						activeSearch = nil
+					}
+					win.markDirty()
+					handled = true
+				} else if win.searchBoxRect().containsPoint(mpos) {
+					activeSearch = win
+					handled = true
+				}
+			}
 		}
 
 		// Window items
 		prevWinHovered := win.Hovered
 		prevActiveWindow := activeWindow
 		win.Hovered = false
-		handled := win.clickWindowItems(mpos, click)
+		if !handled {
+			handled = win.clickWindowItems(mpos, click)
+		}
 		if win.Hovered != prevWinHovered {
 			win.markDirty()
 		}
