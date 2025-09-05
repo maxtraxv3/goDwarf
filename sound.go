@@ -27,8 +27,10 @@ var (
 	clSounds *clsnd.CLSounds
 	pcmCache = make(map[uint16][]byte)
 
-	audioContext *audio.Context
-	soundPlayers = make(map[*audio.Player]struct{})
+	audioContext   *audio.Context
+	soundPlayers   = make(map[*audio.Player]struct{})
+	notifPlayers   = make(map[*audio.Player]struct{})
+	notifPlayersMu sync.Mutex
 
 	sndDumpOnce   sync.Once
 	sndDumpMu     sync.Mutex
@@ -39,11 +41,17 @@ var (
 // stopAllSounds halts and disposes all currently playing audio players.
 func stopAllSounds() {
 	soundMu.Lock()
-	defer soundMu.Unlock()
 	for sp := range soundPlayers {
 		_ = sp.Close()
 		delete(soundPlayers, sp)
 	}
+	soundMu.Unlock()
+
+	notifPlayersMu.Lock()
+	for sp := range notifPlayers {
+		delete(notifPlayers, sp)
+	}
+	notifPlayersMu.Unlock()
 }
 
 // stopAllAudioPlayers stops and disposes every active audio player type.
@@ -226,8 +234,10 @@ func updateSoundVolume() {
 	gameVol := gs.MasterVolume * gs.GameVolume
 	ttsVol := gs.MasterVolume * gs.ChatTTSVolume
 	musicVol := gs.MasterVolume * gs.MusicVolume
+	notifVol := gs.MasterVolume * gs.NotificationVolume
 	if !gs.GameSound {
 		gameVol = 0
+		notifVol = 0
 	}
 	if !gs.ChatTTS {
 		ttsVol = 0
@@ -235,10 +245,14 @@ func updateSoundVolume() {
 	if !gs.Music {
 		musicVol = 0
 	}
+	if !gs.NotificationBeep {
+		notifVol = 0
+	}
 	if gs.Mute {
 		gameVol = 0
 		ttsVol = 0
 		musicVol = 0
+		notifVol = 0
 	}
 
 	soundMu.Lock()
@@ -247,6 +261,13 @@ func updateSoundVolume() {
 		players = append(players, sp)
 	}
 	soundMu.Unlock()
+
+	notifPlayersMu.Lock()
+	notif := make(map[*audio.Player]struct{}, len(notifPlayers))
+	for sp := range notifPlayers {
+		notif[sp] = struct{}{}
+	}
+	notifPlayersMu.Unlock()
 
 	ttsPlayersMu.Lock()
 	tts := make([]*audio.Player, 0, len(ttsPlayers))
@@ -263,11 +284,19 @@ func updateSoundVolume() {
 	musicPlayersMu.Unlock()
 
 	stopped := make([]*audio.Player, 0)
+	notifStopped := make([]*audio.Player, 0)
 	for _, sp := range players {
 		if sp.IsPlaying() {
-			sp.SetVolume(gameVol)
+			if _, ok := notif[sp]; ok {
+				sp.SetVolume(notifVol)
+			} else {
+				sp.SetVolume(gameVol)
+			}
 		} else {
 			stopped = append(stopped, sp)
+			if _, ok := notif[sp]; ok {
+				notifStopped = append(notifStopped, sp)
+			}
 		}
 	}
 
@@ -296,6 +325,14 @@ func updateSoundVolume() {
 			sp.Close()
 		}
 		soundMu.Unlock()
+	}
+
+	if len(notifStopped) > 0 {
+		notifPlayersMu.Lock()
+		for _, sp := range notifStopped {
+			delete(notifPlayers, sp)
+		}
+		notifPlayersMu.Unlock()
 	}
 
 	if len(ttsStopped) > 0 {
