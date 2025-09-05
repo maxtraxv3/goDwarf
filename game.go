@@ -2391,7 +2391,9 @@ func initGame() {
 		}
 	}
 	eui.LoadTheme(theme)
-	eui.LoadStyle("RoundHybrid")
+	if gs.Style != "" {
+		eui.LoadStyle(gs.Style)
+	}
 	initUI()
 	updateDimmedScreenBG()
 	updateCharacterButtons()
