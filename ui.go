@@ -2451,33 +2451,33 @@ func makeSettingsWindow() {
 	left.AddItem(label)
 
 	/*
-			tilingCB, tilingEvents := eui.NewCheckbox()
-			tilingCB.Text = "Tiling window mode (buggy)"
-			tilingCB.Size = eui.Point{X: panelWidth, Y: 24}
-			tilingCB.Checked = gs.WindowTiling
-			tilingCB.Tooltip = "Prevent windows from overlapping"
-			tilingEvents.Handle = func(ev eui.UIEvent) {
-				if ev.Type == eui.EventCheckboxChanged {
-					gs.WindowTiling = ev.Checked
-					eui.SetWindowTiling(ev.Checked)
-					settingsDirty = true
+				tilingCB, tilingEvents := eui.NewCheckbox()
+				tilingCB.Text = "Tiling window mode (buggy)"
+				tilingCB.Size = eui.Point{X: panelWidth, Y: 24}
+				tilingCB.Checked = gs.WindowTiling
+				tilingCB.Tooltip = "Prevent windows from overlapping"
+				tilingEvents.Handle = func(ev eui.UIEvent) {
+					if ev.Type == eui.EventCheckboxChanged {
+						gs.WindowTiling = ev.Checked
+						eui.SetWindowTiling(ev.Checked)
+						settingsDirty = true
+					}
 				}
-			}
-			right.AddItem(tilingCB)
+				right.AddItem(tilingCB)
 
-	               snapCB, snapEvents := eui.NewCheckbox()
-	               snapCB.Text = "Window snapping"
-	               snapCB.Size = eui.Point{X: panelWidth, Y: 24}
-	               snapCB.Checked = gs.WindowSnapping
-	               snapCB.Tooltip = "Snap windows to edges and others"
-			snapEvents.Handle = func(ev eui.UIEvent) {
-				if ev.Type == eui.EventCheckboxChanged {
-					gs.WindowSnapping = ev.Checked
-					eui.SetWindowSnapping(ev.Checked)
-					settingsDirty = true
+		               snapCB, snapEvents := eui.NewCheckbox()
+		               snapCB.Text = "Window snapping"
+		               snapCB.Size = eui.Point{X: panelWidth, Y: 24}
+		               snapCB.Checked = gs.WindowSnapping
+		               snapCB.Tooltip = "Snap windows to edges and others"
+				snapEvents.Handle = func(ev eui.UIEvent) {
+					if ev.Type == eui.EventCheckboxChanged {
+						gs.WindowSnapping = ev.Checked
+						eui.SetWindowSnapping(ev.Checked)
+						settingsDirty = true
+					}
 				}
-			}
-			right.AddItem(snapCB)
+				right.AddItem(snapCB)
 	*/
 
 	if showUIScale {
@@ -4329,22 +4329,10 @@ func makeDebugWindow() {
 	}
 	debugFlow.AddItem(pluginOutCB)
 
-	shaderCB, shaderEvents := eui.NewCheckbox()
-	shaderCB.Text = "Shader lighting"
-	shaderCB.Size = eui.Point{X: width - 90, Y: 24}
-	shaderCB.Checked = gs.ShaderLighting
-	shaderCB.Tooltip = "Experimental shader-based light and dark rendering"
-	shaderEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.ShaderLighting = ev.Checked
-			settingsDirty = true
-		}
-	}
-
 	// Add a small "Reload" button beside the shader checkbox for hot-reload.
 	reloadBtn, reloadEv := eui.NewButton()
-	reloadBtn.Text = "Reload"
-	reloadBtn.Size = eui.Point{X: 80, Y: 24}
+	reloadBtn.Text = "Reload Shaders"
+	reloadBtn.Size = eui.Point{X: 160, Y: 24}
 	reloadBtn.Tooltip = "Recompile the lighting shader from data/shaders/light.kage"
 	reloadEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -4357,7 +4345,6 @@ func makeDebugWindow() {
 	}
 
 	shaderRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
-	shaderRow.AddItem(shaderCB)
 	shaderRow.AddItem(reloadBtn)
 	debugFlow.AddItem(shaderRow)
 
