@@ -65,6 +65,9 @@ Approximately 45,000 lines of Go code.
 ### Text-to-speech voices
 Piper voices are stored in `data/piper/voices`. The client and `build-scripts/download_piper.sh` support voice archives in `.tar.gz` format and automatically extract and remove the archives. If a voice archive isn't available, the program falls back to downloading raw `.onnx` models with matching `.onnx.json` configs.
 
+### Downloading TTS files and soundfonts
+Use the **Download Files** window to fetch optional resources. The TTS option downloads the Piper binary and English voices for chat speech, while the soundfont enables higher quality music playback. Both boxes are checked by default and can be unchecked to skip their downloads.
+
 ## Using the UI
 
 - Windows: Click the `Windows` toolbar button to toggle common panels: Players, Inventory, Chat, Console, Help, Hotkeys, Shortcuts, Mixer, Settings, and more. Window layout and open/closed state persist between runs.
