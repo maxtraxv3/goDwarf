@@ -62,3 +62,48 @@ func playBeep(program, key int) {
 	soundMu.Unlock()
 	p.Play()
 }
+
+// playHarpNotes renders and plays a short harp sequence using the provided
+// MIDI key values. Notes are spaced evenly.
+func playHarpNotes(keys ...int) {
+	if gs.Mute || !gs.GameSound || audioContext == nil {
+		return
+	}
+	if len(keys) == 0 {
+		return
+	}
+
+	notes := make([]Note, len(keys))
+	dur := 150 * time.Millisecond
+	for i, k := range keys {
+		notes[i] = Note{Key: k, Velocity: 120, Start: time.Duration(i) * dur, Duration: dur}
+	}
+	left, right, err := renderSong(46, notes)
+	if err != nil {
+		return
+	}
+	pcm := mixPCM(left, right)
+	p := audioContext.NewPlayerFromBytes(pcm)
+	vol := gs.MasterVolume * gs.GameVolume
+	if gs.Mute {
+		vol = 0
+	}
+	p.SetVolume(vol)
+
+	soundMu.Lock()
+	for sp := range soundPlayers {
+		if !sp.IsPlaying() {
+			sp.Close()
+			delete(soundPlayers, sp)
+		}
+	}
+	if maxSounds > 0 && len(soundPlayers) >= maxSounds {
+		soundMu.Unlock()
+		logDebug("playHarpNotes too many sound players (%d)", len(soundPlayers))
+		p.Close()
+		return
+	}
+	soundPlayers[p] = struct{}{}
+	soundMu.Unlock()
+	p.Play()
+}

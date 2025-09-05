@@ -17,13 +17,18 @@ var notifications []*notification
 
 // showNotification displays msg in the Clan Lord window if notifications are
 // enabled. Messages disappear after a timeout or when clicked.
-func showNotification(msg string) {
+// Optional note keys can be provided to customize the notification sound.
+func showNotification(msg string, keys ...int) {
 	if !gs.Notifications || gameWin == nil {
 		return
 	}
 	if gs.NotificationBeep {
-		// middle C harp beep
-		playBeep(46, 60)
+		if len(keys) == 0 {
+			// middle C harp beep
+			playBeep(46, 60)
+		} else {
+			playHarpNotes(keys...)
+		}
 	}
 	btn, events := eui.NewButton()
 	btn.Text = msg
