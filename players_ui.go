@@ -44,8 +44,7 @@ func updatePlayersWindow() {
 		return
 	}
 
-	accent := eui.Color{}
-	_ = accent.UnmarshalJSON([]byte("\"accent\""))
+	accent := eui.AccentColor()
 
 	prevScroll := playersList.Scroll
 

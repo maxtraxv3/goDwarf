@@ -293,8 +293,7 @@ func searchTextWindow(win *eui.WindowData, list *eui.ItemData, query string) {
 	q := strings.ToLower(query)
 	total := len(list.Contents)
 	var marks []float32
-	accent := eui.Color{}
-	_ = accent.UnmarshalJSON([]byte("\"accent\""))
+	accent := eui.AccentColor()
 	for i, it := range list.Contents {
 		if q != "" && strings.Contains(strings.ToLower(it.Text), q) {
 			it.Filled = true
