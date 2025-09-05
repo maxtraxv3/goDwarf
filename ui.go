@@ -192,6 +192,7 @@ func initUI() {
 	makeShortcutsWindow()
 	makeHotkeysWindow()
 	makeTriggersWindow()
+	makeJoystickWindow()
 	makePluginsWindow()
 	makeMixerWindow()
 	makeToolbar()
@@ -2896,6 +2897,19 @@ func makeSettingsWindow() {
 		}
 	}
 	left.AddItem(bubbleBtn)
+
+	joystickBtn, joystickEvents := eui.NewButton()
+	joystickBtn.Text = "Joystick"
+	joystickBtn.Size = eui.Point{X: panelWidth, Y: 24}
+	joystickEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			joystickWin.ToggleNear(ev.Item)
+		}
+	}
+	left.AddItem(joystickBtn)
 
 	label, _ = eui.NewText()
 	label.Text = "\nStatus Bar Options:"
