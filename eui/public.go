@@ -167,6 +167,11 @@ func SetCurrentStyleName(name string) { currentStyleName = name }
 // AccentSaturation returns the current accent color saturation value.
 func AccentSaturation() float64 { return accentSaturation }
 
+// AccentColor returns the current accent color.
+func AccentColor() Color {
+	return Color(hsvaToRGBA(accentHue, accentSaturation, accentValue, accentAlpha))
+}
+
 // ClearFocus removes focus from the provided item if it is currently focused.
 func ClearFocus(it *ItemData) {
 	if focusedItem == it {
