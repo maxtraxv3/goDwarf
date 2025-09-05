@@ -2590,6 +2590,8 @@ func makeSettingsWindow() {
 		}
 	}
 
+	var accentWheel *eui.ItemData
+
 	themeDD, themeEvents := eui.NewDropdown()
 	themeDD.Label = "Color Theme"
 	if opts, err := eui.ListThemes(); err == nil {
@@ -2621,11 +2623,33 @@ func makeSettingsWindow() {
 				settingsDirty = true
 				settingsWin.Refresh()
 				updateDimmedScreenBG()
+				if accentWheel != nil {
+					var ac eui.Color
+					_ = ac.UnmarshalJSON([]byte("\"accent\""))
+					accentWheel.WheelColor = ac
+				}
 			}
 		}
 	}
+
+	accentWheel, accentEvents := eui.NewColorWheel()
+	accentWheel.Size = eui.Point{X: panelWidth, Y: 40}
+	var ac eui.Color
+	_ = ac.UnmarshalJSON([]byte("\"accent\""))
+	accentWheel.WheelColor = ac
+	accentEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventColorChanged {
+			settingsWin.Refresh()
+		}
+	}
+
 	left.AddItem(themeDD)
 	left.AddItem(styleDD)
+	accLabel, _ := eui.NewText()
+	accLabel.Text = "Accent Color"
+	accLabel.Size = eui.Point{X: panelWidth, Y: 20}
+	left.AddItem(accLabel)
+	left.AddItem(accentWheel)
 
 	label, _ = eui.NewText()
 	label.Text = "\nControls:"

@@ -44,6 +44,9 @@ func updatePlayersWindow() {
 		return
 	}
 
+	accent := eui.Color{}
+	_ = accent.UnmarshalJSON([]byte("\"accent\""))
+
 	// Gather current players and filter to non-NPCs with names.
 	ps := getPlayers()
 	// Sort: online (recently seen and not explicitly offline) first,
@@ -185,9 +188,7 @@ func updatePlayersWindow() {
 		// Highlight if selected.
 		if p.Name == selectedPlayerName {
 			row.Filled = true
-			if playersWin != nil && playersWin.Theme != nil {
-				row.Color = playersWin.Theme.Button.SelectedColor
-			}
+			row.Color = accent
 		}
 
 		iconSize := int(rowUnits + 0.5)
