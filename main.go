@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	//go:embed goThoom.png
+	//go:embed logo.png
 	windowIconPNG []byte
 
 	// Default movie playback FPS; classic client updates ~10Hz.

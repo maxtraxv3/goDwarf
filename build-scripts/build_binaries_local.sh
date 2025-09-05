@@ -190,7 +190,7 @@ for platform in "${platforms[@]}"; do
       exit 1
     fi
     rm -f rsrc*.syso
-    go-winres simply --icon goThoom.png --arch "$GOARCH" --manifest gui
+    go-winres simply --icon logo.png --arch "$GOARCH" --manifest gui
   fi
 
   # Make sure nothing forces the OpenGL backend for mac (support old/new env names)
@@ -245,7 +245,7 @@ for platform in "${platforms[@]}"; do
       cp "${OUTPUT_DIR}/${BIN_NAME}" "$APP_DIR/Contents/MacOS/${APP_NAME}"
       mkdir -p "$APP_DIR/Contents/Resources"
       ensure_cmd convert imagemagick
-      convert "$SCRIPT_DIR/../goThoom.png" -define icon:auto-resize=16,32,64,128,256,512 "$APP_DIR/Contents/Resources/goThoom.icns"
+      convert "$SCRIPT_DIR/../logo.png" -define icon:auto-resize=16,32,64,128,256,512 "$APP_DIR/Contents/Resources/goThoom.icns"
       cat <<'EOF' >"$APP_DIR/Contents/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -304,7 +304,7 @@ EOF
     ICON_DIR="$PKG_DIR/share/icons/hicolor/256x256/apps"
     DESKTOP_DIR="$PKG_DIR/share/applications"
     mkdir -p "$ICON_DIR" "$DESKTOP_DIR"
-    convert "$SCRIPT_DIR/../goThoom.png" -resize 256x256 "$ICON_DIR/goThoom.png"
+    convert "$SCRIPT_DIR/../logo.png" -resize 256x256 "$ICON_DIR/goThoom.png"
     cat <<'EOF' >"$DESKTOP_DIR/goThoom.desktop"
 [Desktop Entry]
 Type=Application
