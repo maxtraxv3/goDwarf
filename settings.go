@@ -14,7 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const SETTINGS_VERSION = 9
+const SETTINGS_VERSION = 10
 
 type BarPlacement int
 
@@ -732,9 +732,7 @@ func detectQualityPreset() int {
 		return 2
 	case matchesPreset(highPreset):
 		return 3
-	case matchesPreset(ultimatePreset):
-		return 4
 	default:
-		return 5
+		return 2
 	}
 }
