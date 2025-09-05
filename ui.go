@@ -2563,6 +2563,33 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(pinLocCB)
 
+	styleDD, styleEvents := eui.NewDropdown()
+	styleDD.Label = "Style Theme"
+	if opts, err := eui.ListStyles(); err == nil {
+		styleDD.Options = opts
+		cur := eui.CurrentStyleName()
+		for i, n := range opts {
+			if n == cur {
+				styleDD.Selected = i
+				break
+			}
+		}
+	}
+	styleDD.Size = eui.Point{X: panelWidth, Y: 24}
+	styleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventDropdownSelected {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			name := styleDD.Options[ev.Index]
+			if err := eui.LoadStyle(name); err == nil {
+				gs.Style = name
+				settingsDirty = true
+				settingsWin.Refresh()
+			}
+		}
+	}
+
 	themeDD, themeEvents := eui.NewDropdown()
 	themeDD.Label = "Color Theme"
 	if opts, err := eui.ListThemes(); err == nil {
@@ -2584,6 +2611,13 @@ func makeSettingsWindow() {
 			name := themeDD.Options[ev.Index]
 			if err := eui.LoadTheme(name); err == nil {
 				gs.Theme = name
+				gs.Style = eui.CurrentStyleName()
+				for i, n := range styleDD.Options {
+					if n == gs.Style {
+						styleDD.Selected = i
+						break
+					}
+				}
 				settingsDirty = true
 				settingsWin.Refresh()
 				updateDimmedScreenBG()
@@ -2591,6 +2625,7 @@ func makeSettingsWindow() {
 		}
 	}
 	left.AddItem(themeDD)
+	left.AddItem(styleDD)
 
 	label, _ = eui.NewText()
 	label.Text = "\nControls:"

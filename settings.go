@@ -186,6 +186,7 @@ type settings struct {
 	MaxNightLevel         int
 	ForceNightLevel       int
 	Theme                 string
+	Style                 string
 	MessagesToConsole     bool
 	ChatTTS               bool
 	ChatTTSVolume         float64
