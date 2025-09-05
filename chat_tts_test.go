@@ -155,3 +155,43 @@ func TestSubstituteTTS(t *testing.T) {
 		t.Fatalf("substituteTTS = %q, want %q", got, want)
 	}
 }
+
+func TestChatTTSSameSpeakerCondenses(t *testing.T) {
+	origGS := gs
+	gs.ChatTTS = true
+	gs.Mute = false
+	blockTTS = false
+	defer func() { gs = origGS }()
+
+	stopAllTTS()
+	lastTTSSpeaker = ""
+	lastTTSTime = time.Time{}
+
+	var mu sync.Mutex
+	var outs []string
+	origFunc := playChatTTSFunc
+	playChatTTSFunc = func(ctx context.Context, text string) {
+		mu.Lock()
+		outs = append(outs, text)
+		mu.Unlock()
+	}
+	defer func() { playChatTTSFunc = origFunc }()
+
+	speakChatMessage("Alice says, hello")
+	time.Sleep(250 * time.Millisecond)
+	speakChatMessage("Alice says, how are you?")
+	time.Sleep(300 * time.Millisecond)
+
+	mu.Lock()
+	got := append([]string(nil), outs...)
+	mu.Unlock()
+	if len(got) != 2 {
+		t.Fatalf("got %d messages, want 2", len(got))
+	}
+	if got[0] != "Alice says, hello" {
+		t.Fatalf("first = %q, want %q", got[0], "Alice says, hello")
+	}
+	if got[1] != "and then said how are you?" {
+		t.Fatalf("second = %q, want %q", got[1], "and then said how are you?")
+	}
+}
