@@ -615,7 +615,7 @@ var (
 	}
 	lowPreset = qualityPreset{
 		DenoiseImages:   false,
-		MotionSmoothing: false,
+		MotionSmoothing: true,
 		BlendMobiles:    false,
 		BlendPicts:      false,
 		NoCaching:       false,
@@ -625,22 +625,14 @@ var (
 		DenoiseImages:   true,
 		MotionSmoothing: true,
 		BlendMobiles:    false,
-		BlendPicts:      false,
+		BlendPicts:      true,
 		NoCaching:       false,
-		ShaderLighting:  true,
+		ShaderLighting:  false,
 	}
 	highPreset = qualityPreset{
 		DenoiseImages:   true,
 		MotionSmoothing: true,
 		BlendMobiles:    false,
-		BlendPicts:      true,
-		NoCaching:       false,
-		ShaderLighting:  true,
-	}
-	ultimatePreset = qualityPreset{
-		DenoiseImages:   true,
-		MotionSmoothing: true,
-		BlendMobiles:    true,
 		BlendPicts:      true,
 		NoCaching:       false,
 		ShaderLighting:  true,
@@ -658,8 +650,6 @@ func applyQualityPreset(name string) {
 		p = standardPreset
 	case "High":
 		p = highPreset
-	case "Ultimate":
-		p = ultimatePreset
 	default:
 		return
 	}

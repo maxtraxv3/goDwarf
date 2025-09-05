@@ -2685,7 +2685,7 @@ func makeSettingsWindow() {
 	left.AddItem(label)
 
 	qualityPresetDD, qpEvents := eui.NewDropdown()
-	qualityPresetDD.Options = []string{"Ultra-Low", "Low", "Standard", "High", "Ultimate", "Custom"}
+	qualityPresetDD.Options = []string{"Potato", "Low", "Standard", "High", "Custom"}
 	qualityPresetDD.Size = eui.Point{X: panelWidth, Y: 24}
 	qualityPresetDD.Selected = detectQualityPreset()
 	qualityPresetDD.FontSize = 12
@@ -2700,8 +2700,6 @@ func makeSettingsWindow() {
 				applyQualityPreset("Standard")
 			case 3:
 				applyQualityPreset("High")
-			case 4:
-				applyQualityPreset("Ultimate")
 			}
 			qualityPresetDD.Selected = detectQualityPreset()
 		}
