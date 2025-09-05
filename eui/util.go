@@ -279,6 +279,19 @@ func (win *windowData) searchCloseRect() rect {
 	return rect{X0: sb.X1 - h, Y0: sb.Y0, X1: sb.X1, Y1: sb.Y1}
 }
 
+// closeSearch resets the search state and clears highlights.
+func (win *windowData) closeSearch() {
+	win.searchOpen = false
+	if activeSearch == win {
+		activeSearch = nil
+	}
+	win.SearchText = ""
+	if win.OnSearch != nil {
+		win.OnSearch("")
+	}
+	win.markDirty()
+}
+
 func (win *windowData) dragbarRect() rect {
 	if win.TitleHeight <= 0 && !win.Resizable {
 		return rect{}

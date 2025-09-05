@@ -161,17 +161,17 @@ func Update() error {
 					break
 				}
 				if part == PART_SEARCH {
-					win.searchOpen = !win.searchOpen
 					if win.searchOpen {
+						win.closeSearch()
+					} else {
+						win.searchOpen = true
 						win.SearchText = ""
 						activeSearch = win
 						if win.OnSearch != nil {
-							win.OnSearch(win.SearchText)
+							win.OnSearch("")
 						}
-					} else if activeSearch == win {
-						activeSearch = nil
+						win.markDirty()
 					}
-					win.markDirty()
 					break
 				}
 				if part == PART_PIN {
@@ -210,11 +210,7 @@ func Update() error {
 						}
 						if click && dragPart == PART_NONE && downWin == win {
 							if win.searchCloseRect().containsPoint(mpos) {
-								win.searchOpen = false
-								if activeSearch == win {
-									activeSearch = nil
-								}
-								win.markDirty()
+								win.closeSearch()
 								break
 							}
 							if win.searchBoxRect().containsPoint(mpos) {
@@ -298,11 +294,7 @@ func Update() error {
 			}
 			if click && dragPart == PART_NONE && downWin == win {
 				if win.searchCloseRect().containsPoint(mpos) {
-					win.searchOpen = false
-					if activeSearch == win {
-						activeSearch = nil
-					}
-					win.markDirty()
+					win.closeSearch()
 					handled = true
 				} else if win.searchBoxRect().containsPoint(mpos) {
 					activeSearch = win
