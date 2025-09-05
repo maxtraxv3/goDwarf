@@ -104,6 +104,7 @@ var gsdef settings = settings{
 	NotifyShares:          true,
 	NotifyFriendOnline:    true,
 	NotifyCopyText:        true,
+	NotificationBeep:      false,
 	NotificationDuration:  6,
 	PluginSpamKill:        true,
 	PromptOnSaveRecording: true,
@@ -199,6 +200,7 @@ type settings struct {
 	NotifyShares          bool
 	NotifyFriendOnline    bool
 	NotifyCopyText        bool
+	NotificationBeep      bool
 	NotificationDuration  float64
 	PluginSpamKill        bool
 	PromptOnSaveRecording bool

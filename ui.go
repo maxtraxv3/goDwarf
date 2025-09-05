@@ -4189,6 +4189,7 @@ func makeNotificationsWindow() {
 	addCB("Shares", &gs.NotifyShares)
 	addCB("Friend online", &gs.NotifyFriendOnline)
 	addCB("Text copied", &gs.NotifyCopyText)
+	addCB("Beep", &gs.NotificationBeep)
 
 	durSlider, durEvents := eui.NewSlider()
 	durSlider.Label = "Display Duration (sec)"
