@@ -1205,7 +1205,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
 		drawScene(worldView, 0, 0, snap, alpha, mobileFade, pictFade)
-		if gs.shaderLighting {
+		if gs.ShaderLighting {
 			// Use shader-based night darkening with inverse-square falloff.
 			addNightDarkSources(offW, offH, float32(alpha))
 		} else {
@@ -1213,7 +1213,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			//drawNightAmbient(worldView, 0, 0)
 			drawNightOverlay(worldView, 0, 0)
 		}
-		if gs.shaderLighting {
+		if gs.ShaderLighting {
 			// Apply lighting on the active subimage only
 			applyLightingShader(worldView, frameLights, frameDarks, float32(alpha))
 		}
@@ -1287,7 +1287,7 @@ var lastSeekPrev time.Time
 
 // drawScene renders all world objects for the current frame.
 func drawScene(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha float64, mobileFade, pictFade float32) {
-	if gs.shaderLighting {
+	if gs.ShaderLighting {
 		frameLights = frameLights[:0]
 		frameDarks = frameDarks[:0]
 	}
