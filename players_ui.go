@@ -142,6 +142,7 @@ func updatePlayersWindow() {
 	// Layout per row: [avatar (or default/blank)] [profession (or blank)] [name]
 	playersList.Contents = nil
 	playersRowRefs = map[*eui.ItemData]string{}
+	var selectedRow *eui.ItemData
 
 	header := fmt.Sprintf("Players Online: %d", onlineCount)
 	// Include simple share summary when relevant.
@@ -186,10 +187,9 @@ func updatePlayersWindow() {
 			row.OutlineColor = labelColor(p.FriendLabel)
 		}
 
-		// Highlight if selected.
+		// Track selected row for highlight after search.
 		if p.Name == selectedPlayerName {
-			row.Filled = true
-			row.Color = accent
+			selectedRow = row
 		}
 
 		iconSize := int(rowUnits + 0.5)
@@ -290,6 +290,10 @@ func updatePlayersWindow() {
 	playersList.Size.Y = clientHAvail
 	playersList.Scroll = prevScroll
 	searchTextWindow(playersWin, playersList, playersWin.SearchText)
+	if selectedRow != nil {
+		selectedRow.Filled = true
+		selectedRow.Color = accent
+	}
 	playersWin.Refresh()
 }
 
