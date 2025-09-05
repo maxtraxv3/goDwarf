@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>goThoom</title>
+  <meta name="description" content="goThoom — a modern client for the classic 1997 2D-MMO Clan Lord. Featuring enhanced graphics, audio, and accessibility on Mac, Windows, and Linux." />
+  <meta name="color-scheme" content="dark light">
+  <meta property="og:title" content="goThoom" />
+  <meta property="og:description" content="A modern Clan Lord client with shader lighting, AI TTS, bard music synthesis, smooth motion, UI themes, and high-quality sound." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/og-image.png" />
+  <meta name="theme-color" content="#0f172a" />
+  <style>
+    :root {
+      --bg: #0a0c0e;           /* matte black */
+      --panel: #0e1113;        /* deep graphite */
+      --text: #e6f1f3;         /* pale text */
+      --muted: #9fb3bd;        /* soft slate */
+      --accent: #22d3ee;       /* cyan/teal */
+      --accent-2: #14b8a6;     /* teal */
+      --link: #7dd3fc;         /* light blue */
+      --ring: #1b2a30;         /* teal-graphite */
+    }
+    body {
+      margin: 0;
+      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; color: var(--accent); box-shadow: 0 2px 0 var(--accent-2); transition: color 0.2s, box-shadow 0.3s; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 20px 80px; }
+    header { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+    .brand { font-weight: 800; font-size: 20px; color: var(--accent); }
+    .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { display:inline-flex; align-items:center; gap:10px; border:1px solid var(--ring); background:#0b1322; color: var(--text); padding: 10px 14px; border-radius: 12px; text-decoration: none; transition: background 0.2s, transform 0.2s; }
+    .btn:hover { background:#162238; transform: translateY(-2px); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color:#0b0f16; font-weight:600; }
+    .hero { padding: 36px 0 16px; text-align:center; }
+    .hero h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.1; margin: 0 0 12px; color: var(--accent); }
+    .hero p { margin: 0 auto 22px; color: var(--muted); max-width: 700px; }
+    .hero img { margin-top: 24px; max-width: 100%; border-radius: 12px; border: 2px solid var(--accent); }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 20px; margin-top: 40px; }
+    .card { background: #0c1424dd; border: 1px solid #1f2b41; border-radius: 16px; padding: 20px; }
+    .card h2 { margin-top: 0; font-size: 22px; color: var(--accent); }
+    .list { padding-left: 18px; color: var(--muted); }
+    footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid #1e293b; color: #94a3b8; display:flex; justify-content:space-between; }
+    footer div:first-child { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">goThoom</div>
+      <nav class="nav">
+        <a class="btn" href="https://github.com/Distortions81/goThoom/releases" target="_blank" rel="noopener">Downloads</a>
+        <a class="btn" href="https://discord.gg/CJ42npkVNd" target="_blank" rel="noopener">Discord</a>
+        <a class="btn" href="https://github.com/Distortions81/goThoom" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn" href="https://www.patreon.com/c/goThoom" target="_blank" rel="noopener">Patreon</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>A Modern Client for Clan Lord</h1>
+      <p>
+        <strong>goThoom</strong> is a reimagined client for the classic 1997 2D-MMO <em>Clan Lord</em>. Bringing smooth graphics, enhanced audio, and modern accessibility to Mac, Windows, and Linux.
+      </p>
+      <a class="btn primary" href="https://github.com/Distortions81/goThoom/releases" target="_blank" rel="noopener">Get the Latest Release</a>
+      <img src="https://raw.githubusercontent.com/Distortions81/goThoom/refs/heads/main/dev-screenshots/Screenshot_20250901_074853.png" alt="goThoom gameplay screenshot">
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Graphics</h2>
+        <ul class="list">
+          <li>Shader-based lighting effects.</li>
+          <li>Interpolated motion for 60+ FPS (instead of 3–5 FPS).</li>
+          <li>Image denoising to soften old-school dithering.</li>
+          <li>Multiple built-in UI themes.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Audio</h2>
+        <ul class="list">
+          <li>High-quality audio resampling for clearer effects.</li>
+          <li>Sound font synthesizer for vastly improved music over 90s QuickTime MIDI.</li>
+          <li>Powerful scripting system using a modern language.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Accessibility & Features</h2>
+        <ul class="list">
+          <li>Built-in AI text-to-speech (TTS) for chat and gameplay.</li>
+          <li>Cross‑platform: Macintosh, Windows, and Linux.</li>
+          <li>Actively maintained and steadily maturing.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:40px;">
+      <h2>Open Source</h2>
+      <p>
+        <img src="https://raw.githubusercontent.com/Distortions81/goThoom/main/goThoom.png" alt="goThoom icon" style="width:64px;height:64px;float:right;margin:0 0 10px 10px;"/>
+        goThoom is fully open source under the <a href='https://github.com/Distortions81/goThoom/blob/main/LICENSE' target='_blank' rel='noopener'>MIT license</a>. That means it’s free to use, modify, and share — and will never be locked away as abandonware.
+      </p>
+    </section>
+
+    <section class="card" style="margin-top:40px;">
+      <h2>Community</h2>
+      <p>
+        Connect with other players on <a href="https://discord.gg/CJ42npkVNd" target="_blank" rel="noopener">Discord</a>, track development and contribute on <a href="https://github.com/Distortions81/goThoom" target="_blank" rel="noopener">GitHub</a>, or support ongoing progress via <a href="https://www.patreon.com/c/goThoom" target="_blank" rel="noopener">Patreon</a>.
+      </p>
+    </section>
+
+    <footer>
+      <div style="opacity:.8">
+        Clan Lord reborn with modern tech. Licensed MIT so it will never become abandonware.<br>
+        Clan Lord is created and owned by <a href='https://www.deltatao.com/clanlord/' target='_blank' rel='noopener'>Delta Tao Software</a>. We are not affiliated with them. This project only provides a modern client — all servers, artwork, and sound assets remain their intellectual property.
+      </div>
+    </footer>
+  </div>
+
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>
