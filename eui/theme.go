@@ -200,10 +200,16 @@ func SaveTheme(name string) error {
 // to all windows and widgets.
 func SetAccentColor(c Color) {
 	accentHue, _, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(c))
+	if namedColors != nil {
+		namedColors["accent"] = AccentColor()
+	}
 }
 
 // SetAccentSaturation updates the saturation component of the accent color and
 // reapplies it to the current theme.
 func SetAccentSaturation(s float64) {
 	accentSaturation = clamp(s, 0, 1)
+	if namedColors != nil {
+		namedColors["accent"] = AccentColor()
+	}
 }

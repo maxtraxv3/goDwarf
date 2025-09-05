@@ -21,6 +21,10 @@ func showNotification(msg string) {
 	if !gs.Notifications || gameWin == nil {
 		return
 	}
+	if gs.NotificationBeep {
+		// middle C harp beep
+		playBeep(46, 60)
+	}
 	btn, events := eui.NewButton()
 	btn.Text = msg
 	btn.FontSize = float32(gs.ChatFontSize)

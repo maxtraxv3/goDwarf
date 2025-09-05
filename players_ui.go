@@ -290,6 +290,7 @@ func updatePlayersWindow() {
 	playersList.Size.X = clientWAvail
 	playersList.Size.Y = clientHAvail
 	playersList.Scroll = prevScroll
+	searchTextWindow(playersWin, playersList, playersWin.SearchText)
 	playersWin.Refresh()
 }
 
