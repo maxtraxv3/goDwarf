@@ -143,8 +143,11 @@ func sendPlayerInput(connection net.Conn, mouseX, mouseY int16, mouseDown bool, 
 		flags = kPIMDownField
 	}
 
-	nextCommand()
 	cmd := pendingCommand
+	if cmd == "" {
+		nextCommand()
+		cmd = pendingCommand
+	}
 	cmdBytes := encodeMacRoman(cmd)
 	packet := make([]byte, 20+len(cmdBytes)+1)
 	binary.BigEndian.PutUint16(packet[0:2], kMsgPlayerInput)
