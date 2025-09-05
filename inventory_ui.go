@@ -149,6 +149,7 @@ func updateInventoryWindow() {
 	// Clear prior contents and rebuild rows as [icon][name (xN)].
 	inventoryList.Contents = nil
 	inventoryRowRefs = map[*eui.ItemData]invRef{}
+	var selectedRow *eui.ItemData
 
 	// Compute row height from actual font metrics (ascent+descent) at the
 	// exact point size used when rendering (+2px fudge for Ebiten).
@@ -308,8 +309,7 @@ func updateInventoryWindow() {
 			idxCopy = -1
 		}
 		if idCopy == selectedInvID && idxCopy == selectedInvIdx {
-			row.Filled = true
-			row.Color = accent
+			selectedRow = row
 		}
 		click := func() { handleInventoryClick(idCopy, idxCopy) }
 		icon.Action = click
@@ -343,6 +343,10 @@ func updateInventoryWindow() {
 		inventoryList.Size.Y = clientHAvail
 		inventoryList.Scroll = prevScroll
 		searchTextWindow(inventoryWin, inventoryList, inventoryWin.SearchText)
+		if selectedRow != nil {
+			selectedRow.Filled = true
+			selectedRow.Color = accent
+		}
 		inventoryWin.Refresh()
 	}
 }
