@@ -1,14 +1,14 @@
 {
   "Comment": "Colors use #RRGGBBAA or h,s,v",
   "Colors": {
-    "background": "0,0,1",
+    "background": "0,0,0.8",
     "panel": "0,0,0.9",
     "text": "0,0,0",
-    "outline": "210.0,0.15,0.8",
-    "button": "210.0,0.02,0.91",
-    "hover": "0.0,0.00,0.75",
-    "accent": "200.6,0.74,0.91",
-    "disabled": "0.0,0.00,0.00,0.00"
+    "outline": "210.0,0.15,0.7",
+    "button": "210.0,0.02,0.9",
+    "hover": "0.0,0.00,0.6",
+    "accent": "200.6,0.74,0.8",
+    "disabled": "0.0,0.00,0.00,0.10"
   },
   "RecommendedStyle": "Default",
   "Window": {
@@ -40,7 +40,7 @@
     "ClickColor": "disabled",
     "OutlineColor": "outline",
     "DisabledColor": "disabled",
-    "SelectedColor": "disabled"
+    "SelectedColor": "outline"
   },
   "Checkbox": {
     "TextColor": "text",
@@ -67,7 +67,7 @@
     "ClickColor": "accent",
     "OutlineColor": "outline",
     "DisabledColor": "disabled",
-    "SelectedColor": "disabled"
+    "SelectedColor": "outline"
   },
   "Slider": {
     "TextColor": "text",
