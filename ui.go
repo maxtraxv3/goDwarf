@@ -3347,6 +3347,16 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(ttsTestBtn)
 
+	ttsEditBtn, ttsEditEvents := eui.NewButton()
+	ttsEditBtn.Text = "Edit TTS corrections"
+	ttsEditBtn.Size = eui.Point{X: panelWidth, Y: 24}
+	ttsEditEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			open.Run(dataDirPath)
+		}
+	}
+	center.AddItem(ttsEditBtn)
+
 	label, _ = eui.NewText()
 	label.Text = "\nAdvanced:"
 	label.FontSize = 15

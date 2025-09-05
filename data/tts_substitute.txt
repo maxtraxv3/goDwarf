@@ -1,26 +1,30 @@
-//Clan Lord creature names
-Darshak, dar shack
-Orga, or gah
-Wendecka, wen deck uh
-Noth, nawth
-Undine, un deen
-Arachne, uh rack nee
-Lyfelidae, lie fell ih day
-Yorilla, yo rilla
-T'rool, trool
-Scarmis, scar miss
+# tts_substitute.txt
+# Each line is ORIGINAL=REPLACEMENT used to tweak TTS pronunciation.
+# Lines starting with # are ignored.
 
-//Common places and terms
-Lok'Groton, lowk grow ton
-Anura, ah new rah
-Meshra, mesh rah
+#Creatures
+Darshak=dar shack
+Orga=or gah
+Wendecka=wen deck uh
+Noth=nawth
+Undine=un deen
+Arachne=uh rack nee
+Lyfelidae=lie fell ih day
+Yorilla=yo rilla
+T'rool=trool
+Scarmis=scar miss
 
-//Directions
-N, north
-S, south
-E, east
-W, west
-NE, north east
-NW, north west
-SE, south east
-SW, south west
+#Common places and terms
+Lok'Groton=lowk grow ton
+Anura=ah new rah
+Meshra=mesh rah
+
+#Directions
+N=north
+S=south
+E=east
+W=west
+NE=north east
+NW=north west
+SE=south east
+SW=south west
