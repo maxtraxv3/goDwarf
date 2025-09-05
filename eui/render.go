@@ -338,34 +338,6 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			textWidth = 0
 		}
 
-		if win.searchOpen {
-			sb := win.searchBoxRect()
-			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: true, Color: win.Theme.Window.BGColor})
-			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: false, Border: uiScale, Color: win.Theme.Window.TitleColor})
-			textSize := win.GetTitleSize() / 2
-			face := textFace(textSize)
-			loo := text.LayoutOptions{LineSpacing: 0, PrimaryAlign: text.AlignStart, SecondaryAlign: text.AlignCenter}
-			tdop := ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-			tdop.GeoM.Translate(float64(sb.X0+textSize/2), float64(sb.Y0+(sb.Y1-sb.Y0)/2))
-			top := &text.DrawOptions{DrawImageOptions: tdop, LayoutOptions: loo}
-			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleColor)
-			text.Draw(screen, win.SearchText, face, top)
-			cr := win.searchCloseRect()
-			xpad := (cr.X1 - cr.X0) / 3
-			strokeLine(screen,
-				cr.X0+xpad,
-				cr.Y0+xpad,
-				cr.X1-xpad,
-				cr.Y1-xpad,
-				uiScale, win.Theme.Window.TitleColor, true)
-			strokeLine(screen,
-				cr.X0+xpad,
-				cr.Y1-xpad,
-				cr.X1-xpad,
-				cr.Y0+xpad,
-				uiScale, win.Theme.Window.TitleColor, true)
-		}
-
 		//Close, Maximize, Search, and Pin icons
 		var buttonsWidth float32 = 0
 		if win.Closable {
@@ -491,6 +463,34 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 					win.getPosition().X+float32(x), win.getPosition().Y+(win.GetTitleSize())-dpad,
 					xThick, xColor, false)
 			}
+		}
+
+		if win.searchOpen {
+			sb := win.searchBoxRect()
+			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: true, Color: win.Theme.Window.BGColor})
+			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: false, Border: uiScale, Color: win.Theme.Window.TitleColor})
+			textSize := win.GetTitleSize() / 2
+			face := textFace(textSize)
+			loo := text.LayoutOptions{LineSpacing: 0, PrimaryAlign: text.AlignStart, SecondaryAlign: text.AlignCenter}
+			tdop := ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+			tdop.GeoM.Translate(float64(sb.X0+textSize/2), float64(sb.Y0+(sb.Y1-sb.Y0)/2))
+			top := &text.DrawOptions{DrawImageOptions: tdop, LayoutOptions: loo}
+			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleColor)
+			text.Draw(screen, win.SearchText, face, top)
+			cr := win.searchCloseRect()
+			xpad := (cr.X1 - cr.X0) / 3
+			strokeLine(screen,
+				cr.X0+xpad,
+				cr.Y0+xpad,
+				cr.X1-xpad,
+				cr.Y1-xpad,
+				uiScale, win.Theme.Window.TitleColor, true)
+			strokeLine(screen,
+				cr.X0+xpad,
+				cr.Y1-xpad,
+				cr.X1-xpad,
+				cr.Y0+xpad,
+				uiScale, win.Theme.Window.TitleColor, true)
 		}
 	}
 }
