@@ -83,6 +83,8 @@ func makeInventoryWindow() {
 		return
 	}
 	inventoryWin, inventoryList, _ = makeTextWindow("Inventory", eui.HZoneLeft, eui.VZoneMiddleTop, true)
+	inventoryWin.Searchable = true
+	inventoryWin.OnSearch = func(s string) { searchTextWindow(inventoryWin, inventoryList, s) }
 	// Ensure layout updates immediately on resize to avoid gaps.
 	inventoryWin.OnResize = func() { updateInventoryWindow() }
 	updateInventoryWindow()
@@ -341,6 +343,7 @@ func updateInventoryWindow() {
 		inventoryList.Size.X = clientWAvail
 		inventoryList.Size.Y = clientHAvail
 		inventoryList.Scroll = prevScroll
+		searchTextWindow(inventoryWin, inventoryList, inventoryWin.SearchText)
 		inventoryWin.Refresh()
 	}
 }
