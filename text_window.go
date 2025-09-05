@@ -295,6 +295,7 @@ func searchTextWindow(win *eui.WindowData, list *eui.ItemData, query string) {
 	var marks []float32
 	accent := eui.AccentColor()
 	for i, it := range list.Contents {
+		it.Focused = false
 		if q != "" && strings.Contains(strings.ToLower(it.Text), q) {
 			it.Filled = true
 			it.Color = accent
