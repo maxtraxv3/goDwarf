@@ -145,6 +145,7 @@ func playChatTTS(ctx context.Context, text string) {
 	default:
 	}
 
+	text = substituteTTS(text)
 	wavData, err := synthesizeWithPiper(text)
 	if err != nil {
 		logError("chat tts synthesize: %v", err)

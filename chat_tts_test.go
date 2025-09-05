@@ -131,3 +131,27 @@ func TestChatTTSDisableDropsQueued(t *testing.T) {
 		t.Fatalf("pendingTTS = %d, want 0", n)
 	}
 }
+
+func TestSubstituteTTS(t *testing.T) {
+	dir := t.TempDir()
+	origDir := dataDirPath
+	dataDirPath = dir
+	defer func() { dataDirPath = origDir }()
+
+	// Ensure file is created from embedded default
+	loadTTSSubstitutions()
+	path := filepath.Join(dir, ttsSubstituteFile)
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("substitute file not created: %v", err)
+	}
+	// Write custom substitutions and reload
+	if err := os.WriteFile(path, []byte("foo=bar"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loadTTSSubstitutions()
+	got := substituteTTS("foo baz foo")
+	want := "bar baz bar"
+	if got != want {
+		t.Fatalf("substituteTTS = %q, want %q", got, want)
+	}
+}
