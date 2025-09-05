@@ -2,6 +2,8 @@ package main
 
 import (
 	"math"
+	"runtime"
+	"sync"
 )
 
 // ---------------- Tunables ----------------
@@ -89,7 +91,6 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 
 	// Q32.32 phase step
 	step := (uint64(srcRate) << 32) / uint64(dstRate)
-	var phase uint64
 
 	// Compute Q15 scale from dB once (padDB <= 0 expected).
 	scale := math.Pow(10, padDB/20) // e.g., -3 dB ≈ 0.7071
@@ -112,32 +113,43 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 		return src[i]
 	}
 
-	for i := 0; i < n; i++ {
-		base := int(phase >> 32)
-		fracIdx := int((phase >> (32 - 10)) & (phases - 1)) // use top 10 frac bits
-		w := lzW[fracIdx]
-
-		// Accumulate 6 taps in Q15
-		acc := int64(0)
-		j := 0
-		for k := -a + 1; k <= a; k++ { // -2..+3
-			s := int32(get(base + k))
-			acc += int64(w[j]) * int64(s)
-			j++
-		}
-
-		// Apply pad in Q15 BEFORE int16 quantization: Q15*Q15 = Q30.
-		y := int32((acc*scaleQ15 + (1 << 29)) >> 30)
-
-		// Saturate to int16 (should be rare with pad)
-		if y > 32767 {
-			y = 32767
-		} else if y < -32768 {
-			y = -32768
-		}
-		dst[i] = int16(y)
-		phase += step
+	workers := runtime.NumCPU()
+	if workers > n {
+		workers = n
 	}
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		start := w * n / workers
+		end := (w + 1) * n / workers
+		phase := step * uint64(start)
+		wg.Add(1)
+		go func(start, end int, phase uint64) {
+			defer wg.Done()
+			for i := start; i < end; i++ {
+				base := int(phase >> 32)
+				fracIdx := int((phase >> (32 - 10)) & (phases - 1))
+				wts := lzW[fracIdx]
+
+				acc := int64(0)
+				j := 0
+				for k := -a + 1; k <= a; k++ {
+					s := int32(get(base + k))
+					acc += int64(wts[j]) * int64(s)
+					j++
+				}
+
+				y := int32((acc*scaleQ15 + (1 << 29)) >> 30)
+				if y > 32767 {
+					y = 32767
+				} else if y < -32768 {
+					y = -32768
+				}
+				dst[i] = int16(y)
+				phase += step
+			}
+		}(start, end, phase)
+	}
+	wg.Wait()
 
 	return dst
 }
