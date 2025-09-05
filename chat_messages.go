@@ -38,7 +38,7 @@ func chatMessage(msg string) {
 	updateChatWindow()
 
 	if tagged && !isSelfChatMessage(msg) {
-		playSound([]uint16{sndThinkTo})
+		playMentionSound()
 	}
 
 	if gs.ChatTTS && !blockTTS && !isSelfChatMessage(msg) {
