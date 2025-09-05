@@ -77,7 +77,7 @@ func makeJoystickWindow() {
 	bindInput.Label = "Binding (action:button)"
 	bindInput.Size = eui.Point{X: 260, Y: 24}
 	bindEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventInputFinished {
+		if ev.Type == eui.EventInputChanged {
 			parts := strings.SplitN(ev.Text, ":", 2)
 			if len(parts) == 2 {
 				if b, err := strconv.Atoi(parts[1]); err == nil {
