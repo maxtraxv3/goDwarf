@@ -1,0 +1,21 @@
+Better player list refreshing
+fixed interpolations issues at login until changing snells
+adjusted persisting ground/bg sprites disappearing on edge of screen 
+scripts now live in the scripts directory next to the program and not in data/plugins
+add api to allow scripts to draw UI elements in the game window
+Improved and optimize image denoising
+Image denoising is now multi-threaded
+Added multi-threading to audio resampling
+Added IsEquipped for scripts
+Improved appearance and performance of name drawing 
+Improved app load time
+fixed light theme not having correct color for text/item selection
+In addition to UI color themes, also enabled selecting a specific style (shapes).
+@playerName or @profession turn the text blue and play a 'tink' sound similar to discord.
+added console/chat window search button
+fixed message about untested versions
+added idle warning beep
+Added search to players and inventory windows
+added notification beep option 
+Added volume slider for notification sounds.
+Downloads for tts and music are checked by default and have notes next to them explaining what they are for.
