@@ -138,6 +138,7 @@ func LoadStyle(name string) error {
 	currentStyleName = name
 	if currentTheme != nil {
 		applyStyleToTheme(currentTheme)
+		applyStyleToItems(currentTheme)
 		markAllDirty()
 	}
 	refreshStyleMod()
@@ -201,6 +202,95 @@ func applyStyleToTheme(th *Theme) {
 	th.Tab.Filled = currentStyle.Filled.Tab
 	th.Tab.Outlined = currentStyle.Outlined.Tab
 	th.Tab.ActiveOutline = currentStyle.ActiveOutline.Tab
+}
+
+// applyStyleToItems updates the style-related fields of all existing windows
+// and items that use the provided theme so changes take effect immediately.
+func applyStyleToItems(th *Theme) {
+	for _, win := range windows {
+		if win == nil || (win.Theme != nil && win.Theme != th) {
+			continue
+		}
+		win.Fillet = th.Window.Fillet
+		win.Border = th.Window.Border
+		win.BorderPad = th.Window.BorderPad
+		win.Outlined = th.Window.Outlined
+		updateItemStyleTree(win.Contents, th)
+	}
+}
+
+// updateItemStyleTree recursively applies theme style values to an item tree.
+func updateItemStyleTree(items []*itemData, th *Theme) {
+	for _, it := range items {
+		if it == nil || (it.Theme != nil && it.Theme != th) {
+			continue
+		}
+		switch it.ItemType {
+		case ITEM_BUTTON:
+			it.Fillet = th.Button.Fillet
+			it.Border = th.Button.Border
+			it.BorderPad = th.Button.BorderPad
+			it.Filled = th.Button.Filled
+			it.Outlined = th.Button.Outlined
+		case ITEM_TEXT:
+			it.Fillet = th.Text.Fillet
+			it.Border = th.Text.Border
+			it.BorderPad = th.Text.BorderPad
+			it.Filled = th.Text.Filled
+			it.Outlined = th.Text.Outlined
+		case ITEM_CHECKBOX:
+			it.Fillet = th.Checkbox.Fillet
+			it.Border = th.Checkbox.Border
+			it.BorderPad = th.Checkbox.BorderPad
+			it.Filled = th.Checkbox.Filled
+			it.Outlined = th.Checkbox.Outlined
+		case ITEM_RADIO:
+			it.Fillet = th.Radio.Fillet
+			it.Border = th.Radio.Border
+			it.BorderPad = th.Radio.BorderPad
+			it.Filled = th.Radio.Filled
+			it.Outlined = th.Radio.Outlined
+		case ITEM_INPUT:
+			it.Fillet = th.Input.Fillet
+			it.Border = th.Input.Border
+			it.BorderPad = th.Input.BorderPad
+			it.Filled = th.Input.Filled
+			it.Outlined = th.Input.Outlined
+		case ITEM_SLIDER:
+			it.Fillet = th.Slider.Fillet
+			it.Border = th.Slider.Border
+			it.BorderPad = th.Slider.BorderPad
+			it.Filled = th.Slider.Filled
+			it.Outlined = th.Slider.Outlined
+		case ITEM_DROPDOWN:
+			it.Fillet = th.Dropdown.Fillet
+			it.Border = th.Dropdown.Border
+			it.BorderPad = th.Dropdown.BorderPad
+			it.Filled = th.Dropdown.Filled
+			it.Outlined = th.Dropdown.Outlined
+		case ITEM_PROGRESS:
+			it.Fillet = th.Progress.Fillet
+			it.Border = th.Progress.Border
+			it.BorderPad = th.Progress.BorderPad
+			it.Filled = th.Progress.Filled
+			it.Outlined = th.Progress.Outlined
+		case ITEM_FLOW:
+			if len(it.Tabs) > 0 {
+				it.Fillet = th.Tab.Fillet
+				it.Border = th.Tab.Border
+				it.BorderPad = th.Tab.BorderPad
+				it.Filled = th.Tab.Filled
+				it.Outlined = th.Tab.Outlined
+				it.ActiveOutline = th.Tab.ActiveOutline
+			}
+		}
+		if len(it.Contents) > 0 {
+			updateItemStyleTree(it.Contents, th)
+		}
+		if len(it.Tabs) > 0 {
+			updateItemStyleTree(it.Tabs, th)
+		}
+	}
 }
 
 // listStyles returns the available style theme names from the themes directory
