@@ -112,6 +112,8 @@ var gsdef settings = settings{
 	TimestampFormat:       "3:04PM",
 	LastUpdateCheck:       time.Time{},
 	NotifiedVersion:       0,
+	JoystickBindings:      map[string]ebiten.GamepadButton{},
+	JoystickEnabled:       false,
 
 	GameWindow:      WindowState{Open: true},
 	InventoryWindow: WindowState{Open: true},
@@ -214,6 +216,9 @@ type settings struct {
 	WindowTiling          bool
 	WindowSnapping        bool
 	ShowPinToLocations    bool
+
+	JoystickEnabled  bool
+	JoystickBindings map[string]ebiten.GamepadButton
 
 	WindowWidth  int
 	WindowHeight int
@@ -328,6 +333,10 @@ func loadSettings() bool {
 
 	if gs.ChatTTSBlocklist == nil {
 		gs.ChatTTSBlocklist = append([]string(nil), gsdef.ChatTTSBlocklist...)
+	}
+
+	if gs.JoystickBindings == nil {
+		gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
 	}
 
 	if gs.DenoiseAmount < 0 || gs.DenoiseAmount > 1 {
