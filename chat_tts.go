@@ -37,6 +37,9 @@ var (
 	piperPath   string
 	piperModel  string
 	piperConfig string
+
+	lastTTSSpeaker string
+	lastTTSTime    time.Time
 )
 
 func init() {
@@ -224,13 +227,29 @@ func speakChatMessage(msg string) {
 		}
 		return
 	}
+
+	speaker := chatSpeaker(msg)
+	ttsMsg := msg
+	if speaker != "" {
+		now := time.Now()
+		if speaker == lastTTSSpeaker && now.Sub(lastTTSTime) <= 10*time.Second {
+			content := msg
+			if i := strings.Index(msg, ","); i >= 0 && i+1 < len(msg) {
+				content = strings.TrimSpace(msg[i+1:])
+			}
+			ttsMsg = "and then said " + content
+		}
+		lastTTSSpeaker = speaker
+		lastTTSTime = now
+	}
+
 	if atomic.LoadInt32(&pendingTTS) >= 10 {
 		logError("chat tts: too many pending messages, dropping message")
 		return
 	}
 	atomic.AddInt32(&pendingTTS, 1)
 	select {
-	case chatTTSQueue <- msg:
+	case chatTTSQueue <- ttsMsg:
 	default:
 		atomic.AddInt32(&pendingTTS, -1)
 		logError("chat tts: queue full, dropping message")
