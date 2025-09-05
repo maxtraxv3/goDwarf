@@ -1107,7 +1107,10 @@ func (item *itemData) drawItemInternal(parent *itemData, offset point, base poin
 		//Text
 	} else if item.ItemType == ITEM_INPUT {
 
-		itemColor := style.Color
+		itemColor := item.Color
+		if itemColor == (Color{}) {
+			itemColor = style.Color
+		}
 		if item.Focused {
 			itemColor = style.ClickColor
 		} else if item.Hovered {
@@ -1393,7 +1396,10 @@ func (item *itemData) drawItemInternal(parent *itemData, offset point, base poin
 		}
 	} else if item.ItemType == ITEM_TEXT {
 
-		itemColor := style.Color
+		itemColor := item.Color
+		if itemColor == (Color{}) {
+			itemColor = style.Color
+		}
 		if item.Focused {
 			itemColor = style.ClickColor
 		} else if item.Hovered {
