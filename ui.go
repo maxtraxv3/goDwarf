@@ -4716,6 +4716,8 @@ func makePlayersWindow() {
 	// Use the common text window scaffold to get an inner scrollable list
 	// and consistent padding/behavior with Inventory/Chat windows.
 	playersWin, playersList, _ = makeTextWindow("Players", eui.HZoneRight, eui.VZoneTop, false)
+	playersWin.Searchable = true
+	playersWin.OnSearch = func(s string) { searchTextWindow(playersWin, playersList, s) }
 	// Restore saved geometry if present, otherwise keep defaults from helper.
 	if gs.PlayersWindow.Size.X > 0 && gs.PlayersWindow.Size.Y > 0 {
 		playersWin.Size = eui.Point{X: float32(gs.PlayersWindow.Size.X), Y: float32(gs.PlayersWindow.Size.Y)}
