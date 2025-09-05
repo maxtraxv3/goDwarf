@@ -1,0 +1,7 @@
+{
+  "TextPadding": 8,
+  "Fillet": { "Button": 6, "Input": 6, "Tab": 6 },
+  "Border": { "Button": 1, "Input": 1, "Tab": 1 },
+  "Filled": { "Button": true, "Input": true, "Tab": true },
+  "Outlined": { "Button": true, "Input": true, "Tab": true }
+}

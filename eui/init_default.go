@@ -11,4 +11,5 @@ func init() {
 	if err := LoadStyle(currentStyleName); err != nil {
 		log.Printf("LoadStyle error: %v", err)
 	}
+	ensureThemeDocs()
 }

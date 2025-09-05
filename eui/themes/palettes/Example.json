@@ -1,0 +1,23 @@
+{
+  "Comment": "Example theme for customization",
+  "Colors": {
+    "background": "#202020",
+    "panel": "#303030",
+    "accent": "#ffd700"
+  },
+  "Window": {
+    "Padding": 8,
+    "BGColor": "background",
+    "TitleBGColor": "panel",
+    "ActiveColor": "accent"
+  },
+  "Button": { "TextColor": "accent", "Color": "panel", "HoverColor": "accent" },
+  "Text": { "TextColor": "accent", "Color": "panel" },
+  "Checkbox": { "TextColor": "accent", "Color": "panel" },
+  "Radio": { "TextColor": "accent", "Color": "panel" },
+  "Input": { "TextColor": "accent", "Color": "panel" },
+  "Slider": { "TextColor": "accent", "Color": "panel", "SliderFilled": "accent" },
+  "Dropdown": { "TextColor": "accent", "Color": "panel", "SelectedColor": "accent" },
+  "Tab": { "TextColor": "accent", "Color": "panel", "SelectedColor": "accent" },
+  "RecommendedStyle": "Example"
+}

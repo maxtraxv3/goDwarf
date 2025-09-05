@@ -60,7 +60,12 @@ Approximately 45,000 lines of Go code.
 - On first run, the client **auto-fetches missing game assets** (images, sounds) into `data/`. No manual wrangling.
 
 ### Optional extras
-- Drop a `background.png` and/or `splash.png` into `data/` for a custom look.
+- **Background and splash images** – place `background.png` and/or `splash.png` in `data/` to override the default visuals.
+- **Sound font** – drop a `soundfont.sf2` file into `data/` to change the music instrument set. The Download Files window can fetch a suitable one.
+- **TTS voices** – voice archives (`.tar.gz`) or `.onnx` models with matching `.onnx.json` configs belong in `data/piper/voices`. Use `build-scripts/download_piper.sh` or the Download Files window to grab voices from online collections.
+
+### Custom themes and styles
+Themes live in `themes/palettes` and styles in `themes/styles`. On first run the client writes an `Example.json` palette and style plus a README explaining the format. Copy these files, adjust the colors or geometry, and select your new theme in Settings. With `eui.AutoReload = true` changes on disk are picked up automatically.
 
 ### Text-to-speech voices
 Piper voices are stored in `data/piper/voices`. The client and `build-scripts/download_piper.sh` support voice archives in `.tar.gz` format and automatically extract and remove the archives. If a voice archive isn't available, the program falls back to downloading raw `.onnx` models with matching `.onnx.json` configs.
