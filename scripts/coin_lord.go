@@ -22,11 +22,29 @@ var (
 )
 
 func Init() {
+	// Load saved totals.
+	if s := gt.Load("total"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil {
+			clTotal = n
+		}
+	}
+	if s := gt.Load("start"); s != "" {
+		if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+			clStart = time.Unix(n, 0)
+		}
+	}
+	if clStart.IsZero() {
+		clStart = time.Now()
+	}
+
 	// Toggle counting with /cw.
 	gt.RegisterCommand("cw", cwCmd)
 
 	// Reset the totals with /cwnew.
 	gt.RegisterCommand("cwnew", cwNewCmd)
+
+	// Clear the total with /cwclear.
+	gt.RegisterCommand("cwclear", cwClearCmd)
 
 	// Show current totals with /cwdata or Shift+C.
 	gt.RegisterCommand("cwdata", cwDataCmd)
@@ -42,8 +60,12 @@ func cwCmd(args string) {
 	if clRunning {
 		clStart = time.Now()
 		clTotal = 0
+		gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
+		gt.Save("total", "0")
 		gt.Console("Coin Lord started")
 	} else {
+		gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
+		gt.Save("total", strconv.Itoa(clTotal))
 		gt.Console("Coin Lord stopped")
 	}
 }
@@ -51,7 +73,15 @@ func cwCmd(args string) {
 func cwNewCmd(args string) {
 	clStart = time.Now()
 	clTotal = 0
+	gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
+	gt.Save("total", "0")
 	gt.Console("Coin data reset")
+}
+
+func cwClearCmd(args string) {
+	clTotal = 0
+	gt.Save("total", "0")
+	gt.Console("Coin total cleared")
 }
 
 func cwDataCmd(args string) {
@@ -82,4 +112,5 @@ func clHandle(msg string) {
 		return
 	}
 	clTotal += n
+	gt.Save("total", strconv.Itoa(clTotal))
 }
