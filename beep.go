@@ -39,7 +39,7 @@ func playBeep(program, key int) {
 	}
 
 	p := audioContext.NewPlayerFromBytes(pcm)
-	vol := gs.MasterVolume * gs.GameVolume
+	vol := gs.MasterVolume * gs.NotificationVolume
 	if gs.Mute {
 		vol = 0
 	}
@@ -60,6 +60,11 @@ func playBeep(program, key int) {
 	}
 	soundPlayers[p] = struct{}{}
 	soundMu.Unlock()
+
+	notifPlayersMu.Lock()
+	notifPlayers[p] = struct{}{}
+	notifPlayersMu.Unlock()
+
 	p.Play()
 }
 
@@ -84,7 +89,7 @@ func playHarpNotes(keys ...int) {
 	}
 	pcm := mixPCM(left, right)
 	p := audioContext.NewPlayerFromBytes(pcm)
-	vol := gs.MasterVolume * gs.GameVolume
+	vol := gs.MasterVolume * gs.NotificationVolume
 	if gs.Mute {
 		vol = 0
 	}
@@ -105,5 +110,10 @@ func playHarpNotes(keys ...int) {
 	}
 	soundPlayers[p] = struct{}{}
 	soundMu.Unlock()
+
+	notifPlayersMu.Lock()
+	notifPlayers[p] = struct{}{}
+	notifPlayersMu.Unlock()
+
 	p.Play()
 }

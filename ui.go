@@ -109,10 +109,12 @@ var (
 	gameMixSlider     *eui.ItemData
 	musicMixSlider    *eui.ItemData
 	ttsMixSlider      *eui.ItemData
+	notifMixSlider    *eui.ItemData
 	mixMuteBtn        *eui.ItemData
 	gameMixCB         *eui.ItemData
 	musicMixCB        *eui.ItemData
 	ttsMixCB          *eui.ItemData
+	notifMixCB        *eui.ItemData
 )
 
 var ttsTestPhrase = "The quick brown fox jumps over the lazy dog"
@@ -976,6 +978,25 @@ func makeMixerWindow() {
 				} else {
 					disableTTS()
 				}
+			}
+		})
+
+	addSpacer()
+
+	notifMixSlider, notifMixCB = makeMix(gs.NotificationVolume, gs.NotificationBeep, "Notif",
+		func(ev eui.UIEvent) {
+			if ev.Type == eui.EventSliderChanged {
+				gs.NotificationVolume = float64(ev.Value)
+				settingsDirty = true
+				updateSoundVolume()
+			}
+		},
+		func(ev eui.UIEvent) {
+			if ev.Type == eui.EventCheckboxChanged {
+				gs.NotificationBeep = ev.Checked
+				notifMixSlider.Disabled = !ev.Checked
+				settingsDirty = true
+				updateSoundVolume()
 			}
 		})
 
@@ -4191,6 +4212,9 @@ func makeNotificationsWindow() {
 			if ev.Type == eui.EventCheckboxChanged {
 				*val = ev.Checked
 				settingsDirty = true
+				if val == &gs.NotificationBeep {
+					updateSoundVolume()
+				}
 			}
 		}
 		flow.AddItem(cb)
