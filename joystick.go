@@ -40,7 +40,11 @@ func makeJoystickWindow() {
 	root.AddItem(controllerDD)
 
 	axesText, _ := eui.NewText()
+	axesText.FontSize = 12
+	axesText.Size = eui.Point{X: 260, Y: 24}
 	buttonsText, _ := eui.NewText()
+	buttonsText.FontSize = 12
+	buttonsText.Size = eui.Point{X: 260, Y: 24}
 
 	updateInfo := func(idx int) {
 		if idx < 0 || idx >= len(ids) {
