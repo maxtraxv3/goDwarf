@@ -37,6 +37,7 @@ var uiMouseDown bool
 // worldRT is the offscreen render target for the game world. It stays at an
 // integer multiple of the native field size and is composited into the window.
 var worldRT *ebiten.Image
+
 // Track the active sub-rectangle of worldRT used this frame (for resize)
 var worldRTUsedW, worldRTUsedH int
 
@@ -77,17 +78,17 @@ func keyForRune(r rune) ebiten.Key {
 	return ebiten.Key(-1)
 }
 func ensureWorldRT(w, h int) {
-    if w < 1 {
-        w = 1
-    }
-    if h < 1 {
-        h = 1
-    }
-    // Grow-only allocation to avoid churn during interactive resize.
-    // We will draw using a subimage matching the requested w,h.
-    if worldRT == nil || worldRT.Bounds().Dx() < w || worldRT.Bounds().Dy() < h {
-        worldRT = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
-    }
+	if w < 1 {
+		w = 1
+	}
+	if h < 1 {
+		h = 1
+	}
+	// Grow-only allocation to avoid churn during interactive resize.
+	// We will draw using a subimage matching the requested w,h.
+	if worldRT == nil || worldRT.Bounds().Dx() < w || worldRT.Bounds().Dy() < h {
+		worldRT = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+	}
 }
 
 // updateGameImageSize ensures the game image item exists and matches the
@@ -124,16 +125,16 @@ func updateGameImageSize() {
 		b := gameImage.Bounds()
 		iw, ih = b.Dx(), b.Dy()
 	}
-    if iw < w || ih < h {
-        _, gameImage = eui.NewImageFastItem(w, h)
-        gameImageItem.Image = gameImage
-        if gameWin != nil {
-            gameWin.Dirty = true
-        }
-    }
-    // Always update the item size/position even if we reuse a larger backing image.
-    gameImageItem.Size = eui.Point{X: float32(w) / s, Y: float32(h) / s}
-    gameImageItem.Position = eui.Point{X: 2 / s, Y: 2 / s}
+	if iw < w || ih < h {
+		_, gameImage = eui.NewImageFastItem(w, h)
+		gameImageItem.Image = gameImage
+		if gameWin != nil {
+			gameWin.Dirty = true
+		}
+	}
+	// Always update the item size/position even if we reuse a larger backing image.
+	gameImageItem.Size = eui.Point{X: float32(w) / s, Y: float32(h) / s}
+	gameImageItem.Position = eui.Point{X: 2 / s, Y: 2 / s}
 }
 
 // scaleForFiltering returns adjusted scale values for width and height to reduce
@@ -1182,11 +1183,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Prepare variable-sized offscreen target (supersampled)
 	offW := worldW * offIntScale
 	offH := worldH * offIntScale
-    ensureWorldRT(offW, offH)
-    // Use only the active portion of the (possibly larger) render target
-    worldRTUsedW, worldRTUsedH = offW, offH
-    worldView := worldRT.SubImage(image.Rect(0, 0, offW, offH)).(*ebiten.Image)
-    worldView.Fill(color.Black)
+	ensureWorldRT(offW, offH)
+	// Use only the active portion of the (possibly larger) render target
+	worldRTUsedW, worldRTUsedH = offW, offH
+	worldView := worldRT.SubImage(image.Rect(0, 0, offW, offH)).(*ebiten.Image)
+	worldView.Fill(color.Black)
 
 	// Render splash or live frame into worldRT using the offscreen scale
 	var snap drawSnapshot
@@ -1195,7 +1196,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if clmov == "" && tcpConn == nil && pcapPath == "" && !fake {
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
-        drawSplash(worldView, 0, 0)
+		drawSplash(worldView, 0, 0)
 		gs.GameScale = prev
 	} else {
 		snap = captureDrawSnapshot()
@@ -1203,44 +1204,44 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		alpha, mobileFade, pictFade = computeInterpolation(snap.prevTime, snap.curTime, gs.MobileBlendAmount, gs.BlendAmount)
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
-        drawScene(worldView, 0, 0, snap, alpha, mobileFade, pictFade)
+		drawScene(worldView, 0, 0, snap, alpha, mobileFade, pictFade)
 		if gs.shaderLighting {
 			// Use shader-based night darkening with inverse-square falloff.
 			addNightDarkSources(offW, offH, float32(alpha))
 		} else {
 			// Classic overlay path when shader is off.
-            //drawNightAmbient(worldView, 0, 0)
-            drawNightOverlay(worldView, 0, 0)
+			//drawNightAmbient(worldView, 0, 0)
+			drawNightOverlay(worldView, 0, 0)
 		}
 		if gs.shaderLighting {
-            // Apply lighting on the active subimage only
-            applyLightingShader(worldView, frameLights, frameDarks, float32(alpha))
+			// Apply lighting on the active subimage only
+			applyLightingShader(worldView, frameLights, frameDarks, float32(alpha))
 		}
-        drawStatusBars(worldView, 0, 0, snap, alpha)
+		drawStatusBars(worldView, 0, 0, snap, alpha)
 		gs.GameScale = prev
 		haveSnap = true
 	}
 
-    // Composite worldRT into the gameImage buffer: scale/center
-    scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
-    // Prefer nearest-neighbor when the composite scale is an exact integer to reduce cost
-    // and keep pixels crisp; otherwise apply a half-texel nudge to minimize seams.
-    sx, sy := scaleForFiltering(scaleDown, offW, offH)
-    // If scaleDown is an exact integer, switch to nearest filtering
-    _, isExactInt := exactScale(scaleDown, 1, 1e-6)
-    drawW := float64(offW) * sx
-    drawH := float64(offH) * sy
-    tx := (float64(bufW) - drawW) / 2
-    ty := (float64(bufH) - drawH) / 2
-    op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
-    if isExactInt {
-        op.Filter = ebiten.FilterNearest
-    }
-    // worldView was cleared and fully redrawn; a copy avoids extra blending cost.
-    op.Blend = ebiten.BlendCopy
-    op.GeoM.Scale(sx, sy)
-    op.GeoM.Translate(tx, ty)
-    gameImage.DrawImage(worldView, op)
+	// Composite worldRT into the gameImage buffer: scale/center
+	scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
+	// Prefer nearest-neighbor when the composite scale is an exact integer to reduce cost
+	// and keep pixels crisp; otherwise apply a half-texel nudge to minimize seams.
+	sx, sy := scaleForFiltering(scaleDown, offW, offH)
+	// If scaleDown is an exact integer, switch to nearest filtering
+	_, isExactInt := exactScale(scaleDown, 1, 1e-6)
+	drawW := float64(offW) * sx
+	drawH := float64(offH) * sy
+	tx := (float64(bufW) - drawW) / 2
+	ty := (float64(bufH) - drawH) / 2
+	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+	if isExactInt {
+		op.Filter = ebiten.FilterNearest
+	}
+	// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
+	op.Blend = ebiten.BlendCopy
+	op.GeoM.Scale(sx, sy)
+	op.GeoM.Translate(tx, ty)
+	gameImage.DrawImage(worldView, op)
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
@@ -1942,45 +1943,45 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 				}
 			}
 			playersMu.RUnlock()
-            if m.nameTag != nil && m.nameTagKey.FontGen == fontGen && m.nameTagKey.Opacity == nameAlpha && m.nameTagKey.Text == d.Name && m.nameTagKey.Colors == m.Colors && m.nameTagKey.Style == style {
-                top := y + int(offset)
-                left := x - int(float64(m.nameTagW)/2)
-                op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-                op.GeoM.Translate(float64(left), float64(top))
-                screen.DrawImage(m.nameTag, op)
-            } else {
-                // Rebuild the cached name tag image on mismatch to avoid per-frame vector draws.
-                // Respect label color frames if enabled.
-                _, _, frameClr := mobileNameColors(m.Colors)
-                if gs.NameTagLabelColors {
-                    playersMu.RLock()
-                    if p, ok := players[d.Name]; ok && p.FriendLabel > 0 && p.FriendLabel <= len(labelColors) {
-                        lc := labelColors[p.FriendLabel-1]
-                        frameClr = color.RGBA{lc.R, lc.G, lc.B, 0xff}
-                    }
-                    playersMu.RUnlock()
-                }
-                frameClr.A = nameAlpha
-                img, iw, ih := buildNameTagImage(d.Name, m.Colors, nameAlpha, style, frameClr)
-                if img != nil {
-                    // Update shared cache so next frames reuse this image.
-                    stateMu.Lock()
-                    if sm, ok := state.mobiles[m.Index]; ok {
-                        sm.nameTag = img
-                        sm.nameTagW = iw
-                        sm.nameTagH = ih
-                        sm.nameTagKey = nameTagKey{Text: d.Name, Colors: m.Colors, Opacity: nameAlpha, FontGen: fontGen, Style: style}
-                        state.mobiles[m.Index] = sm
-                    }
-                    stateMu.Unlock()
+			if m.nameTag != nil && m.nameTagKey.FontGen == fontGen && m.nameTagKey.Opacity == nameAlpha && m.nameTagKey.Text == d.Name && m.nameTagKey.Colors == m.Colors && m.nameTagKey.Style == style {
+				top := y + int(offset)
+				left := x - int(float64(m.nameTagW)/2)
+				op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+				op.GeoM.Translate(float64(left), float64(top))
+				screen.DrawImage(m.nameTag, op)
+			} else {
+				// Rebuild the cached name tag image on mismatch to avoid per-frame vector draws.
+				// Respect label color frames if enabled.
+				_, _, frameClr := mobileNameColors(m.Colors)
+				if gs.NameTagLabelColors {
+					playersMu.RLock()
+					if p, ok := players[d.Name]; ok && p.FriendLabel > 0 && p.FriendLabel <= len(labelColors) {
+						lc := labelColors[p.FriendLabel-1]
+						frameClr = color.RGBA{lc.R, lc.G, lc.B, 0xff}
+					}
+					playersMu.RUnlock()
+				}
+				frameClr.A = nameAlpha
+				img, iw, ih := buildNameTagImage(d.Name, m.Colors, nameAlpha, style, frameClr)
+				if img != nil {
+					// Update shared cache so next frames reuse this image.
+					stateMu.Lock()
+					if sm, ok := state.mobiles[m.Index]; ok {
+						sm.nameTag = img
+						sm.nameTagW = iw
+						sm.nameTagH = ih
+						sm.nameTagKey = nameTagKey{Text: d.Name, Colors: m.Colors, Opacity: nameAlpha, FontGen: fontGen, Style: style}
+						state.mobiles[m.Index] = sm
+					}
+					stateMu.Unlock()
 
-                    top := y + int(offset)
-                    left := x - int(float64(iw)/2)
-                    op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-                    op.GeoM.Translate(float64(left), float64(top))
-                    screen.DrawImage(img, op)
-                }
-            }
+					top := y + int(offset)
+					left := x - int(float64(iw)/2)
+					op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+					op.GeoM.Translate(float64(left), float64(top))
+					screen.DrawImage(img, op)
+				}
+			}
 		} else {
 			back := int((m.Colors >> 4) & 0x0f)
 			if back != kColorCodeBackWhite && back != kColorCodeBackBlue && !(back == kColorCodeBackBlack && d.Type == kDescMonster) {
@@ -2396,6 +2397,8 @@ func initGame() {
 	updateCharacterButtons()
 
 	close(gameStarted)
+	go loadSpellcheck()
+	go loadPlugins()
 }
 
 func makeGameWindow() {

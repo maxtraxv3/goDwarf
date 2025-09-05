@@ -168,7 +168,6 @@ func initUI() {
 	}
 
 	loadHotkeys()
-	loadPlugins()
 
 	eui.SetUIScale(float32(gs.UIScale))
 
