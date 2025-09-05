@@ -285,3 +285,26 @@ func showSpellSuggestions(t *eui.ItemData) {
 		}
 	}
 }
+
+// searchTextWindow highlights rows in the list containing the query string and
+// adds markers to the scrollbar for quick navigation. It clears highlights when
+// the query is empty.
+func searchTextWindow(win *eui.WindowData, list *eui.ItemData, query string) {
+	q := strings.ToLower(query)
+	total := len(list.Contents)
+	var marks []float32
+	for i, it := range list.Contents {
+		if q != "" && strings.Contains(strings.ToLower(it.Text), q) {
+			it.Filled = true
+			it.Color = eui.NewColor(255, 255, 0, 255)
+			marks = append(marks, float32(i)/float32(total))
+		} else {
+			it.Filled = false
+			it.Color = eui.Color{}
+		}
+	}
+	list.ScrollMarks = marks
+	if win != nil {
+		win.Refresh()
+	}
+}

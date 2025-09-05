@@ -822,8 +822,17 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 			if maxScroll > 0 {
 				pos = (item.Scroll.Y / maxScroll) * (size.Y - barH)
 			}
-			col := NewColor(96, 96, 96, 192)
 			sbW := currentStyle.BorderPad.Slider * 2
+			if len(item.ScrollMarks) > 0 {
+				for _, m := range item.ScrollMarks {
+					if m < 0 || m > 1 {
+						continue
+					}
+					y := drawRect.Y0 + m*size.Y
+					drawFilledRect(subImg, drawRect.X1-sbW, y, sbW, uiScale, NewColor(255, 255, 0, 255).ToRGBA(), false)
+				}
+			}
+			col := NewColor(96, 96, 96, 192)
 			drawFilledRect(subImg, drawRect.X1-sbW, drawRect.Y0+pos, sbW, barH, col.ToRGBA(), false)
 		} else if item.FlowType == FLOW_HORIZONTAL && req.X > size.X {
 			barW := size.X * size.X / req.X
@@ -1548,9 +1557,9 @@ func drawParallelogram(dst *ebiten.Image, x, y, w, h, slant float32, col color.C
 	for i := range vs {
 		vs[i].ColorR, vs[i].ColorG, vs[i].ColorB, vs[i].ColorA = colorToVec4(col)
 	}
-    // Use the cached 1x1 white sub-image to avoid allocating
-    // and to keep this path on unmanaged images when configured.
-    dst.DrawTriangles(vs, is, whiteSubImage, &ebiten.DrawTrianglesOptions{})
+	// Use the cached 1x1 white sub-image to avoid allocating
+	// and to keep this path on unmanaged images when configured.
+	dst.DrawTriangles(vs, is, whiteSubImage, &ebiten.DrawTrianglesOptions{})
 }
 
 func colorToVec4(c color.Color) (r, g, b, a float32) {

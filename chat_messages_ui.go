@@ -22,6 +22,7 @@ func updateChatWindow() {
 
 	msgs := getChatMessages()
 	updateTextWindow(chatWin, chatList, nil, msgs, gs.ChatFontSize, "", nil)
+	searchTextWindow(chatWin, chatList, chatWin.SearchText)
 	if chatList != nil {
 		// Auto-scroll list to bottom on new messages
 		if scrollit {
@@ -39,6 +40,8 @@ func makeChatWindow() error {
 		return nil
 	}
 	chatWin, chatList, _ = newTextWindow("Chat", eui.HZoneRight, eui.VZoneBottom, false, updateChatWindow)
+	chatWin.Searchable = true
+	chatWin.OnSearch = func(s string) { searchTextWindow(chatWin, chatList, s) }
 	updateChatWindow()
 	chatWin.Refresh()
 	return nil
