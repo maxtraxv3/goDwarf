@@ -118,6 +118,7 @@ func LoadTheme(name string) error {
 	currentThemeName = name
 	applyStyleToTheme(currentTheme)
 	updateThemeReferences(oldTheme, currentTheme)
+	applyStyleToItems(currentTheme)
 	markAllDirty()
 	if ac, ok := namedColors["accent"]; ok {
 		accentHue, accentSaturation, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(ac))
