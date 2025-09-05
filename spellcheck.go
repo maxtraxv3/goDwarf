@@ -38,7 +38,7 @@ var commonWords = []string{
 	"feral", "tenebrion", "melabrion", "qual", "kizmia",
 }
 
-func init() {
+func loadSpellcheck() {
 	var err error
 	sc, err = spellchecker.New("abcdefghijklmnopqrstuvwxyz'", spellchecker.WithMaxErrors(1))
 	if err != nil {

@@ -2397,6 +2397,8 @@ func initGame() {
 	updateCharacterButtons()
 
 	close(gameStarted)
+	go loadSpellcheck()
+	go loadPlugins()
 }
 
 func makeGameWindow() {
