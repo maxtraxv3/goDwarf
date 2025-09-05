@@ -1,12 +1,13 @@
 package main
 
 import (
-	_ "embed"
-	"gothoom/climg"
-	"math"
-	"os"
+    _ "embed"
+    "gothoom/climg"
+    "image"
+    "math"
+    "os"
 
-	"github.com/hajimehoshi/ebiten/v2"
+    "github.com/hajimehoshi/ebiten/v2"
 )
 
 const maxLights = 128
@@ -15,10 +16,15 @@ const maxLights = 128
 var lightShaderSrc []byte
 
 var (
-	lightingShader *ebiten.Shader
-	lightingTmp    *ebiten.Image
-	frameLights    []lightSource
-	frameDarks     []darkSource
+    lightingShader *ebiten.Shader
+    lightingTmp    *ebiten.Image
+    frameLights    []lightSource
+    frameDarks     []darkSource
+    // Reused shader data to avoid per-frame allocations
+    lposX, lposY, lradius, lr, lg, lb, lint [maxLights]float32
+    dposX, dposY, dradius, da, dint        [maxLights]float32
+    lightingUniforms                       map[string]any
+    lightingOp                             ebiten.DrawRectShaderOptions
 )
 
 // Global multipliers to make lights/darks reach farther on screen.
@@ -43,9 +49,31 @@ const (
 )
 
 func init() {
-	if err := ReloadLightingShader(); err != nil {
-		panic(err)
-	}
+    if err := ReloadLightingShader(); err != nil {
+        panic(err)
+    }
+    // Initialize reusable uniforms and options
+    lightingUniforms = map[string]any{
+        "LightCount":      0,
+        "DarkCount":       0,
+        "LightPosX":       lposX[:],
+        "LightPosY":       lposY[:],
+        "LightRadius":     lradius[:],
+        "LightR":          lr[:],
+        "LightG":          lg[:],
+        "LightB":          lb[:],
+        "LightIntensity":  lint[:],
+        "DarkPosX":        dposX[:],
+        "DarkPosY":        dposY[:],
+        "DarkRadius":      dradius[:],
+        "DarkAlpha":       da[:],
+        "DarkIntensity":   dint[:],
+        "LightStrength":   float32(1),
+        "GlowStrength":    float32(1),
+        "NightFactor":     float32(0),
+    }
+    lightingOp = ebiten.DrawRectShaderOptions{}
+    lightingOp.Uniforms = lightingUniforms
 }
 
 // ReloadLightingShader recompiles the lighting shader from disk and swaps it in.
@@ -92,100 +120,82 @@ type darkSource struct {
 }
 
 func ensureLightingTmp(w, h int) {
-	if lightingTmp == nil || lightingTmp.Bounds().Dx() != w || lightingTmp.Bounds().Dy() != h {
-		lightingTmp = ebiten.NewImage(w, h)
-	}
+    if lightingTmp == nil || lightingTmp.Bounds().Dx() != w || lightingTmp.Bounds().Dy() != h {
+        // Use unmanaged image for the lighting intermediate to reduce
+        // driver sync and improve throughput on this path.
+        lightingTmp = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+    }
 }
 
 func applyLightingShader(dst *ebiten.Image, lights []lightSource, darks []darkSource, t float32) {
-	w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
-	ensureLightingTmp(w, h)
-	lightingTmp.DrawImage(dst, nil)
+    w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
+    ensureLightingTmp(w, h)
+    lightingTmp.DrawImage(dst, nil)
 
-	// Use the already-interpolated sprite/mobile positions directly.
-	// Interpolation for motion has been applied when enqueuing lights,
-	// so avoid re-interpolating here to keep shader lights aligned
-	// exactly with rendered objects.
-	// Build a temporally smoothed set by blending previous and current
-	// light parameters. Positions are already interpolated elsewhere;
-	// we blend color/radius and add fade in/out intensities.
-	il := interpolateLights(lights, t)
-	id := interpolateDarks(darks, t)
+    // Use already-interpolated positions and smooth attributes
+    il := interpolateLights(lights, t)
+    id := interpolateDarks(darks, t)
 
-	uniforms := map[string]any{
-		"LightCount": len(il),
-		"DarkCount":  len(id),
-	}
-	var lposX, lposY, lradius, lr, lg, lb, lint [maxLights]float32
-	for i := 0; i < len(il) && i < maxLights; i++ {
-		ls := il[i]
-		lposX[i] = ls.X
-		lposY[i] = ls.Y
-		lradius[i] = ls.Radius * float32(lightRadiusScale)
-		lr[i] = ls.R
-		lg[i] = ls.G
-		lb[i] = ls.B
-		if ls.Intensity <= 0 {
-			lint[i] = 0
-		} else if ls.Intensity >= 1 {
-			lint[i] = 1
-		} else {
-			lint[i] = ls.Intensity
-		}
-	}
-	var dposX, dposY, dradius, da, dint [maxLights]float32
-	for i := 0; i < len(id) && i < maxLights; i++ {
-		ds := id[i]
-		dposX[i] = ds.X
-		dposY[i] = ds.Y
-		dradius[i] = ds.Radius * float32(darkRadiusScale)
-		da[i] = ds.Alpha
-		if ds.Intensity <= 0 {
-			dint[i] = 0
-		} else if ds.Intensity >= 1 {
-			dint[i] = 1
-		} else {
-			dint[i] = ds.Intensity
-		}
-	}
-	uniforms["LightPosX"] = lposX
-	uniforms["LightPosY"] = lposY
-	uniforms["LightRadius"] = lradius
-	uniforms["LightR"] = lr
-	uniforms["LightG"] = lg
-	uniforms["LightB"] = lb
-	uniforms["LightIntensity"] = lint
-	uniforms["DarkPosX"] = dposX
-	uniforms["DarkPosY"] = dposY
-	uniforms["DarkRadius"] = dradius
-	uniforms["DarkAlpha"] = da
-	uniforms["DarkIntensity"] = dint
+    // Update counts
+    lightingUniforms["LightCount"] = len(il)
+    lightingUniforms["DarkCount"] = len(id)
 
-	uniforms["LightStrength"] = float32(gs.ShaderLightStrength)
-	uniforms["GlowStrength"] = float32(gs.ShaderGlowStrength)
+    // Fill light arrays
+    for i := 0; i < len(il) && i < maxLights; i++ {
+        ls := il[i]
+        lposX[i] = ls.X
+        lposY[i] = ls.Y
+        lradius[i] = ls.Radius * float32(lightRadiusScale)
+        lr[i] = ls.R
+        lg[i] = ls.G
+        lb[i] = ls.B
+        if ls.Intensity <= 0 {
+            lint[i] = 0
+        } else if ls.Intensity >= 1 {
+            lint[i] = 1
+        } else {
+            lint[i] = ls.Intensity
+        }
+    }
+    // Fill dark arrays
+    for i := 0; i < len(id) && i < maxLights; i++ {
+        ds := id[i]
+        dposX[i] = ds.X
+        dposY[i] = ds.Y
+        dradius[i] = ds.Radius * float32(darkRadiusScale)
+        da[i] = ds.Alpha
+        if ds.Intensity <= 0 {
+            dint[i] = 0
+        } else if ds.Intensity >= 1 {
+            dint[i] = 1
+        } else {
+            dint[i] = ds.Intensity
+        }
+    }
 
-	// Compute smoothed night factor for reveal scaling in shader.
-	// If we have night smoothing state, use it; otherwise fall back to current level.
-	nightFactor := float32(0)
-	if nightAlphaInited {
-		nf := lerpf(nightPrevTarget, nightCurTarget, ease(t)) / float32(shaderNightStrength)
-		if nf < 0 {
-			nf = 0
-		} else if nf > 1 {
-			nf = 1
-		}
-		nightFactor = nf
-	} else {
-		lvl := currentNightLevel()
-		nightFactor = float32(lvl) / 100
-	}
-	uniforms["NightFactor"] = nightFactor
+    // Scalars
+    lightingUniforms["LightStrength"] = float32(gs.ShaderLightStrength)
+    lightingUniforms["GlowStrength"] = float32(gs.ShaderGlowStrength)
 
-	op := &ebiten.DrawRectShaderOptions{}
-	op.Images[0] = lightingTmp
-	op.Uniforms = uniforms
-	dst.DrawRectShader(w, h, lightingShader, op)
+    // Smoothed night factor (0..1)
+    nightFactor := float32(0)
+    if nightAlphaInited {
+        nf := lerpf(nightPrevTarget, nightCurTarget, ease(t)) / float32(shaderNightStrength)
+        if nf < 0 {
+            nf = 0
+        } else if nf > 1 {
+            nf = 1
+        }
+        nightFactor = nf
+    } else {
+        lvl := currentNightLevel()
+        nightFactor = float32(lvl) / 100
+    }
+    lightingUniforms["NightFactor"] = nightFactor
 
+    // Bind source and draw
+    lightingOp.Images[0] = lightingTmp
+    dst.DrawRectShader(w, h, lightingShader, &lightingOp)
 }
 
 // min helper to avoid importing math just for ints

@@ -221,7 +221,7 @@ func NewImageFastItem(w, h int) (*itemData, *ebiten.Image) {
 		Size:     point{X: float32(w), Y: float32(h)},
 		Theme:    currentTheme,
 	}
-	newItem.Image = newImage(w, h)
+	newItem.Image = newImageFast(w, h)
 	return &newItem, newItem.Image
 }
 

@@ -1548,7 +1548,9 @@ func drawParallelogram(dst *ebiten.Image, x, y, w, h, slant float32, col color.C
 	for i := range vs {
 		vs[i].ColorR, vs[i].ColorG, vs[i].ColorB, vs[i].ColorA = colorToVec4(col)
 	}
-	dst.DrawTriangles(vs, is, ebiten.NewImage(1, 1), &ebiten.DrawTrianglesOptions{})
+    // Use the cached 1x1 white sub-image to avoid allocating
+    // and to keep this path on unmanaged images when configured.
+    dst.DrawTriangles(vs, is, whiteSubImage, &ebiten.DrawTrianglesOptions{})
 }
 
 func colorToVec4(c color.Color) (r, g, b, a float32) {

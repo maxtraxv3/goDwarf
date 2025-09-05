@@ -37,6 +37,8 @@ var uiMouseDown bool
 // worldRT is the offscreen render target for the game world. It stays at an
 // integer multiple of the native field size and is composited into the window.
 var worldRT *ebiten.Image
+// Track the active sub-rectangle of worldRT used this frame (for resize)
+var worldRTUsedW, worldRTUsedH int
 
 // gameImageItem is the UI image item inside the game window that displays
 // the rendered world, and gameImage is its backing texture.
@@ -75,16 +77,17 @@ func keyForRune(r rune) ebiten.Key {
 	return ebiten.Key(-1)
 }
 func ensureWorldRT(w, h int) {
-	if w < 1 {
-		w = 1
-	}
-	if h < 1 {
-		h = 1
-	}
-	if worldRT == nil || worldRT.Bounds().Dx() != w || worldRT.Bounds().Dy() != h {
-		// Use unmanaged images for faster off-screen rendering.
-		worldRT = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
-	}
+    if w < 1 {
+        w = 1
+    }
+    if h < 1 {
+        h = 1
+    }
+    // Grow-only allocation to avoid churn during interactive resize.
+    // We will draw using a subimage matching the requested w,h.
+    if worldRT == nil || worldRT.Bounds().Dx() < w || worldRT.Bounds().Dy() < h {
+        worldRT = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+    }
 }
 
 // updateGameImageSize ensures the game image item exists and matches the
@@ -121,15 +124,16 @@ func updateGameImageSize() {
 		b := gameImage.Bounds()
 		iw, ih = b.Dx(), b.Dy()
 	}
-	if iw != w || ih != h {
-		gameImage = ebiten.NewImage(w, h)
-		gameImageItem.Image = gameImage
-		gameImageItem.Size = eui.Point{X: float32(w) / s, Y: float32(h) / s}
-		gameImageItem.Position = eui.Point{X: 2 / s, Y: 2 / s}
-		if gameWin != nil {
-			gameWin.Dirty = true
-		}
-	}
+    if iw < w || ih < h {
+        _, gameImage = eui.NewImageFastItem(w, h)
+        gameImageItem.Image = gameImage
+        if gameWin != nil {
+            gameWin.Dirty = true
+        }
+    }
+    // Always update the item size/position even if we reuse a larger backing image.
+    gameImageItem.Size = eui.Point{X: float32(w) / s, Y: float32(h) / s}
+    gameImageItem.Position = eui.Point{X: 2 / s, Y: 2 / s}
 }
 
 // scaleForFiltering returns adjusted scale values for width and height to reduce
@@ -1178,8 +1182,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Prepare variable-sized offscreen target (supersampled)
 	offW := worldW * offIntScale
 	offH := worldH * offIntScale
-	ensureWorldRT(offW, offH)
-	worldRT.Fill(color.Black)
+    ensureWorldRT(offW, offH)
+    // Use only the active portion of the (possibly larger) render target
+    worldRTUsedW, worldRTUsedH = offW, offH
+    worldView := worldRT.SubImage(image.Rect(0, 0, offW, offH)).(*ebiten.Image)
+    worldView.Fill(color.Black)
 
 	// Render splash or live frame into worldRT using the offscreen scale
 	var snap drawSnapshot
@@ -1188,7 +1195,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if clmov == "" && tcpConn == nil && pcapPath == "" && !fake {
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
-		drawSplash(worldRT, 0, 0)
+        drawSplash(worldView, 0, 0)
 		gs.GameScale = prev
 	} else {
 		snap = captureDrawSnapshot()
@@ -1196,19 +1203,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		alpha, mobileFade, pictFade = computeInterpolation(snap.prevTime, snap.curTime, gs.MobileBlendAmount, gs.BlendAmount)
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
-		drawScene(worldRT, 0, 0, snap, alpha, mobileFade, pictFade)
+        drawScene(worldView, 0, 0, snap, alpha, mobileFade, pictFade)
 		if gs.shaderLighting {
 			// Use shader-based night darkening with inverse-square falloff.
 			addNightDarkSources(offW, offH, float32(alpha))
 		} else {
 			// Classic overlay path when shader is off.
-			//drawNightAmbient(worldRT, 0, 0)
-			drawNightOverlay(worldRT, 0, 0)
+            //drawNightAmbient(worldView, 0, 0)
+            drawNightOverlay(worldView, 0, 0)
 		}
 		if gs.shaderLighting {
-			applyLightingShader(worldRT, frameLights, frameDarks, float32(alpha))
+            // Apply lighting on the active subimage only
+            applyLightingShader(worldView, frameLights, frameDarks, float32(alpha))
 		}
-		drawStatusBars(worldRT, 0, 0, snap, alpha)
+        drawStatusBars(worldView, 0, 0, snap, alpha)
 		gs.GameScale = prev
 		haveSnap = true
 	}
@@ -1222,7 +1230,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
 	op.GeoM.Scale(scaleDown, scaleDown)
 	op.GeoM.Translate(tx, ty)
-	gameImage.DrawImage(worldRT, op)
+    gameImage.DrawImage(worldView, op)
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
