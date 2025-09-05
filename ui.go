@@ -2088,7 +2088,7 @@ func startLogin() {
 		return
 	}
 	if status.Version > 0 && clientVersion < status.Version {
-		msg := fmt.Sprintf("goThoom is not tested with client version %d. It may still work with version %d.", clientVersion, status.Version)
+		msg := fmt.Sprintf("goThoom is only tested with version %d, it may still work with version %d.", clientVersion, status.Version)
 		showPopup(
 			"Untested Version",
 			msg,
