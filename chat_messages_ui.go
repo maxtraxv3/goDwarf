@@ -23,6 +23,14 @@ func updateChatWindow() {
 	msgs := getChatMessages()
 	updateTextWindow(chatWin, chatList, nil, msgs, gs.ChatFontSize, "", nil)
 	if chatList != nil {
+		for i, msg := range msgs {
+			if chatHasPlayerTag(msg) {
+				chatList.Contents[i].TextColor = eui.ColorBlue
+				chatList.Contents[i].ForceTextColor = true
+			} else {
+				chatList.Contents[i].ForceTextColor = false
+			}
+		}
 		// Auto-scroll list to bottom on new messages
 		if scrollit {
 			chatList.Scroll.Y = 1e9

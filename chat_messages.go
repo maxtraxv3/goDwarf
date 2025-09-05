@@ -30,10 +30,16 @@ func chatMessage(msg string) {
 		}
 	}
 
+	tagged := chatHasPlayerTag(msg)
+
 	chatLog.Add(msg)
 	appendChatLog(msg)
 
 	updateChatWindow()
+
+	if tagged && !isSelfChatMessage(msg) {
+		playMentionSound()
+	}
 
 	if gs.ChatTTS && !blockTTS && !isSelfChatMessage(msg) {
 		if speaker == "" || !isTTSBlocked(speaker) {
@@ -89,4 +95,25 @@ func chatSpeaker(msg string) string {
 		return utfFold(m[:i])
 	}
 	return ""
+}
+
+func chatHasPlayerTag(msg string) bool {
+	if playerName == "" {
+		return false
+	}
+	lower := strings.ToLower(msg)
+	name := strings.ToLower("@" + playerName)
+	if strings.Contains(lower, name) {
+		return true
+	}
+	var prof string
+	playersMu.RLock()
+	if p, ok := players[playerName]; ok {
+		prof = p.Class
+	}
+	playersMu.RUnlock()
+	if prof != "" && strings.Contains(lower, "@"+strings.ToLower(prof)) {
+		return true
+	}
+	return false
 }
