@@ -40,7 +40,8 @@ func parseMovie(path string, clientVersion int) ([]movieFrame, error) {
 		return nil, fmt.Errorf("bad signature")
 	}
 	version := binary.BigEndian.Uint16(data[4:6])
-	revision := binary.BigEndian.Uint16(data[16:18])
+	revision := binary.BigEndian.Uint32(data[16:20])
+	movieRevision = int32(revision)
 	// Arindal movies store version numbers 100x larger.
 	if version > 50000 {
 		version /= 100
@@ -88,11 +89,11 @@ func parseMovie(path string, clientVersion int) ([]movieFrame, error) {
 			if end > len(data) {
 				break
 			}
-			parseGameState(data[start:end], version, revision)
+			parseGameState(data[start:end], version, uint16(revision))
 			pos = end
 		}
 		if flags&flagMobileData != 0 {
-			pos = parseMobileTable(data, pos, version, revision)
+			pos = parseMobileTable(data, pos, version, uint16(revision))
 		}
 		if flags&flagPictureTable != 0 {
 			if pos+2 > len(data) {
