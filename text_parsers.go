@@ -369,7 +369,7 @@ func parseFallenText(raw []byte, s string) bool {
 				playersDirty = true
 			}
 			if gs.NotifyFallen {
-				showNotification(playerName + " has fallen")
+				showNotification(playerName+" has fallen", 72, 69, 65)
 			}
 			return true
 		}
@@ -389,7 +389,7 @@ func parseFallenText(raw []byte, s string) bool {
 				playersDirty = true
 			}
 			if gs.NotifyNotFallen {
-				showNotification(playerName + " is no longer fallen")
+				showNotification(playerName+" is no longer fallen", 60, 64, 67)
 			}
 			return true
 		}
@@ -419,7 +419,7 @@ func parseFallenText(raw []byte, s string) bool {
 		playersDirty = true
 		notifyPlayerHandlers(playerCopy)
 		if gs.NotifyFallen {
-			showNotification(name + " has fallen")
+			showNotification(name+" has fallen", 72, 69, 65)
 		}
 		return true
 	}
@@ -449,7 +449,7 @@ func parseFallenText(raw []byte, s string) bool {
 			playersDirty = true
 		}
 		if gs.NotifyNotFallen {
-			showNotification(name + " is no longer fallen")
+			showNotification(name+" is no longer fallen", 60, 64, 67)
 		}
 		return true
 	}
@@ -503,7 +503,7 @@ func parsePresenceText(raw []byte, s string) bool {
 			notifyPlayerHandlers(playerCopy)
 		}
 		if friend && gs.NotifyFriendOnline {
-			showNotification(name + " is online")
+			showNotification(name+" is online", 84, 84)
 		}
 		return true
 	}
