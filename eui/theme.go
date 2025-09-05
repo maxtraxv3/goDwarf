@@ -203,6 +203,7 @@ func SetAccentColor(c Color) {
 	if namedColors != nil {
 		namedColors["accent"] = AccentColor()
 	}
+	markAllDirty()
 }
 
 // SetAccentSaturation updates the saturation component of the accent color and
@@ -212,4 +213,5 @@ func SetAccentSaturation(s float64) {
 	if namedColors != nil {
 		namedColors["accent"] = AccentColor()
 	}
+	markAllDirty()
 }
