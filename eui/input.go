@@ -274,12 +274,12 @@ func Update() error {
 				}
 				win.clampToScreen()
 				if windowSnapping && win.zone == nil {
+					snapped := false
 					if !win.snapAnchorActive {
-						if !snapToCorner(win) {
-							if snapToWindow(win) {
-								win.clampToScreen()
-							}
-						}
+						snapped = snapToCorner(win)
+					}
+					if !snapped && snapToWindow(win) {
+						win.clampToScreen()
 					}
 				}
 				if dragPart != PART_BAR {

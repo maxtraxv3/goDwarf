@@ -61,3 +61,37 @@ func TestDragUnsnapThreshold(t *testing.T) {
 		t.Fatalf("window snapped after moving away")
 	}
 }
+
+func TestSnapToWindowWithSnapAnchor(t *testing.T) {
+	screenWidth = 100
+	screenHeight = 100
+	uiScale = 1
+	windowSnapping = true
+
+	base := &windowData{Position: point{20, 0}, Size: point{10, 10}, Open: true}
+	win := &windowData{Size: point{10, 10}, Open: true}
+	windows = []*windowData{base, win}
+	defer func() { windows = nil }()
+
+	if !snapToCorner(win) {
+		t.Fatalf("expected window to snap to corner")
+	}
+
+	dragWindowMove(win, point{X: 9, Y: 0})
+	if !win.snapAnchorActive {
+		t.Fatalf("snap anchor deactivated too soon")
+	}
+
+	snapped := false
+	if !win.snapAnchorActive {
+		snapped = snapToCorner(win)
+	}
+	if !snapped && snapToWindow(win) {
+		win.clampToScreen()
+	}
+
+	expected := point{X: base.Position.X - win.Size.X, Y: 0}
+	if win.Position != expected {
+		t.Fatalf("expected snap to window at %+v, got %+v", expected, win.Position)
+	}
+}

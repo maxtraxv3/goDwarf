@@ -2452,33 +2452,33 @@ func makeSettingsWindow() {
 	left.AddItem(label)
 
 	/*
-		tilingCB, tilingEvents := eui.NewCheckbox()
-		tilingCB.Text = "Tiling window mode (buggy)"
-		tilingCB.Size = eui.Point{X: panelWidth, Y: 24}
-		tilingCB.Checked = gs.WindowTiling
-		tilingCB.Tooltip = "Prevent windows from overlapping"
-		tilingEvents.Handle = func(ev eui.UIEvent) {
-			if ev.Type == eui.EventCheckboxChanged {
-				gs.WindowTiling = ev.Checked
-				eui.SetWindowTiling(ev.Checked)
-				settingsDirty = true
+			tilingCB, tilingEvents := eui.NewCheckbox()
+			tilingCB.Text = "Tiling window mode (buggy)"
+			tilingCB.Size = eui.Point{X: panelWidth, Y: 24}
+			tilingCB.Checked = gs.WindowTiling
+			tilingCB.Tooltip = "Prevent windows from overlapping"
+			tilingEvents.Handle = func(ev eui.UIEvent) {
+				if ev.Type == eui.EventCheckboxChanged {
+					gs.WindowTiling = ev.Checked
+					eui.SetWindowTiling(ev.Checked)
+					settingsDirty = true
+				}
 			}
-		}
-		right.AddItem(tilingCB)
+			right.AddItem(tilingCB)
 
-		snapCB, snapEvents := eui.NewCheckbox()
-		snapCB.Text = "Window snapping (buggy)"
-		snapCB.Size = eui.Point{X: panelWidth, Y: 24}
-		snapCB.Checked = gs.WindowSnapping
-		snapCB.Tooltip = "Snap windows to edges and others"
-		snapEvents.Handle = func(ev eui.UIEvent) {
-			if ev.Type == eui.EventCheckboxChanged {
-				gs.WindowSnapping = ev.Checked
-				eui.SetWindowSnapping(ev.Checked)
-				settingsDirty = true
+	               snapCB, snapEvents := eui.NewCheckbox()
+	               snapCB.Text = "Window snapping"
+	               snapCB.Size = eui.Point{X: panelWidth, Y: 24}
+	               snapCB.Checked = gs.WindowSnapping
+	               snapCB.Tooltip = "Snap windows to edges and others"
+			snapEvents.Handle = func(ev eui.UIEvent) {
+				if ev.Type == eui.EventCheckboxChanged {
+					gs.WindowSnapping = ev.Checked
+					eui.SetWindowSnapping(ev.Checked)
+					settingsDirty = true
+				}
 			}
-		}
-		right.AddItem(snapCB)
+			right.AddItem(snapCB)
 	*/
 
 	if showUIScale {
