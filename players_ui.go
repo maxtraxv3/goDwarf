@@ -47,6 +47,8 @@ func updatePlayersWindow() {
 	accent := eui.Color{}
 	_ = accent.UnmarshalJSON([]byte("\"accent\""))
 
+	prevScroll := playersList.Scroll
+
 	// Gather current players and filter to non-NPCs with names.
 	ps := getPlayers()
 	// Sort: online (recently seen and not explicitly offline) first,
@@ -287,6 +289,7 @@ func updatePlayersWindow() {
 	}
 	playersList.Size.X = clientWAvail
 	playersList.Size.Y = clientHAvail
+	playersList.Scroll = prevScroll
 	playersWin.Refresh()
 }
 
