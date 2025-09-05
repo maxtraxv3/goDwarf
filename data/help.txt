@@ -22,6 +22,7 @@ Chat & Console
 --------------
 - Chat and Console are separate windows. If "Messages to Console" is enabled in settings, chat is merged into the Console.
 - The input bar auto-expands as you type. Use the input bar menu (right-click) for paste/copy/clear.
+- Messages with `@<your name>` or `@<profession>` highlight in blue and play a tink sound.
 
 Players
 -------
