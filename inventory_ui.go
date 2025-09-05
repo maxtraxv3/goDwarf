@@ -95,8 +95,7 @@ func updateInventoryWindow() {
 		return
 	}
 
-	accent := eui.Color{}
-	_ = accent.UnmarshalJSON([]byte("\"accent\""))
+	accent := eui.AccentColor()
 
 	prevScroll := inventoryList.Scroll
 
