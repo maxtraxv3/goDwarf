@@ -17,6 +17,7 @@ import (
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
+	gt "gt"
 )
 
 const pluginAPICurrentVersion = 1
@@ -106,12 +107,12 @@ var basePluginExports = interp.Exports{
 }
 
 func exportsForPlugin(owner string) interp.Exports {
-    ex := make(interp.Exports)
-    for pkg, symbols := range basePluginExports {
-        m := map[string]reflect.Value{}
-        for k, v := range symbols {
-            m[k] = v
-        }
+	ex := make(interp.Exports)
+	for pkg, symbols := range basePluginExports {
+		m := map[string]reflect.Value{}
+		for k, v := range symbols {
+			m[k] = v
+		}
 		m["Equip"] = reflect.ValueOf(func(id uint16) { pluginEquip(owner, id) })
 		m["Unequip"] = reflect.ValueOf(func(id uint16) { pluginUnequip(owner, id) })
 		m["AddHotkey"] = reflect.ValueOf(func(combo, command string) { pluginAddHotkey(owner, combo, command) })
@@ -210,33 +211,33 @@ func exportsForPlugin(owner string) interp.Exports {
 		// Sleep for game ticks (blocks current goroutine only)
 		m["SleepTicks"] = reflect.ValueOf(func(ticks int) { pluginSleepTicks(owner, ticks) })
 		// Simpler alias: Console("text", fn)
-        m["Console"] = reflect.ValueOf(func(phrase string, handler func(string)) {
-            p := strings.TrimSpace(phrase)
-            if p != "" {
-                pluginRegisterConsole(owner, []string{p}, handler)
-            }
-        })
-        // Back-compat registrations matching gt stubs
-        m["RegisterTriggers"] = reflect.ValueOf(func(name string, phrases []string, fn func(string)) {
-            if fn == nil || len(phrases) == 0 {
-                return
-            }
-            pluginRegisterChat(owner, name, phrases, ChatAny, fn)
-        })
-        m["RegisterConsoleTriggers"] = reflect.ValueOf(func(phrases []string, fn func()) {
-            if fn == nil || len(phrases) == 0 {
-                return
-            }
-            pluginRegisterConsoleTriggers(owner, phrases, fn)
-        })
-        m["RegisterTrigger"] = reflect.ValueOf(func(name, phrase string, fn func()) {
-            p := strings.TrimSpace(phrase)
-            if p == "" || fn == nil {
-                return
-            }
-            pluginRegisterChat(owner, name, []string{p}, ChatAny, func(string) { fn() })
-        })
-        m["RegisterPlayerHandler"] = reflect.ValueOf(func(fn func(Player)) { pluginRegisterPlayerHandler(owner, fn) })
+		m["Console"] = reflect.ValueOf(func(phrase string, handler func(string)) {
+			p := strings.TrimSpace(phrase)
+			if p != "" {
+				pluginRegisterConsole(owner, []string{p}, handler)
+			}
+		})
+		// Back-compat registrations matching gt stubs
+		m["RegisterTriggers"] = reflect.ValueOf(func(name string, phrases []string, fn func(string)) {
+			if fn == nil || len(phrases) == 0 {
+				return
+			}
+			pluginRegisterChat(owner, name, phrases, ChatAny, fn)
+		})
+		m["RegisterConsoleTriggers"] = reflect.ValueOf(func(phrases []string, fn func()) {
+			if fn == nil || len(phrases) == 0 {
+				return
+			}
+			pluginRegisterConsoleTriggers(owner, phrases, fn)
+		})
+		m["RegisterTrigger"] = reflect.ValueOf(func(name, phrase string, fn func()) {
+			p := strings.TrimSpace(phrase)
+			if p == "" || fn == nil {
+				return
+			}
+			pluginRegisterChat(owner, name, []string{p}, ChatAny, func(string) { fn() })
+		})
+		m["RegisterPlayerHandler"] = reflect.ValueOf(func(fn func(Player)) { pluginRegisterPlayerHandler(owner, fn) })
 		m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
 		m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
 		// Simple world overlay drawing (top-left origin, world units)
@@ -439,6 +440,23 @@ func ensureDefaultScripts() {
 			log.Printf("write %s: %v", dst, err)
 			continue
 		}
+	}
+}
+
+func ensurePluginAPI() {
+	dst := filepath.Join(userScriptsDir(), "gt", "pluginapi.go")
+	if _, err := os.Stat(dst); err == nil {
+		return
+	} else if !os.IsNotExist(err) {
+		log.Printf("check plugin api: %v", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		log.Printf("create plugin api dir: %v", err)
+		return
+	}
+	if err := os.WriteFile(dst, gt.PluginAPISource, 0o644); err != nil {
+		log.Printf("write %s: %v", dst, err)
 	}
 }
 
@@ -827,23 +845,23 @@ func pluginEnqueueCommand(owner, cmd string) {
 }
 
 func loadPluginSource(owner, name, path string, src []byte, restricted interp.Exports) {
-    pluginRemoveConfig(owner)
-    i := interp.New(interp.Options{})
-    if len(restricted) > 0 {
-        i.Use(restricted)
-    }
-    i.Use(exportsForPlugin(owner))
-    pluginMu.Lock()
-    pluginDisabled[owner] = false
-    pluginMu.Unlock()
-    // Strip build tags like //go:build which are for the Go toolchain only.
-    src = stripGoBuildDirectives(src)
-    if _, err := i.Eval(string(src)); err != nil {
-        log.Printf("plugin %s: %v", path, err)
-        consoleMessage("[plugin] load error for " + path + ": " + err.Error())
-        disablePlugin(owner, "load error")
-        return
-    }
+	pluginRemoveConfig(owner)
+	i := interp.New(interp.Options{})
+	if len(restricted) > 0 {
+		i.Use(restricted)
+	}
+	i.Use(exportsForPlugin(owner))
+	pluginMu.Lock()
+	pluginDisabled[owner] = false
+	pluginMu.Unlock()
+	// Strip build tags like //go:build which are for the Go toolchain only.
+	src = stripGoBuildDirectives(src)
+	if _, err := i.Eval(string(src)); err != nil {
+		log.Printf("plugin %s: %v", path, err)
+		consoleMessage("[plugin] load error for " + path + ": " + err.Error())
+		disablePlugin(owner, "load error")
+		return
+	}
 	if v, err := i.Eval("Terminate"); err == nil {
 		if fn, ok := v.Interface().(func()); ok {
 			pluginMu.Lock()
@@ -857,33 +875,33 @@ func loadPluginSource(owner, name, path string, src []byte, restricted interp.Ex
 		}
 	}
 	log.Printf("loaded plugin %s", path)
-    consoleMessage("[plugin] loaded: " + name)
+	consoleMessage("[plugin] loaded: " + name)
 }
 
 // stripGoBuildDirectives removes leading build constraints (//go:build, // +build)
 // which are meaningful to the Go toolchain but can confuse the interpreter.
 func stripGoBuildDirectives(src []byte) []byte {
-    lines := strings.Split(string(src), "\n")
-    out := make([]string, 0, len(lines))
-    i := 0
-    // Skip initial build constraint lines and following blank lines until package clause
-    for i < len(lines) {
-        l := strings.TrimSpace(lines[i])
-        if strings.HasPrefix(l, "package ") {
-            break
-        }
-        if strings.HasPrefix(l, "//go:build") || strings.HasPrefix(l, "// +build") || l == "" {
-            i++
-            continue
-        }
-        // Any other pre-package content: keep it
-        break
-    }
-    if i > 0 {
-        out = append(out, lines[i:]...)
-        return []byte(strings.Join(out, "\n"))
-    }
-    return src
+	lines := strings.Split(string(src), "\n")
+	out := make([]string, 0, len(lines))
+	i := 0
+	// Skip initial build constraint lines and following blank lines until package clause
+	for i < len(lines) {
+		l := strings.TrimSpace(lines[i])
+		if strings.HasPrefix(l, "package ") {
+			break
+		}
+		if strings.HasPrefix(l, "//go:build") || strings.HasPrefix(l, "// +build") || l == "" {
+			i++
+			continue
+		}
+		// Any other pre-package content: keep it
+		break
+	}
+	if i > 0 {
+		out = append(out, lines[i:]...)
+		return []byte(strings.Join(out, "\n"))
+	}
+	return src
 }
 
 func enablePlugin(owner string) {
@@ -1779,6 +1797,7 @@ func checkPluginMods() {
 func loadPlugins() {
 	ensureScriptsDir()
 	ensureDefaultScripts()
+	ensurePluginAPI()
 	scanned := scanPlugins(scriptSearchDirs(), func(name, path string) {
 		log.Printf("plugin %s duplicate name %s", path, name)
 		consoleMessage("[plugin] duplicate name: " + name)
