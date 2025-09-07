@@ -2355,11 +2355,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func runGame(ctx context.Context) {
-	gameCtx = ctx
+    gameCtx = ctx
 
-	ebiten.SetScreenClearedEveryFrame(false)
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	w, h := ebiten.Monitor().Size()
+    ebiten.SetScreenClearedEveryFrame(false)
+    ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+    // Ensure Update() TPS is synced with Draw FPS from the start.
+    ebiten.SetTPS(ebiten.SyncWithFPS)
+    w, h := ebiten.Monitor().Size()
 	if w == 0 || h == 0 {
 		w, h = initialWindowW, initialWindowH
 	}
