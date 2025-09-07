@@ -956,27 +956,27 @@ func hotkeyEquipAlreadyEquipped(cmd string) bool {
 }
 
 func checkHotkeys() {
-	if recording || inputActive || typingInUI() {
-		return
-	}
-	if combo := detectCombo(); combo != "" {
-		hotkeysMu.RLock()
-		list := append([]Hotkey(nil), hotkeys...)
-		hotkeysMu.RUnlock()
-		for _, hk := range list {
-			if hk.Combo == combo && !hk.Disabled {
-				// If this is a plugin hotkey with a function handler, call it.
-				if hk.Plugin != "" {
-					if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
-						parts := strings.Split(combo, "-")
-						trig := ""
-						if len(parts) > 0 {
-							trig = parts[len(parts)-1]
-						}
-						ev := HotkeyEvent{Combo: combo, Parts: parts, Trigger: trig}
-						go fn(ev)
-					}
-				}
+    if recording || inputActive || typingInUI() {
+        return
+    }
+    if combo := detectCombo(); combo != "" {
+        hotkeysMu.RLock()
+        list := append([]Hotkey(nil), hotkeys...)
+        hotkeysMu.RUnlock()
+        for _, hk := range list {
+            if !hk.Disabled && (hk.Combo == combo || strings.EqualFold(hk.Combo, combo) || sameCombo(hk.Combo, combo)) {
+                // If this is a plugin hotkey with a function handler, call it.
+                if hk.Plugin != "" {
+                    if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
+                        parts := strings.Split(combo, "-")
+                        trig := ""
+                        if len(parts) > 0 {
+                            trig = parts[len(parts)-1]
+                        }
+                        ev := HotkeyEvent{Combo: combo, Parts: parts, Trigger: trig}
+                        go fn(ev)
+                    }
+                }
 				for _, c := range hk.Commands {
 					cmd := strings.TrimSpace(c.Command)
 					lower := strings.ToLower(cmd)
@@ -1009,7 +1009,51 @@ func checkHotkeys() {
 				}
 				nextCommand()
 				break
-			}
-		}
-	}
+        }
+    }
+}
+}
+
+// sameCombo compares two combo strings case-insensitively while ignoring the
+// order and verbosity of modifier keys (Ctrl/Control, Alt, Shift). The final
+// trigger token (e.g., "F3", "RightClick", "WheelUp") must match ignoring case.
+func sameCombo(a, b string) bool {
+    norm := func(s string) (mods map[string]bool, trig string) {
+        parts := strings.Split(strings.TrimSpace(s), "-")
+        if len(parts) == 0 {
+            return map[string]bool{}, ""
+        }
+        trig = strings.ToLower(parts[len(parts)-1])
+        mods = map[string]bool{}
+        for _, p := range parts[:len(parts)-1] {
+            switch strings.ToLower(strings.TrimSpace(p)) {
+            case "ctrl", "control", "controlleft", "controlright":
+                mods["ctrl"] = true
+            case "alt", "altleft", "altright":
+                mods["alt"] = true
+            case "shift", "shiftleft", "shiftright":
+                mods["shift"] = true
+            default:
+                // Treat any unknown modifier token as-is to be strict
+                if p != "" {
+                    mods[strings.ToLower(p)] = true
+                }
+            }
+        }
+        return mods, trig
+    }
+    am, at := norm(a)
+    bm, bt := norm(b)
+    if at != bt {
+        return false
+    }
+    if len(am) != len(bm) {
+        return false
+    }
+    for k := range am {
+        if !bm[k] {
+            return false
+        }
+    }
+    return true
 }

@@ -507,10 +507,12 @@ func pluginIsDisabled(owner string) bool {
 }
 
 func pluginAddHotkey(owner, combo, command string) {
-	if pluginIsDisabled(owner) {
-		return
-	}
-	hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Plugin: owner, Disabled: true}
+    if pluginIsDisabled(owner) {
+        return
+    }
+    // Default plugin hotkeys to enabled on first add; users can disable them
+    // in the Hotkeys window. Persisted preferences still override this.
+    hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Plugin: owner, Disabled: false}
 	pluginHotkeyMu.RLock()
 	if m := pluginHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
@@ -591,7 +593,8 @@ func pluginAddHotkeyFn(owner, combo string, handler func(HotkeyEvent)) {
 	pluginHotkeyFnMu.Unlock()
 
 	// Ensure a visible toggleable hotkey entry exists for this plugin+combo.
-	hk := Hotkey{Name: "", Combo: combo, Plugin: owner, Disabled: true}
+    // Function-based hotkeys default to enabled on first add.
+    hk := Hotkey{Name: "", Combo: combo, Plugin: owner, Disabled: false}
 	pluginHotkeyMu.RLock()
 	if m := pluginHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
