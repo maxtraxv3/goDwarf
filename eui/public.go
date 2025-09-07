@@ -174,9 +174,20 @@ func AccentColor() Color {
 
 // ClearFocus removes focus from the provided item if it is currently focused.
 func ClearFocus(it *ItemData) {
-	if focusedItem == it {
-		focusedItem.Focused = false
-		focusedItem.markDirty()
-		focusedItem = nil
-	}
+    if focusedItem == it {
+        focusedItem.Focused = false
+        focusedItem.markDirty()
+        focusedItem = nil
+    }
+}
+
+// SetActiveSearchForTest sets the active search window for tests.
+// This helper mirrors logic used internally when a window's search box
+// is activated. It exists so external tests can simulate an active
+// search without poking unexported symbols.
+func SetActiveSearchForTest(win *WindowData) {
+    activeSearch = win
+    if win != nil {
+        win.searchOpen = true
+    }
 }

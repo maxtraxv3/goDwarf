@@ -105,10 +105,12 @@ func main() {
 		log.Printf("clipboard init: %v", err)
 	}
 
-	if *genPGO {
-		clmov = filepath.Join("clmovFiles", "test.clMov")
-		clMovFPS = 30
-	}
+	/*
+		if *genPGO {
+			clmov = filepath.Join("clmovFiles", "test.clMov")
+			clMovFPS = 30
+		}
+	*/
 
 	loadSettings()
 	if gs.WindowWidth < 512 {

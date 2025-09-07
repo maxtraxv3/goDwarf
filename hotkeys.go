@@ -1029,6 +1029,7 @@ func checkHotkeys() {
         }
     }
 }
+
 }
 
 // sameCombo compares two combo strings case-insensitively while ignoring the
