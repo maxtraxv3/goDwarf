@@ -126,10 +126,11 @@ func Init() {
 	gt.PlayerChatFrom("Hero", "ping", func(msg string) { gt.Save("chat_pfrom", "1") })
 	gt.OtherChatFrom("Other", "ping", func(msg string) { gt.Save("chat_ofrom", "1") })
 	gt.Console("ready", func(msg string) { gt.Save("cons_new", "1") })
-		// Use ConsoleMsg for console trigger with message parameter
-		gt.ConsoleMsg("legacy", func(msg string) { gt.Save("cons_old", "1") })
+	// Use ConsoleMsg for console trigger with message parameter
+	gt.ConsoleMsg("legacy", func(msg string) { gt.Save("cons_old", "1") })
 	gt.RegisterTriggers("any", []string{"bb"}, func(msg string) { gt.Save("legacy_trig", "1") })
-	gt.RegisterTrigger("unit", func() { gt.Save("sing_trig", "1") })
+	// Single chat trigger: name "unit", phrase "ping"
+	gt.RegisterTrigger("unit", "ping", func() { gt.Save("sing_trig", "1") })
 	gt.RegisterChatHandler(func(msg string) { gt.Save("allchat", msg) })
 	gt.RegisterPlayerHandler(func(p gt.Player) { gt.Save("player_seen", p.Name) })
 
