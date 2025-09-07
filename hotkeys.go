@@ -956,10 +956,27 @@ func hotkeyEquipAlreadyEquipped(cmd string) bool {
 }
 
 func checkHotkeys() {
-    if recording || inputActive || typingInUI() {
+    if recording {
         return
     }
+    // Detect any just-pressed combo first.
     if combo := detectCombo(); combo != "" {
+        // If the console/input or another UI text field is active, allow
+        // only non-text triggers (e.g., function keys, arrows, mouse, wheel).
+        // This keeps typing unaffected while still letting F12, etc. work.
+        if inputActive || typingInUI() {
+            parts := strings.Split(combo, "-")
+            trig := ""
+            if len(parts) > 0 {
+                trig = parts[len(parts)-1]
+            }
+            // Treat single-character triggers (e.g., "c", "1") as text keys
+            // and ignore them while typing. Everything else (e.g., "F12",
+            // "ArrowUp", "RightClick", "WheelUp") is allowed.
+            if len([]rune(trig)) == 1 {
+                return
+            }
+        }
         hotkeysMu.RLock()
         list := append([]Hotkey(nil), hotkeys...)
         hotkeysMu.RUnlock()
