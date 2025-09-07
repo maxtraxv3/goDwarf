@@ -42,3 +42,4 @@ data/Movies/*.clMov
 go/mod/cache/
 go/mod/
 themes/
+.VSCodeCounter/
