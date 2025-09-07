@@ -17,7 +17,6 @@ import (
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
-	gt "gt"
 )
 
 const pluginAPICurrentVersion = 1
@@ -443,22 +442,7 @@ func ensureDefaultScripts() {
 	}
 }
 
-func ensurePluginAPI() {
-	dst := filepath.Join(userScriptsDir(), "gt", "pluginapi.go")
-	if _, err := os.Stat(dst); err == nil {
-		return
-	} else if !os.IsNotExist(err) {
-		log.Printf("check plugin api: %v", err)
-		return
-	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		log.Printf("create plugin api dir: %v", err)
-		return
-	}
-	if err := os.WriteFile(dst, gt.PluginAPISource, 0o644); err != nil {
-		log.Printf("write %s: %v", dst, err)
-	}
-}
+// ensurePluginAPI removed: the editor stub now ships in scripts/gt.
 
 var pluginAllowedPkgs = []string{
 	"bytes/bytes",
@@ -1797,7 +1781,6 @@ func checkPluginMods() {
 func loadPlugins() {
 	ensureScriptsDir()
 	ensureDefaultScripts()
-	ensurePluginAPI()
 	scanned := scanPlugins(scriptSearchDirs(), func(name, path string) {
 		log.Printf("plugin %s duplicate name %s", path, name)
 		consoleMessage("[plugin] duplicate name: " + name)
