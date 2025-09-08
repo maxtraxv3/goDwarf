@@ -88,6 +88,12 @@ func updatePlayerAppearance(name string, pictID uint16, colors []byte, isNPC boo
 	// Seeing a player on screen implies they are present now.
 	p.LastSeen = time.Now()
 	p.Offline = false
+	if p.Dead {
+		p.Dead = false
+		p.FellWhere = ""
+		p.KillerName = ""
+		p.FellTime = time.Time{}
+	}
 	seenChanged := !p.Seen
 	p.Seen = true
 	prevSC := p.SameClan
