@@ -146,6 +146,28 @@ func (parent *ItemData) PrependItem(child *ItemData) { parent.prependItemTo(chil
 // PrependItem prepends a child item to the window.
 func (win *WindowData) PrependItem(child *ItemData) { win.prependItemTo(child) }
 
+// RemoveItem removes a child item from the parent item.
+func (parent *ItemData) RemoveItem(child *ItemData) { parent.removeItem(child) }
+
+// RemoveItem removes a child item from the window.
+func (win *WindowData) RemoveItem(child *ItemData) { win.removeItem(child) }
+
+// SetProgressIndeterminate updates the indeterminate state of a progress bar
+// and refreshes its parent window's tracking flag.
+func SetProgressIndeterminate(pb *ItemData, ind bool) {
+	if pb == nil || pb.ItemType != ITEM_PROGRESS {
+		return
+	}
+	if pb.Indeterminate == ind {
+		return
+	}
+	pb.Indeterminate = ind
+	if pb.ParentWindow != nil {
+		pb.ParentWindow.updateHasIndeterminate()
+	}
+	pb.markDirty()
+}
+
 // ListThemes returns the available palette names.
 func ListThemes() ([]string, error) { return listThemes() }
 
@@ -174,11 +196,11 @@ func AccentColor() Color {
 
 // ClearFocus removes focus from the provided item if it is currently focused.
 func ClearFocus(it *ItemData) {
-    if focusedItem == it {
-        focusedItem.Focused = false
-        focusedItem.markDirty()
-        focusedItem = nil
-    }
+	if focusedItem == it {
+		focusedItem.Focused = false
+		focusedItem.markDirty()
+		focusedItem = nil
+	}
 }
 
 // SetActiveSearchForTest sets the active search window for tests.
@@ -186,8 +208,8 @@ func ClearFocus(it *ItemData) {
 // is activated. It exists so external tests can simulate an active
 // search without poking unexported symbols.
 func SetActiveSearchForTest(win *WindowData) {
-    activeSearch = win
-    if win != nil {
-        win.searchOpen = true
-    }
+	activeSearch = win
+	if win != nil {
+		win.searchOpen = true
+	}
 }

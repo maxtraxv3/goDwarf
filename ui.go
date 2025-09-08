@@ -1483,7 +1483,7 @@ func makeDownloadsWindow() {
 	pb.MinValue = 0
 	pb.MaxValue = 1
 	pb.Value = 0
-	pb.Indeterminate = true
+	eui.SetProgressIndeterminate(pb, true)
 	flow.AddItem(pb)
 	// Track throughput for kb/s and ETA
 	var dlStart time.Time
@@ -1503,13 +1503,13 @@ func makeDownloadsWindow() {
 		}
 		// Update progress bar
 		if total > 0 {
-			pb.Indeterminate = false
+			eui.SetProgressIndeterminate(pb, false)
 			// Use absolute scale so ratio = (Value-Min)/(Max-Min) is robust
 			pb.MinValue = 0
 			pb.MaxValue = float32(total)
 			pb.Value = float32(read)
 		} else {
-			pb.Indeterminate = true
+			eui.SetProgressIndeterminate(pb, true)
 		}
 		pb.Dirty = true
 
@@ -1640,7 +1640,7 @@ func makeDownloadsWindow() {
 		// Reset UI state
 		dlStart = time.Time{}
 		currentName = ""
-		pb.Indeterminate = true
+		eui.SetProgressIndeterminate(pb, true)
 		pb.MinValue = 0
 		pb.MaxValue = 1
 		pb.Value = 0
