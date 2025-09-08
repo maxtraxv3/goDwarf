@@ -28,15 +28,26 @@ var (
 	inputBuf []rune
 )
 
+var (
+	ShiftPressed          bool
+	CapsLockToggleHandler func()
+)
+
 // Update processes input and updates window state.
 // Programs embedding the UI can call this from their Ebiten Update handler.
 func Update() error {
 	checkThemeStyleMods()
 
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
+	ShiftPressed = shiftPressed
 	ctrlPressed := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
 	altPressed := ebiten.IsKeyPressed(ebiten.KeyAlt) || ebiten.IsKeyPressed(ebiten.KeyAltLeft) || ebiten.IsKeyPressed(ebiten.KeyAltRight)
 	metaPressed := ebiten.IsKeyPressed(ebiten.KeyMeta) || ebiten.IsKeyPressed(ebiten.KeyMetaLeft) || ebiten.IsKeyPressed(ebiten.KeyMetaRight)
+	if inpututil.IsKeyJustPressed(ebiten.KeyCapsLock) {
+		if CapsLockToggleHandler != nil {
+			CapsLockToggleHandler()
+		}
+	}
 	_ = altPressed
 	_ = metaPressed
 

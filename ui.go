@@ -21,6 +21,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	open "github.com/skratchdot/open-golang/open"
 	"github.com/sqweek/dialog"
+	"unicode"
 
 	"gothoom/climg"
 	"gothoom/clsnd"
@@ -48,6 +49,8 @@ var addCharPass string
 var addCharRemember bool
 var passWin *eui.WindowData
 var passInput *eui.ItemData
+var passWarn *eui.ItemData
+var passPrev string
 
 var changelogWin *eui.WindowData
 var changelogList *eui.ItemData
@@ -57,6 +60,8 @@ var changelogNextBtn *eui.ItemData
 // Keep references to inputs so we can clear text programmatically.
 var addCharNameInput *eui.ItemData
 var addCharPassInput *eui.ItemData
+var addCharPassWarn *eui.ItemData
+var addCharPassPrev string
 var windowsWin *eui.WindowData
 var pluginsWin *eui.WindowData
 var pluginsList *eui.ItemData
@@ -119,7 +124,45 @@ var ttsTestPhrase = "The quick brown fox jumps over the lazy dog"
 // can avoid spamming the server when the Players window is toggled rapidly.
 var lastWhoRequest time.Time
 
+func capsLockToggled() {
+	clearCapsWarnings()
+}
+
+func clearCapsWarnings() {
+	if addCharPassWarn != nil {
+		addCharPassWarn.Text = ""
+		addCharPassWarn.Dirty = true
+	}
+	if passWarn != nil {
+		passWarn.Text = ""
+		passWarn.Dirty = true
+	}
+}
+
+func checkCapsWarning(prev *string, curr string, warn *eui.ItemData) {
+	if warn == nil {
+		*prev = curr
+		return
+	}
+	if len(curr) > len(*prev) {
+		r := rune(curr[len(curr)-1])
+		shift := eui.ShiftPressed
+		if unicode.IsLetter(r) && ((unicode.IsUpper(r) && !shift) || (unicode.IsLower(r) && shift)) {
+			warn.Text = "Caps lock may be on"
+			warn.TextColor = eui.NewColor(255, 0, 0, 255)
+		} else {
+			warn.Text = ""
+		}
+		warn.Dirty = true
+	} else if len(curr) <= len(*prev) {
+		warn.Text = ""
+		warn.Dirty = true
+	}
+	*prev = curr
+}
+
 func init() {
+	eui.CapsLockToggleHandler = capsLockToggled
 	eui.WindowStateChanged = func() {
 		// Keep the Windows window's checkboxes in sync
 		if windowsPlayersCB != nil {
@@ -1922,13 +1965,24 @@ func makeAddCharacterWindow() {
 	nameInput.Size = eui.Point{X: 200, Y: 24}
 	addCharNameInput = nameInput
 	flow.AddItem(nameInput)
-	passInput, _ := eui.NewInput()
+	passInput, passEvents := eui.NewInput()
 	passInput.Label = "Password"
 	passInput.TextPtr = &addCharPass
 	passInput.HideText = true
 	passInput.Size = eui.Point{X: 200, Y: 24}
 	addCharPassInput = passInput
+	addCharPassPrev = addCharPass
+	passEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventInputChanged {
+			checkCapsWarning(&addCharPassPrev, addCharPass, addCharPassWarn)
+		}
+	}
 	flow.AddItem(passInput)
+
+	addCharPassWarn, _ = eui.NewText()
+	addCharPassWarn.TextColor = eui.NewColor(255, 0, 0, 255)
+	addCharPassWarn.Size = eui.Point{X: 200, Y: 12}
+	flow.AddItem(addCharPassWarn)
 
 	rememberCB, rememberEvents := eui.NewCheckbox()
 	rememberCB.Text = "Remember Password"
@@ -1982,6 +2036,8 @@ func makeAddCharacterWindow() {
 			// Clear the add-character inputs for good UX on repeat adds
 			addCharName = ""
 			addCharPass = ""
+			addCharPassPrev = ""
+			clearCapsWarnings()
 			if addCharNameInput != nil {
 				addCharNameInput.Text = ""
 				addCharNameInput.Dirty = true
@@ -2024,13 +2080,24 @@ func makePasswordWindow() {
 
 	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
 
-	input, _ := eui.NewInput()
+	input, passEvents := eui.NewInput()
 	input.Label = "Password"
 	input.TextPtr = &pass
 	input.HideText = true
 	input.Size = eui.Point{X: 200, Y: 24}
 	passInput = input
+	passPrev = pass
+	passEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventInputChanged {
+			checkCapsWarning(&passPrev, pass, passWarn)
+		}
+	}
 	flow.AddItem(input)
+
+	passWarn, _ = eui.NewText()
+	passWarn.TextColor = eui.NewColor(255, 0, 0, 255)
+	passWarn.Size = eui.Point{X: 200, Y: 12}
+	flow.AddItem(passWarn)
 
 	btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 
@@ -2040,6 +2107,8 @@ func makePasswordWindow() {
 	cancelEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			pass = ""
+			passPrev = ""
+			clearCapsWarnings()
 			passWin.Close()
 		}
 	}
@@ -2207,6 +2276,8 @@ func makeLoginWindow() {
 		if ev.Type == eui.EventClick {
 			addCharName = ""
 			addCharPass = ""
+			addCharPassPrev = ""
+			clearCapsWarnings()
 			addCharRemember = true
 			loginWin.Close()
 			addCharWin.MarkOpenNear(ev.Item)
