@@ -52,7 +52,9 @@ var inAspectResize bool
 var dimmedScreenBG = color.RGBA{0, 0, 0, 255}
 
 var (
-	drawOptsPool     = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
+	// drawOptsPool pools DrawImageOptions to reduce allocations.
+	drawOptsPool = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
+	// textDrawOptsPool pools DrawOptions to reduce allocations.
 	textDrawOptsPool = sync.Pool{New: func() any { return &text.DrawOptions{} }}
 )
 
@@ -183,12 +185,15 @@ func exactScale(scale float64, maxDenom int, eps float64) (float64, bool) {
 	return best, false
 }
 
+// acquireDrawOpts returns a DrawImageOptions from the shared pool initialized
+// with nearest filtering and mipmaps disabled. Call releaseDrawOpts when done.
 func acquireDrawOpts() *ebiten.DrawImageOptions {
 	op := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	*op = ebiten.DrawImageOptions{}
+	*op = ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
 	return op
 }
 
+// releaseDrawOpts returns a DrawImageOptions to the shared pool.
 func releaseDrawOpts(op *ebiten.DrawImageOptions) {
 	drawOptsPool.Put(op)
 }

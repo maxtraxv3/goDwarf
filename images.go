@@ -70,11 +70,6 @@ var (
 	// pictBlendCache stores pre-rendered blended picture frames.
 	pictBlendCache = make(map[pictBlendKey]*ebiten.Image)
 
-	// drawOptsPool pools DrawImageOptions to reduce allocations.
-	drawOptsPool = sync.Pool{
-		New: func() any { return &ebiten.DrawImageOptions{} },
-	}
-
 	imageMu  sync.Mutex
 	clImages *climg.CLImages
 
