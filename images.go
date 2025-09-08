@@ -70,6 +70,11 @@ var (
 	// pictBlendCache stores pre-rendered blended picture frames.
 	pictBlendCache = make(map[pictBlendKey]*ebiten.Image)
 
+	// drawOptsPool pools DrawImageOptions to reduce allocations.
+	drawOptsPool = sync.Pool{
+		New: func() any { return &ebiten.DrawImageOptions{} },
+	}
+
 	imageMu  sync.Mutex
 	clImages *climg.CLImages
 
@@ -378,17 +383,37 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	blended := newImage(size, size)
 	alpha := float32(step) / float32(total)
 	offPrev := (size - prevImg.Bounds().Dx()) / 2
-	op1 := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op1 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
+	op1.Filter = ebiten.FilterNearest
+	op1.DisableMipmaps = true
+	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
+	op1.GeoM.Reset()
 	op1.GeoM.Translate(float64(offPrev), float64(offPrev))
 	blended.DrawImage(prevImg, op1)
+	op1.ColorScale.Reset()
+	op1.GeoM.Reset()
+	op1.Filter = 0
+	op1.DisableMipmaps = false
+	op1.Blend = ebiten.BlendSourceOver
+	drawOptsPool.Put(op1)
 	offCur := (size - img.Bounds().Dx()) / 2
-	op2 := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op2 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
+	op2.Filter = ebiten.FilterNearest
+	op2.DisableMipmaps = true
+	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
+	op2.GeoM.Reset()
 	op2.GeoM.Translate(float64(offCur), float64(offCur))
 	blended.DrawImage(img, op2)
+	op2.ColorScale.Reset()
+	op2.GeoM.Reset()
+	op2.Filter = 0
+	op2.DisableMipmaps = false
+	op2.Blend = ebiten.BlendSourceOver
+	drawOptsPool.Put(op2)
 	if !gs.NoCaching {
 		imageMu.Lock()
 		mobileBlendCache[k] = blended
@@ -425,18 +450,38 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	alpha := float32(step) / float32(total)
 	offPrevX := (w - w1) / 2
 	offPrevY := (h - h1) / 2
-	op1 := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op1 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
+	op1.Filter = ebiten.FilterNearest
+	op1.DisableMipmaps = true
+	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
+	op1.GeoM.Reset()
 	op1.GeoM.Translate(float64(offPrevX), float64(offPrevY))
 	blended.DrawImage(prevImg, op1)
+	op1.ColorScale.Reset()
+	op1.GeoM.Reset()
+	op1.Filter = 0
+	op1.DisableMipmaps = false
+	op1.Blend = ebiten.BlendSourceOver
+	drawOptsPool.Put(op1)
 	offCurX := (w - w2) / 2
 	offCurY := (h - h2) / 2
-	op2 := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op2 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
+	op2.Filter = ebiten.FilterNearest
+	op2.DisableMipmaps = true
+	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
+	op2.GeoM.Reset()
 	op2.GeoM.Translate(float64(offCurX), float64(offCurY))
 	blended.DrawImage(img, op2)
+	op2.ColorScale.Reset()
+	op2.GeoM.Reset()
+	op2.Filter = 0
+	op2.DisableMipmaps = false
+	op2.Blend = ebiten.BlendSourceOver
+	drawOptsPool.Put(op2)
 	if !gs.NoCaching {
 		imageMu.Lock()
 		pictBlendCache[k] = blended
