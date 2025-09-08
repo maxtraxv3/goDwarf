@@ -659,6 +659,20 @@ func (g *Game) Update() error {
 	hy := int16(float64(my-worldOriginY)/worldScale - float64(fieldCenterY))
 	updateWorldHover(hx, hy)
 
+	joyClick1, joyClick2, joyClick3 := false, false, false
+	if gs.JoystickEnabled && selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) {
+		id := joystickIDs[selectedJoystick]
+		if b, ok := gs.JoystickBindings["click1"]; ok {
+			joyClick1 = inpututil.IsGamepadButtonJustPressed(id, b)
+		}
+		if b, ok := gs.JoystickBindings["click2"]; ok {
+			joyClick2 = inpututil.IsGamepadButtonJustPressed(id, b)
+		}
+		if b, ok := gs.JoystickBindings["click3"]; ok {
+			joyClick3 = inpututil.IsGamepadButtonJustPressed(id, b)
+		}
+	}
+
 	if keys := inpututil.AppendJustPressedKeys(nil); len(keys) > 0 {
 		lastPressedKey := keys[len(keys)-1]
 		inventoryShortcutMu.RLock()
@@ -669,7 +683,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) || joyClick2 {
 		// Input bar menu takes precedence when right-clicking on input.
 		if !handleConsoleInputContext(mx, my) {
 			// Try players list first, then inventory, then chat/console copy.
@@ -979,9 +993,9 @@ func (g *Game) Update() error {
 	baseX := int16(float64(mx-worldOriginX)/worldScale - float64(fieldCenterX))
 	baseY := int16(float64(my-worldOriginY)/worldScale - float64(fieldCenterY))
 	heldTime := inpututil.MouseButtonPressDuration(ebiten.MouseButtonLeft)
-	click := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
-	rightClick := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
-	middleClick := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonMiddle)
+	click := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || joyClick1
+	rightClick := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) || joyClick2
+	middleClick := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonMiddle) || joyClick3
 
 	winW, winH := ebiten.WindowSize()
 	inWindow := mx > 0 && my > 0 && mx < winW-1 && my < winH-1

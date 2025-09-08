@@ -10,6 +10,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	text "github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -19,6 +20,8 @@ var (
 	axesText, buttonsText *eui.ItemData
 	walkStickDD           *eui.ItemData
 	cursorStickDD         *eui.ItemData
+	walkDeadzoneSlider    *eui.ItemData
+	cursorDeadzoneSlider  *eui.ItemData
 	click1Input           *eui.ItemData
 	click2Input           *eui.ItemData
 	click3Input           *eui.ItemData
@@ -59,6 +62,7 @@ func makeJoystickWindow() {
 	}
 
 	controllerDD, controllerEvents := eui.NewDropdown()
+	controllerDD.Label = "Controller"
 	controllerDD.Options = joystickNames
 	controllerDD.Size = eui.Point{X: 260, Y: 24}
 	controllerEvents.Handle = func(ev eui.UIEvent) {
@@ -93,6 +97,7 @@ func makeJoystickWindow() {
 	root.AddItem(enableCB)
 
 	walkStickDD, walkEvents := eui.NewDropdown()
+	walkStickDD.Label = "Walk Stick"
 	walkStickDD.Size = eui.Point{X: 260, Y: 24}
 	walkEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
@@ -102,7 +107,22 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(walkStickDD)
 
+	walkDeadzoneSlider, walkDZEvents := eui.NewSlider()
+	walkDeadzoneSlider.Label = "Walk Deadzone"
+	walkDeadzoneSlider.MinValue = 0.01
+	walkDeadzoneSlider.MaxValue = 0.2
+	walkDeadzoneSlider.Value = float32(gs.JoystickWalkDeadzone)
+	walkDeadzoneSlider.Size = eui.Point{X: 260, Y: 24}
+	walkDZEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.JoystickWalkDeadzone = float64(ev.Value)
+			settingsDirty = true
+		}
+	}
+	root.AddItem(walkDeadzoneSlider)
+
 	cursorStickDD, cursorEvents := eui.NewDropdown()
+	cursorStickDD.Label = "Cursor Stick"
 	cursorStickDD.Size = eui.Point{X: 260, Y: 24}
 	cursorEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
@@ -111,6 +131,20 @@ func makeJoystickWindow() {
 		}
 	}
 	root.AddItem(cursorStickDD)
+
+	cursorDeadzoneSlider, cursorDZEvents := eui.NewSlider()
+	cursorDeadzoneSlider.Label = "Cursor Deadzone"
+	cursorDeadzoneSlider.MinValue = 0.01
+	cursorDeadzoneSlider.MaxValue = 0.2
+	cursorDeadzoneSlider.Value = float32(gs.JoystickCursorDeadzone)
+	cursorDeadzoneSlider.Size = eui.Point{X: 260, Y: 24}
+	cursorDZEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.JoystickCursorDeadzone = float64(ev.Value)
+			settingsDirty = true
+		}
+	}
+	root.AddItem(cursorDeadzoneSlider)
 
 	click1Input, _ = eui.NewInput()
 	click1Input.Label = "Click1 Button"
@@ -187,20 +221,26 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 	}
 	inputImg.Clear()
 
-	drawStick := func(cx, cy float32, stick int) {
+	drawStick := func(cx, cy float32, stick int, label string, dz float64) {
 		vector.DrawFilledCircle(inputImg, cx, cy, 40, color.NRGBA{64, 64, 64, 255}, true)
+		if dz > 0 {
+			vector.DrawFilledCircle(inputImg, cx, cy, float32(dz)*40, color.NRGBA{32, 32, 32, 255}, true)
+		}
 		axisIndex := stick * 2
 		if axisIndex+1 < ebiten.GamepadAxisCount(id) {
 			ax := ebiten.GamepadAxisValue(id, axisIndex)
 			ay := ebiten.GamepadAxisValue(id, axisIndex+1)
 			vector.DrawFilledCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
 		}
+		op := &text.DrawOptions{}
+		op.GeoM.Translate(float64(cx-20), float64(cy+50))
+		text.Draw(inputImg, label, mainFont, op)
 	}
 
-	drawStick(60, 60, gs.JoystickWalkStick)
-	drawStick(200, 60, gs.JoystickCursorStick)
+	drawStick(60, 60, gs.JoystickWalkStick, "Walk", gs.JoystickWalkDeadzone)
+	drawStick(200, 60, gs.JoystickCursorStick, "Cursor", gs.JoystickCursorDeadzone)
 
-	drawBtn := func(cx float32, key string) {
+	drawBtn := func(cx float32, key, lbl string) {
 		col := color.NRGBA{128, 128, 128, 255}
 		if btn, ok := gs.JoystickBindings[key]; ok {
 			if ebiten.IsGamepadButtonPressed(id, btn) {
@@ -208,11 +248,14 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 			}
 		}
 		vector.DrawFilledCircle(inputImg, cx, 120, 10, col, true)
+		op := &text.DrawOptions{}
+		op.GeoM.Translate(float64(cx-6), 135)
+		text.Draw(inputImg, lbl, mainFont, op)
 	}
 
-	drawBtn(100, "click1")
-	drawBtn(130, "click2")
-	drawBtn(160, "click3")
+	drawBtn(100, "click1", "1")
+	drawBtn(130, "click2", "2")
+	drawBtn(160, "click3", "3")
 
 	inputImgItem.Dirty = true
 }
