@@ -170,47 +170,64 @@ func picturesSummary(pics []framePicture) string {
 // matching the base game area (0..gameAreaSizeX, 0..gameAreaSizeY). The
 // provided scale converts world units to worldView pixels.
 func drawPluginOverlays(worldView *ebiten.Image, scale float64) {
-    if worldView == nil || scale <= 0 {
-        return
-    }
-    overlayMu.RLock()
-    // Snapshot to avoid holding the lock while drawing
-    snap := make([]overlayOp, 0, 64)
-    for _, ops := range pluginOverlayOps {
-        snap = append(snap, ops...)
-    }
-    overlayMu.RUnlock()
-    if len(snap) == 0 {
-        return
-    }
-    for _, op := range snap {
-        switch op.kind {
-        case 0: // rect
-            if op.w > 0 && op.h > 0 {
-                vector.DrawFilledRect(worldView,
-                    float32(float64(op.x)*scale),
-                    float32(float64(op.y)*scale),
-                    float32(float64(op.w)*scale),
-                    float32(float64(op.h)*scale),
-                    color.RGBA{op.r, op.g, op.b, op.a}, false)
-            }
-        case 1: // text
-            if op.text != "" {
-                opts := &text.DrawOptions{}
-                opts.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
-                // Use mainFont (native scale), color with RGBA
-                opts.ColorScale.ScaleWithColor(color.RGBA{op.r, op.g, op.b, op.a})
-                text.Draw(worldView, op.text, mainFont, opts)
-            }
-        case 2: // image by ID
-            if img := loadImage(op.id); img != nil {
-                di := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
-                di.GeoM.Scale(scale, scale)
-                di.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
-                worldView.DrawImage(img, di)
-            }
-        }
-    }
+	if worldView == nil || scale <= 0 {
+		return
+	}
+	overlayMu.RLock()
+	// Snapshot to avoid holding the lock while drawing
+	snap := make([]overlayOp, 0, 64)
+	for _, ops := range pluginOverlayOps {
+		snap = append(snap, ops...)
+	}
+	overlayMu.RUnlock()
+	if len(snap) == 0 {
+		return
+	}
+
+	// Sort to help Ebiten batch identical draw operations.
+	sort.Slice(snap, func(i, j int) bool {
+		if snap[i].kind != snap[j].kind {
+			return snap[i].kind < snap[j].kind
+		}
+		if snap[i].kind == 2 {
+			return snap[i].id < snap[j].id
+		}
+		return false
+	})
+
+	var rects rectBatch
+	for _, op := range snap {
+		switch op.kind {
+		case 0: // rect
+			if op.w > 0 && op.h > 0 {
+				rects.Add(
+					float32(float64(op.x)*scale),
+					float32(float64(op.y)*scale),
+					float32(float64(op.w)*scale),
+					float32(float64(op.h)*scale),
+					color.RGBA{op.r, op.g, op.b, op.a},
+				)
+			}
+		case 1: // text
+			if op.text != "" {
+				opts := &text.DrawOptions{}
+				opts.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
+				// Use mainFont (native scale), color with RGBA
+				opts.ColorScale.ScaleWithColor(color.RGBA{op.r, op.g, op.b, op.a})
+				text.Draw(worldView, op.text, mainFont, opts)
+			}
+		case 2: // image by ID
+			if img := loadImage(op.id); img != nil {
+				di := acquireDrawOpts()
+				di.Filter = ebiten.FilterLinear
+				di.GeoM.Scale(scale, scale)
+				di.GeoM.Translate(float64(op.x)*scale, float64(op.y)*scale)
+				worldView.DrawImage(img, di)
+				releaseDrawOpts(di)
+			}
+		}
+	}
+	rects.Draw(worldView)
 }
 
 var (
@@ -446,11 +463,12 @@ func buildNameTagImage(name string, colorCode uint8, opacity uint8, style uint8,
 	}
 	img := newImage(iw+5, ih)
 	// Fill background
-	op := &ebiten.DrawImageOptions{}
+	op := acquireDrawOpts()
 	op.GeoM.Scale(float64(iw+5), float64(ih))
 	op.ColorScale.ScaleWithColor(bgClr)
 	op.ColorScale.ScaleAlpha(float32(opacity) / 255)
 	img.DrawImage(whiteImage, op)
+	releaseDrawOpts(op)
 	// Border
 	vector.StrokeRect(img, 1, 1, float32(iw+4), float32(ih-1), 1, frameClr, false)
 	// Text
@@ -1153,56 +1171,56 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		}
 	}
 
-    // Carry over previous-frame ground sprites that are missing this frame.
-    // Advance them by the detected picture shift and keep them one extra
-    // update to prevent edge flicker during camera motion.
-    //
-    // Previously this only triggered when a sprite was classified as
-    // "on edge" (>=70% off-screen). That was too strict and could miss
-    // legitimate ground tiles. Now we carry if the previous sprite was
-    // marked Background and still visible, or fall back to the stricter
-    // edge test for unclassified cases.
-    if (state.picShiftX != 0 || state.picShiftY != 0) && len(prevPics) > 0 {
-        for _, pp := range prevPics {
-            if pp.Owned {
-                continue // already matched/present
-            }
-            // Only carry ground/static sprites (not marked moving)
-            if pp.Moving {
-                continue
-            }
-            // Don't include these
-            if pp.Again {
-                continue
-            }
-            // Carry when the previous sprite was background and still visible,
-            // otherwise fall back to stricter edge classification.
-            if !pictureVisible(pp) {
-                continue
-            }
-            if !pp.Background {
-                if !pictureOnEdge(pp) {
-                    continue
-                }
-            }
-            // Skip very large images to avoid overdraw surprises.
-            if clImages != nil {
-                if w, h := clImages.Size(uint32(pp.PictID)); w > maxPersistImageSize || h > maxPersistImageSize {
-                    continue
-                }
-            }
-            oldH, oldV := pp.H, pp.V
-            // Advance by detected picture shift for this frame.
-            pp.H = int16(int(pp.H) + state.picShiftX)
-            pp.V = int16(int(pp.V) + state.picShiftY)
-            pp.PrevH = oldH
-            pp.PrevV = oldV
-            pp.Moving = false
-            pp.Background = true
-            pp.Again = true
-            newPics = append(newPics, pp)
-        }
-    }
+	// Carry over previous-frame ground sprites that are missing this frame.
+	// Advance them by the detected picture shift and keep them one extra
+	// update to prevent edge flicker during camera motion.
+	//
+	// Previously this only triggered when a sprite was classified as
+	// "on edge" (>=70% off-screen). That was too strict and could miss
+	// legitimate ground tiles. Now we carry if the previous sprite was
+	// marked Background and still visible, or fall back to the stricter
+	// edge test for unclassified cases.
+	if (state.picShiftX != 0 || state.picShiftY != 0) && len(prevPics) > 0 {
+		for _, pp := range prevPics {
+			if pp.Owned {
+				continue // already matched/present
+			}
+			// Only carry ground/static sprites (not marked moving)
+			if pp.Moving {
+				continue
+			}
+			// Don't include these
+			if pp.Again {
+				continue
+			}
+			// Carry when the previous sprite was background and still visible,
+			// otherwise fall back to stricter edge classification.
+			if !pictureVisible(pp) {
+				continue
+			}
+			if !pp.Background {
+				if !pictureOnEdge(pp) {
+					continue
+				}
+			}
+			// Skip very large images to avoid overdraw surprises.
+			if clImages != nil {
+				if w, h := clImages.Size(uint32(pp.PictID)); w > maxPersistImageSize || h > maxPersistImageSize {
+					continue
+				}
+			}
+			oldH, oldV := pp.H, pp.V
+			// Advance by detected picture shift for this frame.
+			pp.H = int16(int(pp.H) + state.picShiftX)
+			pp.V = int16(int(pp.V) + state.picShiftY)
+			pp.PrevH = oldH
+			pp.PrevV = oldV
+			pp.Moving = false
+			pp.Background = true
+			pp.Again = true
+			newPics = append(newPics, pp)
+		}
+	}
 
 	// Save previous pictures for pinning/interpolation decisions
 	state.prevPictures = append([]framePicture(nil), prevPics...)
@@ -1218,21 +1236,21 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 			state.prevMobiles[idx] = m
 		}
 	}
-    needAnimUpdate := (gs.MotionSmoothing || (gs.BlendMobiles && changed)) && ok && !seekingMov
-    if needAnimUpdate {
-        // Use the latest measured server interval; do not reuse the previous
-        // cur-prev duration as that can get stuck until a hard reset (e.g.,
-        // background change) occurs.
-        frameMu.Lock()
-        interval := frameInterval
-        frameMu.Unlock()
-        if interval <= 0 {
-            interval = time.Second / 5
-        }
-        interval *= time.Duration(extra + 1)
-        state.prevTime = time.Now()
-        state.curTime = state.prevTime.Add(interval)
-    }
+	needAnimUpdate := (gs.MotionSmoothing || (gs.BlendMobiles && changed)) && ok && !seekingMov
+	if needAnimUpdate {
+		// Use the latest measured server interval; do not reuse the previous
+		// cur-prev duration as that can get stuck until a hard reset (e.g.,
+		// background change) occurs.
+		frameMu.Lock()
+		interval := frameInterval
+		frameMu.Unlock()
+		if interval <= 0 {
+			interval = time.Second / 5
+		}
+		interval *= time.Duration(extra + 1)
+		state.prevTime = time.Now()
+		state.curTime = state.prevTime.Add(interval)
+	}
 
 	// Carry over previous-frame mobiles that disappear at the edge to avoid
 	// premature culling from interpolation.
