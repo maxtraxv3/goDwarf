@@ -24,19 +24,13 @@ var (
 // Typing short text in the chat box will expand into the full string before
 // being sent.  For example, adding ("pp", "/ponder ") means that typing
 // "pp" or "pp hello" becomes "/ponder " or "/ponder hello" respectively.
-func pluginAddShortcut(owner, short, full string) {
-	if pluginIsDisabled(owner) {
-		return
-	}
+func addShortcut(owner, short, full string) {
 	short = strings.ToLower(short)
 	shortcutMu.Lock()
 	m := shortcutMaps[owner]
 	if m == nil {
 		m = map[string]string{}
 		shortcutMaps[owner] = m
-		// Install an input handler the first time this script adds a
-		// macro.  It runs whenever the user submits chat text and
-		// replaces any macro prefixes.
 		pluginRegisterInputHandler(owner, func(txt string) string {
 			shortcutMu.RLock()
 			local := shortcutMaps[owner]
@@ -58,6 +52,13 @@ func pluginAddShortcut(owner, short, full string) {
 	m[short] = full
 	shortcutMu.Unlock()
 	refreshShortcutsList()
+}
+
+func pluginAddShortcut(owner, short, full string) {
+	if pluginIsDisabled(owner) {
+		return
+	}
+	addShortcut(owner, short, full)
 	name := pluginDisplayNames[owner]
 	if name == "" {
 		name = owner
@@ -96,4 +97,33 @@ func pluginRemoveShortcuts(owner string) {
 		consoleMessage(msg)
 	}
 	log.Print(msg)
+}
+
+func removeShortcut(owner, short string) {
+	short = strings.ToLower(short)
+	shortcutMu.Lock()
+	if m := shortcutMaps[owner]; m != nil {
+		delete(m, short)
+		if len(m) == 0 {
+			delete(shortcutMaps, owner)
+		}
+	}
+	shortcutMu.Unlock()
+	refreshShortcutsList()
+}
+
+func addUserShortcut(short, full string) {
+	addShortcut("user", short, full)
+}
+
+func addGlobalShortcut(short, full string) {
+	addShortcut("global", short, full)
+}
+
+func removeUserShortcut(short string) {
+	removeShortcut("user", short)
+}
+
+func removeGlobalShortcut(short string) {
+	removeShortcut("global", short)
 }
