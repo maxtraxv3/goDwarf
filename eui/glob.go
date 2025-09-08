@@ -56,8 +56,12 @@ var (
 	// AutoHiDPI enables automatic scaling when the device scale factor
 	// changes, keeping the UI size consistent on HiDPI displays. It is
 	// enabled by default and can be disabled if needed.
-	AutoHiDPI       bool    = true
-	lastDeviceScale float64 = 1.0
+	AutoHiDPI          bool    = true
+	lastDeviceScale    float64 = 1.0
+	lastScaleCheck     time.Time
+	lastOutsideW       int
+	lastOutsideH       int
+	scaleCheckInterval = time.Second
 
 	// WindowStateChanged is an optional callback fired when any window
 	// is opened or closed.
@@ -75,9 +79,16 @@ func init() {
 func Layout(outsideWidth, outsideHeight int) (int, int) {
 	scale := 1.0
 	if AutoHiDPI {
-		scale = ebiten.Monitor().DeviceScaleFactor()
-		lastDeviceScale = scale
+		scale = lastDeviceScale
+		now := time.Now()
+		if outsideWidth != lastOutsideW || outsideHeight != lastOutsideH || now.Sub(lastScaleCheck) >= scaleCheckInterval {
+			scale = ebiten.Monitor().DeviceScaleFactor()
+			lastDeviceScale = scale
+			lastScaleCheck = now
+		}
 	}
+	lastOutsideW = outsideWidth
+	lastOutsideH = outsideHeight
 
 	scaledW := int(float64(outsideWidth) * scale)
 	scaledH := int(float64(outsideHeight) * scale)
