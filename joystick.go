@@ -17,11 +17,16 @@ import (
 var (
 	joystickWin           *eui.WindowData
 	controllerDD          *eui.ItemData
+	controllerEvents      *eui.EventHandler
 	axesText, buttonsText *eui.ItemData
 	walkStickDD           *eui.ItemData
+	walkEvents            *eui.EventHandler
 	cursorStickDD         *eui.ItemData
+	cursorEvents          *eui.EventHandler
 	walkDeadzoneSlider    *eui.ItemData
+	walkDZEvents          *eui.EventHandler
 	cursorDeadzoneSlider  *eui.ItemData
+	cursorDZEvents        *eui.EventHandler
 	click1Input           *eui.ItemData
 	click2Input           *eui.ItemData
 	click3Input           *eui.ItemData
