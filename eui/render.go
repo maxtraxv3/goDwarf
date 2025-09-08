@@ -21,6 +21,8 @@ const shadowAlphaDivisor = 16
 var dumpDone bool
 var zoneIndicatorWin *windowData
 
+var dropdownReuse []openDropdown
+
 var drawImageOptionsPool = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
 
 func acquireDrawImageOptions() *ebiten.DrawImageOptions {
@@ -69,7 +71,10 @@ func itemFace(item *itemData, size float32) text.Face {
 // Call this from your Ebiten Draw function.
 func Draw(screen *ebiten.Image) {
 	zoneIndicatorWin = nil
-	dropdowns := []openDropdown{}
+	dropdowns := dropdownReuse[:0]
+	if cap(dropdowns) < len(windows) {
+		dropdowns = make([]openDropdown, 0, len(windows))
+	}
 	for _, win := range windows {
 		if !win.Open {
 			continue
@@ -111,6 +116,7 @@ func Draw(screen *ebiten.Image) {
 	if hoveredItem != nil && hoveredItem.Tooltip != "" {
 		drawTooltip(screen, hoveredItem)
 	}
+	dropdownReuse = dropdowns
 
 	if DumpMode && !dumpDone {
 		if err := DumpCachedImages(); err != nil {
