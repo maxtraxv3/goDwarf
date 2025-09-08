@@ -2978,7 +2978,7 @@ func makeSettingsWindow() {
 	left.AddItem(bubbleBtn)
 
 	joystickBtn, joystickEvents := eui.NewButton()
-	joystickBtn.Text = "Joystick"
+	joystickBtn.Text = "Gamepad"
 	joystickBtn.Size = eui.Point{X: panelWidth, Y: 24}
 	joystickEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
