@@ -284,7 +284,7 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 	}
 
 	drawStick(60, 60, gs.JoystickWalkStick, "Walk", gs.JoystickWalkDeadzone)
-	drawStick(200, 60, gs.JoystickCursorStick, "Cursor", gs.JoystickCursorDeadzone)
+	drawStick(190, 90, gs.JoystickCursorStick, "Cursor", gs.JoystickCursorDeadzone)
 
 	drawBtn := func(cx, cy, r float32, btn ebiten.GamepadButton, lbl string) {
 		col := color.NRGBA{128, 128, 128, 255}
@@ -306,10 +306,10 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 		x, y, r float32
 		lbl     string
 	}{
-		{ebiten.GamepadButton0, 210, 100, 10, "A"},
-		{ebiten.GamepadButton1, 230, 80, 10, "B"},
-		{ebiten.GamepadButton2, 190, 80, 10, "X"},
-		{ebiten.GamepadButton3, 210, 60, 10, "Y"},
+		{ebiten.GamepadButton0, 230, 80, 10, "A"},
+		{ebiten.GamepadButton1, 250, 60, 10, "B"},
+		{ebiten.GamepadButton2, 210, 60, 10, "X"},
+		{ebiten.GamepadButton3, 230, 40, 10, "Y"},
 		{ebiten.GamepadButton4, 80, 30, 10, "LB"},
 		{ebiten.GamepadButton5, 180, 30, 10, "RB"},
 		{ebiten.GamepadButton6, 80, 10, 10, "LT"},
@@ -317,7 +317,7 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 		{ebiten.GamepadButton8, 120, 60, 10, "Back"},
 		{ebiten.GamepadButton9, 150, 60, 10, "Start"},
 		{ebiten.GamepadButton10, 60, 60, 6, "L3"},
-		{ebiten.GamepadButton11, 200, 60, 6, "R3"},
+		{ebiten.GamepadButton11, 190, 90, 6, "R3"},
 		{ebiten.GamepadButton12, 80, 100, 8, "Up"},
 		{ebiten.GamepadButton13, 90, 110, 8, "Right"},
 		{ebiten.GamepadButton14, 80, 120, 8, "Down"},

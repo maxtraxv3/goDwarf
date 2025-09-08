@@ -221,6 +221,7 @@ var keyX, keyY int16
 var walkToggled bool
 var keyWalkPrev bool
 var keyStopFrames int
+var joyCursorX, joyCursorY float64
 
 var inputActive bool
 var inputText []rune
@@ -978,8 +979,19 @@ func (g *Game) Update() error {
 			}
 			keyX = int16(float64(dx) * float64(fieldCenterX) * speed)
 			keyY = int16(float64(dy) * float64(fieldCenterY) * speed)
-		} else {
-			keyWalk = false
+		}
+	}
+	if focused && !inputActive && !typingElsewhere && gs.JoystickEnabled && selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) && gs.JoystickWalkStick >= 0 {
+		id := joystickIDs[selectedJoystick]
+		axis := gs.JoystickWalkStick * 2
+		if axis+1 < ebiten.GamepadAxisCount(id) {
+			ax := ebiten.GamepadAxisValue(id, axis)
+			ay := ebiten.GamepadAxisValue(id, axis+1)
+			if math.Abs(ax) > gs.JoystickWalkDeadzone || math.Abs(ay) > gs.JoystickWalkDeadzone {
+				keyWalk = true
+				keyX = int16(ax * float64(fieldCenterX))
+				keyY = int16(ay * float64(fieldCenterY))
+			}
 		}
 	}
 	if !keyWalk && keyWalkPrev {
@@ -988,6 +1000,35 @@ func (g *Game) Update() error {
 	keyWalkPrev = keyWalk
 
 	mx, my = eui.PointerPosition()
+	if gs.JoystickEnabled && selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) && gs.JoystickCursorStick >= 0 {
+		id := joystickIDs[selectedJoystick]
+		axis := gs.JoystickCursorStick * 2
+		if axis+1 < ebiten.GamepadAxisCount(id) {
+			ax := ebiten.GamepadAxisValue(id, axis)
+			ay := ebiten.GamepadAxisValue(id, axis+1)
+			if math.Abs(ax) > gs.JoystickCursorDeadzone || math.Abs(ay) > gs.JoystickCursorDeadzone {
+				if joyCursorX == 0 && joyCursorY == 0 {
+					joyCursorX, joyCursorY = float64(mx), float64(my)
+				}
+				joyCursorX += float64(ax) * 5
+				joyCursorY += float64(ay) * 5
+				winW, winH := ebiten.WindowSize()
+				if joyCursorX < 0 {
+					joyCursorX = 0
+				} else if joyCursorX > float64(winW-1) {
+					joyCursorX = float64(winW - 1)
+				}
+				if joyCursorY < 0 {
+					joyCursorY = 0
+				} else if joyCursorY > float64(winH-1) {
+					joyCursorY = float64(winH - 1)
+				}
+				mx, my = int(joyCursorX), int(joyCursorY)
+			} else {
+				joyCursorX, joyCursorY = float64(mx), float64(my)
+			}
+		}
+	}
 	inGame := pointInGameWindow(mx, my)
 	// Map mouse to world coordinates accounting for current draw scale/offset.
 	baseX := int16(float64(mx-worldOriginX)/worldScale - float64(fieldCenterX))
