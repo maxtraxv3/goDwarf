@@ -134,7 +134,7 @@ func makeJoystickWindow() {
 	walkStickDD.Size = eui.Point{X: 260, Y: 24}
 	walkEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
-			gs.JoystickWalkStick = ev.Index
+			gs.JoystickWalkStick = ev.Index - 1
 			settingsDirty = true
 		}
 	}
@@ -159,7 +159,7 @@ func makeJoystickWindow() {
 	cursorStickDD.Size = eui.Point{X: 260, Y: 24}
 	cursorEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
-			gs.JoystickCursorStick = ev.Index
+			gs.JoystickCursorStick = ev.Index - 1
 			settingsDirty = true
 		}
 	}
@@ -220,37 +220,33 @@ func makeJoystickWindow() {
 
 func updateStickOptions(axisCount int) {
 	stickCount := axisCount / 2
-	opts := make([]string, stickCount)
+	opts := make([]string, stickCount+1)
+	opts[0] = "none"
 	for i := 0; i < stickCount; i++ {
-		opts[i] = fmt.Sprintf("Stick %d", i+1)
-	}
-	if stickCount == 0 {
-		opts = []string{"none"}
+		opts[i+1] = fmt.Sprintf("Stick %d", i+1)
 	}
 	if walkStickDD != nil {
 		walkStickDD.Options = opts
 		walkStickDD.Disabled = stickCount == 0
-		if stickCount > 0 {
-			if gs.JoystickWalkStick >= stickCount {
-				gs.JoystickWalkStick = stickCount - 1
-			}
-			walkStickDD.Selected = gs.JoystickWalkStick
-		} else {
-			walkStickDD.Selected = 0
+		if gs.JoystickWalkStick >= stickCount {
+			gs.JoystickWalkStick = stickCount - 1
 		}
+		if gs.JoystickWalkStick < -1 {
+			gs.JoystickWalkStick = -1
+		}
+		walkStickDD.Selected = gs.JoystickWalkStick + 1
 		walkStickDD.Dirty = true
 	}
 	if cursorStickDD != nil {
 		cursorStickDD.Options = opts
 		cursorStickDD.Disabled = stickCount == 0
-		if stickCount > 0 {
-			if gs.JoystickCursorStick >= stickCount {
-				gs.JoystickCursorStick = stickCount - 1
-			}
-			cursorStickDD.Selected = gs.JoystickCursorStick
-		} else {
-			cursorStickDD.Selected = 0
+		if gs.JoystickCursorStick >= stickCount {
+			gs.JoystickCursorStick = stickCount - 1
 		}
+		if gs.JoystickCursorStick < -1 {
+			gs.JoystickCursorStick = -1
+		}
+		cursorStickDD.Selected = gs.JoystickCursorStick + 1
 		cursorStickDD.Dirty = true
 	}
 	lastAxisCount = axisCount
@@ -270,36 +266,65 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 		if dz > 0 {
 			vector.DrawFilledCircle(inputImg, cx, cy, float32(dz)*40, color.NRGBA{32, 32, 32, 255}, true)
 		}
-		axisIndex := stick * 2
-		if axisIndex+1 < ebiten.GamepadAxisCount(id) {
-			ax := ebiten.GamepadAxisValue(id, axisIndex)
-			ay := ebiten.GamepadAxisValue(id, axisIndex+1)
-			vector.DrawFilledCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
+		if stick >= 0 {
+			axisIndex := stick * 2
+			if axisIndex+1 < ebiten.GamepadAxisCount(id) {
+				ax := ebiten.GamepadAxisValue(id, axisIndex)
+				ay := ebiten.GamepadAxisValue(id, axisIndex+1)
+				vector.DrawFilledCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
+			}
 		}
+		metrics := mainFont.Metrics()
+		txtW, _ := text.Measure(label, mainFont, 0)
+		scale := 0.7
 		op := &text.DrawOptions{}
-		op.GeoM.Translate(float64(cx-20), float64(cy+50))
+		op.GeoM.Translate(float64(cx)-float64(txtW)*scale/2, float64(cy)+40+metrics.HAscent*scale)
+		op.GeoM.Scale(scale, scale)
 		text.Draw(inputImg, label, mainFont, op)
 	}
 
 	drawStick(60, 60, gs.JoystickWalkStick, "Walk", gs.JoystickWalkDeadzone)
 	drawStick(200, 60, gs.JoystickCursorStick, "Cursor", gs.JoystickCursorDeadzone)
 
-	drawBtn := func(cx, cy float32, btn ebiten.GamepadButton, lbl string) {
+	drawBtn := func(cx, cy, r float32, btn ebiten.GamepadButton, lbl string) {
 		col := color.NRGBA{128, 128, 128, 255}
 		if ebiten.IsGamepadButtonPressed(id, btn) {
 			col = color.NRGBA{0, 255, 0, 255}
 		}
-		vector.DrawFilledCircle(inputImg, cx, cy, 10, col, true)
+		vector.DrawFilledCircle(inputImg, cx, cy, r, col, true)
+		metrics := mainFont.Metrics()
+		txtW, _ := text.Measure(lbl, mainFont, 0)
+		scale := 0.5
 		op := &text.DrawOptions{}
-		op.GeoM.Translate(float64(cx-8), float64(cy+15))
+		op.GeoM.Translate(float64(cx)-float64(txtW)*scale/2, float64(cy)+float64(r)+metrics.HAscent*scale)
+		op.GeoM.Scale(scale, scale)
 		text.Draw(inputImg, lbl, mainFont, op)
 	}
 
-	labels := []string{"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Back", "Start", "L3", "R3", "Up", "Right", "Down", "Left"}
-	for i, lbl := range labels {
-		cx := float32(20 + (i%8)*30)
-		cy := float32(110 + (i/8)*20)
-		drawBtn(cx, cy, ebiten.GamepadButton(i), lbl)
+	btns := []struct {
+		btn     ebiten.GamepadButton
+		x, y, r float32
+		lbl     string
+	}{
+		{ebiten.GamepadButton0, 210, 100, 10, "A"},
+		{ebiten.GamepadButton1, 230, 80, 10, "B"},
+		{ebiten.GamepadButton2, 190, 80, 10, "X"},
+		{ebiten.GamepadButton3, 210, 60, 10, "Y"},
+		{ebiten.GamepadButton4, 80, 30, 10, "LB"},
+		{ebiten.GamepadButton5, 180, 30, 10, "RB"},
+		{ebiten.GamepadButton6, 80, 10, 10, "LT"},
+		{ebiten.GamepadButton7, 180, 10, 10, "RT"},
+		{ebiten.GamepadButton8, 120, 60, 10, "Back"},
+		{ebiten.GamepadButton9, 150, 60, 10, "Start"},
+		{ebiten.GamepadButton10, 60, 60, 6, "L3"},
+		{ebiten.GamepadButton11, 200, 60, 6, "R3"},
+		{ebiten.GamepadButton12, 80, 100, 8, "Up"},
+		{ebiten.GamepadButton13, 90, 110, 8, "Right"},
+		{ebiten.GamepadButton14, 80, 120, 8, "Down"},
+		{ebiten.GamepadButton15, 70, 110, 8, "Left"},
+	}
+	for _, b := range btns {
+		drawBtn(b.x, b.y, b.r, b.btn, b.lbl)
 	}
 
 	inputImgItem.Dirty = true
