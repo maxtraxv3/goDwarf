@@ -33,6 +33,18 @@ func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {
 	drawImageOptionsPool.Put(op)
 }
 
+var textDrawOptionsPool = sync.Pool{New: func() any { return &text.DrawOptions{} }}
+
+func acquireTextDrawOptions() *text.DrawOptions {
+	op := textDrawOptionsPool.Get().(*text.DrawOptions)
+	*op = text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}}
+	return op
+}
+
+func releaseTextDrawOptions(op *text.DrawOptions) {
+	textDrawOptionsPool.Put(op)
+}
+
 type openDropdown struct {
 	item   *itemData
 	offset point
@@ -1675,9 +1687,11 @@ func drawDropdownOptions(item *itemData, offset point, clip rect, screen *ebiten
 			}
 			drawRoundRect(subImg, &roundRect{Size: maxSize, Position: point{X: offset.X, Y: y}, Fillet: item.Fillet, Filled: true, Color: col})
 		}
-		td := ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+		td := acquireDrawImageOptions()
 		td.GeoM.Translate(float64(offset.X+item.BorderPad+item.Padding+currentStyle.TextPadding*uiScale), float64(y+optionH/2))
-		tdo := &text.DrawOptions{DrawImageOptions: td, LayoutOptions: loo}
+		tdo := acquireTextDrawOptions()
+		tdo.DrawImageOptions = *td
+		tdo.LayoutOptions = loo
 		if i < item.HeaderCount {
 			// Render headers with disabled text color.
 			tdo.ColorScale.ScaleWithColor(style.DisabledColor)
@@ -1685,6 +1699,8 @@ func drawDropdownOptions(item *itemData, offset point, clip rect, screen *ebiten
 			tdo.ColorScale.ScaleWithColor(style.TextColor)
 		}
 		text.Draw(subImg, item.Options[i], face, tdo)
+		releaseTextDrawOptions(tdo)
+		releaseDrawImageOptions(td)
 	}
 
 	if len(item.Options) > visible {
