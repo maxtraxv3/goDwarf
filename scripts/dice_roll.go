@@ -3,11 +3,11 @@
 package main
 
 import (
-    "fmt"
-    "math/rand"
-    "strconv"
+	"fmt"
+	"math/rand"
+	"strconv"
 
-    "gt"
+	"gt"
 )
 
 const PluginAuthor = "Examples"
@@ -21,25 +21,25 @@ func Init() {
 }
 
 func roll(args string) {
-    args = gt.Trim(gt.Lower(args))
-    if args == "" {
-        gt.Console("usage: /roll NdM, e.g. /roll 2d6")
-        return
-    }
-    parts := gt.Split(args, "d")
-    if len(parts) != 2 {
-        gt.Console("usage: /roll NdM, e.g. /roll 2d6")
-        return
-    }
-    n := 1
-    if parts[0] != "" {
-        n, _ = strconv.Atoi(parts[0])
-    }
-    sides, _ := strconv.Atoi(parts[1])
-    if n <= 0 || sides <= 0 {
-        gt.Console("invalid dice")
-        return
-    }
+	args = gt.Trim(gt.Lower(args))
+	if args == "" {
+		gt.Print("usage: /roll NdM, e.g. /roll 2d6")
+		return
+	}
+	parts := gt.Split(args, "d")
+	if len(parts) != 2 {
+		gt.Print("usage: /roll NdM, e.g. /roll 2d6")
+		return
+	}
+	n := 1
+	if parts[0] != "" {
+		n, _ = strconv.Atoi(parts[0])
+	}
+	sides, _ := strconv.Atoi(parts[1])
+	if n <= 0 || sides <= 0 {
+		gt.Print("invalid dice")
+		return
+	}
 
 	// Try to equip a dice item if present so others see it.
 	for _, it := range gt.Inventory() {

@@ -28,9 +28,9 @@ func Init() {
 func scToggleCmd(args string) {
 	scOn = !scOn
 	if scOn {
-		gt.Console("* Sharecads enabled")
+		gt.Print("* Sharecads enabled")
 	} else {
-		gt.Console("* Sharecads disabled")
+		gt.Print("* Sharecads disabled")
 	}
 }
 

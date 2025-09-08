@@ -64,12 +64,12 @@ func equipItem(name, cmd, display string) {
 	time.Sleep(100 * time.Millisecond)
 	if !hasEquipped(name) {
 		gt.Run("/unequip " + cmd)
-		gt.Console("* " + display + " unequipped due to durability.")
+		gt.Print("* " + display + " unequipped due to durability.")
 	}
 }
 
 func examineArmor() {
-	gt.Console("* Armor Examiner:")
+	gt.Print("* Armor Examiner:")
 	if gt.HasItem("iron breastplate") {
 		gt.Run("/examine ironbreastplate")
 		time.Sleep(100 * time.Millisecond)

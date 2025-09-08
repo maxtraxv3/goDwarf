@@ -37,7 +37,7 @@ func quickReplyWatch(msg string) {
 
 func quickReplyCmd(args string) {
 	if lastThinker == "" {
-		gt.Console("No one to reply to yet.")
+		gt.Print("No one to reply to yet.")
 		return
 	}
 	gt.Run("/thinkto " + lastThinker + " " + args)
