@@ -246,6 +246,12 @@ var (
 	latencyMu     sync.Mutex
 )
 
+var (
+	worldOriginX int
+	worldOriginY int
+	worldScale   float64 = 1.0
+)
+
 // drawState tracks information needed by the Ebiten renderer.
 type drawState struct {
 	descriptors  map[uint8]frameDescriptor
@@ -621,9 +627,8 @@ func (g *Game) Update() error {
 	}
 
 	mx, my := eui.PointerPosition()
-	origX, origY, worldScale := worldDrawInfo()
-	hx := int16(float64(mx-origX)/worldScale - float64(fieldCenterX))
-	hy := int16(float64(my-origY)/worldScale - float64(fieldCenterY))
+	hx := int16(float64(mx-worldOriginX)/worldScale - float64(fieldCenterX))
+	hy := int16(float64(my-worldOriginY)/worldScale - float64(fieldCenterY))
 	updateWorldHover(hx, hy)
 
 	inventoryShortcutMu.RLock()
@@ -937,9 +942,8 @@ func (g *Game) Update() error {
 	mx, my = eui.PointerPosition()
 	inGame := pointInGameWindow(mx, my)
 	// Map mouse to world coordinates accounting for current draw scale/offset.
-	origX, origY, worldScale = worldDrawInfo()
-	baseX := int16(float64(mx-origX)/worldScale - float64(fieldCenterX))
-	baseY := int16(float64(my-origY)/worldScale - float64(fieldCenterY))
+	baseX := int16(float64(mx-worldOriginX)/worldScale - float64(fieldCenterX))
+	baseY := int16(float64(my-worldOriginY)/worldScale - float64(fieldCenterY))
 	heldTime := inpututil.MouseButtonPressDuration(ebiten.MouseButtonLeft)
 	click := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 	rightClick := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
@@ -1152,7 +1156,13 @@ func worldDrawInfo() (int, int, float64) {
 	return originX, originY, effScale
 }
 
+// getWorldDrawParams returns the cached draw origin and scale.
+func getWorldDrawParams() (int, int, float64) {
+	return worldOriginX, worldOriginY, worldScale
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
+	worldOriginX, worldOriginY, worldScale = worldDrawInfo()
 	// Cache now for the whole draw to reduce time.Now overhead.
 	now := time.Now()
 
