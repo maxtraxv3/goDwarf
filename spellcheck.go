@@ -17,6 +17,8 @@ import (
 var embeddedDict []byte
 
 var sc *spellchecker.Spellchecker
+var spellCache map[string]bool
+var spellDirty bool
 
 // commonWords provides a tiny built-in dictionary so the checker works out of
 // the box without large data files. A more complete word list can be added
@@ -45,6 +47,7 @@ func loadSpellcheck() {
 		sc = nil
 		return
 	}
+	spellCache = make(map[string]bool)
 	if len(embeddedDict) > 0 {
 		if err := sc.AddFrom(bytes.NewReader(embeddedDict)); err != nil {
 			// ignore errors reading embedded dictionary
@@ -72,16 +75,32 @@ func findMisspellings(s string) []eui.TextSpan {
 		}
 		if start != -1 {
 			word := strings.ToLower(string(rs[start:i]))
-			if !sc.IsCorrect(word) {
-				spans = append(spans, eui.TextSpan{Start: start, End: i})
+			if correct, ok := spellCache[word]; ok {
+				if !correct {
+					spans = append(spans, eui.TextSpan{Start: start, End: i})
+				}
+			} else {
+				correct := sc.IsCorrect(word)
+				spellCache[word] = correct
+				if !correct {
+					spans = append(spans, eui.TextSpan{Start: start, End: i})
+				}
 			}
 			start = -1
 		}
 	}
 	if start != -1 {
 		word := strings.ToLower(string(rs[start:]))
-		if !sc.IsCorrect(word) {
-			spans = append(spans, eui.TextSpan{Start: start, End: len(rs)})
+		if correct, ok := spellCache[word]; ok {
+			if !correct {
+				spans = append(spans, eui.TextSpan{Start: start, End: len(rs)})
+			}
+		} else {
+			correct := sc.IsCorrect(word)
+			spellCache[word] = correct
+			if !correct {
+				spans = append(spans, eui.TextSpan{Start: start, End: len(rs)})
+			}
 		}
 	}
 	return spans

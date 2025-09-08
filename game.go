@@ -702,12 +702,14 @@ func (g *Game) Update() error {
 
 	/* Console input */
 	changedInput := false
+	textChanged := false
 	if typingElsewhere && inputActive {
 		inputActive = false
 		inputText = inputText[:0]
 		inputPos = 0
 		historyPos = len(inputHistory)
 		changedInput = true
+		textChanged = true
 	}
 	if inputActive {
 		if newChars := ebiten.AppendInputChars(nil); len(newChars) > 0 {
@@ -720,6 +722,7 @@ func (g *Game) Update() error {
 			inputText = append(inputText[:inputPos], append(newChars, inputText[inputPos:]...)...)
 			inputPos += len(newChars)
 			changedInput = true
+			textChanged = true
 		}
 		ctrl := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
 		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyV) {
@@ -728,6 +731,7 @@ func (g *Game) Update() error {
 				inputText = append(inputText[:inputPos], append(runes, inputText[inputPos:]...)...)
 				inputPos += len(runes)
 				changedInput = true
+				textChanged = true
 			}
 		}
 		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyC) {
@@ -755,6 +759,7 @@ func (g *Game) Update() error {
 				inputText = []rune(inputHistory[historyPos])
 				inputPos = len(inputText)
 				changedInput = true
+				textChanged = true
 			}
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
@@ -764,11 +769,13 @@ func (g *Game) Update() error {
 					inputText = []rune(inputHistory[historyPos])
 					inputPos = len(inputText)
 					changedInput = true
+					textChanged = true
 				} else {
 					historyPos = len(inputHistory)
 					inputText = inputText[:0]
 					inputPos = 0
 					changedInput = true
+					textChanged = true
 				}
 			}
 		}
@@ -779,6 +786,7 @@ func (g *Game) Update() error {
 					inputText = append(inputText[:inputPos-1], inputText[inputPos:]...)
 					inputPos--
 					changedInput = true
+					textChanged = true
 				}
 			} else if d := inpututil.KeyPressDuration(ebiten.KeyBackspace); d > 30 {
 				if inputPos > 0 {
@@ -786,6 +794,7 @@ func (g *Game) Update() error {
 					inputText = append(inputText[:inputPos-1], inputText[inputPos:]...)
 					inputPos--
 					changedInput = true
+					textChanged = true
 				}
 			}
 		}
@@ -841,7 +850,7 @@ func (g *Game) Update() error {
 					} else {
 						pendingCommand = txt
 					}
-					//consoleMessage("> " + txt)
+					// consoleMessage("> " + txt)
 				}
 				inputHistory = append(inputHistory, txt)
 			}
@@ -854,6 +863,7 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			inputActive = false
@@ -861,6 +871,7 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 	} else if !typingElsewhere {
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
@@ -869,9 +880,13 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 	}
 
+	if textChanged {
+		spellDirty = true
+	}
 	if changedInput {
 		updateConsoleWindow()
 		if consoleWin != nil {
