@@ -178,13 +178,19 @@ func ListStyles() ([]string, error) { return listStyles() }
 func CurrentThemeName() string { return currentThemeName }
 
 // SetCurrentThemeName updates the active theme name.
-func SetCurrentThemeName(name string) { currentThemeName = name }
+func SetCurrentThemeName(name string) {
+	currentThemeName = name
+	updateThemePath()
+}
 
 // CurrentStyleName returns the active style theme name.
 func CurrentStyleName() string { return currentStyleName }
 
 // SetCurrentStyleName updates the active style theme name.
-func SetCurrentStyleName(name string) { currentStyleName = name }
+func SetCurrentStyleName(name string) {
+	currentStyleName = name
+	updateStylePath()
+}
 
 // AccentSaturation returns the current accent color saturation value.
 func AccentSaturation() float64 { return accentSaturation }

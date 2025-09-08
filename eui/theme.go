@@ -115,7 +115,7 @@ func LoadTheme(name string) error {
 			currentTheme.Slider.SelectedColor = col
 		}
 	}
-	currentThemeName = name
+	SetCurrentThemeName(name)
 	applyStyleToTheme(currentTheme)
 	updateThemeReferences(oldTheme, currentTheme)
 	applyStyleToItems(currentTheme)
