@@ -72,21 +72,25 @@ func disabledStyle(style *itemData) *itemData {
 }
 
 func (win *windowData) getWinRect() rect {
-	winPos := win.GetPos()
+	pos := win.GetPos()
+	size := win.GetSize()
 	return rect{
-		X0: winPos.X,
-		Y0: winPos.Y,
-		X1: winPos.X + win.GetSize().X,
-		Y1: winPos.Y + win.GetSize().Y,
+		X0: pos.X,
+		Y0: pos.Y,
+		X1: pos.X + size.X,
+		Y1: pos.Y + size.Y,
 	}
 }
 
 func (item *itemData) getItemRect(win *windowData) rect {
+	wpos := win.getPosition()
+	ipos := item.getPosition(win)
+	size := item.GetSize()
 	return rect{
-		X0: win.getPosition().X + (item.getPosition(win).X),
-		Y0: win.getPosition().Y + (item.getPosition(win).Y),
-		X1: win.getPosition().X + (item.getPosition(win).X) + (item.GetSize().X),
-		Y1: win.getPosition().Y + (item.getPosition(win).Y) + (item.GetSize().Y),
+		X0: wpos.X + ipos.X,
+		Y0: wpos.Y + ipos.Y,
+		X1: wpos.X + ipos.X + size.X,
+		Y1: wpos.Y + ipos.Y + size.Y,
 	}
 }
 
@@ -135,11 +139,14 @@ func (parent *windowData) prependItemTo(item *itemData) {
 }
 
 func (win *windowData) getMainRect() rect {
+	pos := win.getPosition()
+	size := win.GetSize()
+	title := win.GetTitleSize()
 	return rect{
-		X0: win.getPosition().X,
-		Y0: win.getPosition().Y + win.GetTitleSize(),
-		X1: win.getPosition().X + win.GetSize().X,
-		Y1: win.getPosition().Y + win.GetSize().Y,
+		X0: pos.X,
+		Y0: pos.Y + title,
+		X1: pos.X + size.X,
+		Y1: pos.Y + size.Y,
 	}
 }
 
@@ -148,10 +155,12 @@ func (win *windowData) getTitleRect() rect {
 		return rect{}
 	}
 	pos := win.GetPos()
+	size := win.GetSize()
+	title := win.GetTitleSize()
 	return rect{
 		X0: pos.X, Y0: pos.Y,
-		X1: pos.X + win.GetSize().X,
-		Y1: pos.Y + (win.GetTitleSize()),
+		X1: pos.X + size.X,
+		Y1: pos.Y + title,
 	}
 }
 
@@ -162,12 +171,14 @@ func (win *windowData) xRect() rect {
 
 	var xpad float32 = win.Border * win.scale()
 	pos := win.GetPos()
+	size := win.GetSize()
+	title := win.GetTitleSize()
 	return rect{
-		X0: pos.X + win.GetSize().X - (win.GetTitleSize()) + xpad,
+		X0: pos.X + size.X - title + xpad,
 		Y0: pos.Y + xpad,
 
-		X1: pos.X + win.GetSize().X - xpad,
-		Y1: pos.Y + (win.GetTitleSize()) - xpad,
+		X1: pos.X + size.X - xpad,
+		Y1: pos.Y + title - xpad,
 	}
 }
 
