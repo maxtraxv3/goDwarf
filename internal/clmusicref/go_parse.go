@@ -1,11 +1,10 @@
 package clmusicref
 
-// GoParse is a small, test-only Go reimplementation of the tune string parser
-// that mirrors the minimal C reference stub behavior. It focuses on timing
-// issues: notes, rests, ties, and inline tempo (@, @+N, @-N, @N). It returns
-// a timeline of RefEvent with millisecond timing. This is scaffolding to enable
-// comparisons and will be replaced by a wrapper to the classic parser.
-func GoParse(s string, baseTempo int) []RefEvent {
+// parseRefInternal is a minimal Go implementation of the tune string parser
+// used in tests and, via ParseRef, at runtime. It focuses on timing issues:
+// notes, rests, ties, and inline tempo (@, @+N, @-N, @N). It returns a timeline
+// of RefEvent with millisecond timing.
+func parseRefInternal(s string, baseTempo int) []RefEvent {
 	tempo := baseTempo
 	if tempo <= 0 {
 		tempo = 120
@@ -151,4 +150,10 @@ func GoParse(s string, baseTempo int) []RefEvent {
 		startMS += durFull
 	}
 	return out
+}
+
+// ParseRef parses a tune string at baseTempo using the internal Go parser.
+// It mirrors the previous C implementation but avoids cgo overhead.
+func ParseRef(s string, baseTempo int) ([]RefEvent, error) {
+	return parseRefInternal(s, baseTempo), nil
 }
