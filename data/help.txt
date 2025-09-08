@@ -1,46 +1,46 @@
 Movement
 --------
-- Left-click to walk toward the cursor. When "Click-to-Toggle Walk" is enabled, a single click sets a walk target.
-- Or, move using WASD or arrow keys. Hold Shift to run.
+- Left-click to walk toward the cursor. With "Click-to-Toggle Walk" enabled, one click sets a walk target.
+- Use WASD or arrow keys; hold Shift to run.
 
 Communication
 -------------
-- Press Enter to start typing. Enter again sends the message.
-- Press Esc to cancel typing. Up/Down browse previous messages.
-- While typing: Ctrl-V pastes, Ctrl-C copies the whole input line.
-- Right-click the input bar for a menu: Paste, Copy Line, Clear Line. Paste and Clear switch to typing mode so you can send immediately.
+- Press Enter to start typing; press Enter again to send.
+- Press Esc to cancel; Up/Down browse previous messages.
+- While typing: Ctrl-V pastes, Ctrl-C copies the whole line.
+- Right-click the input bar for Paste, Copy Line, or Clear Line. Paste and Clear return you to typing mode.
 - Right-click a chat or console line to copy it; the line briefly highlights.
 
 UI Navigation
 -------------
-- Click the "Windows" button on the toolbar to open/close UI windows.
+- Click the "Windows" button on the toolbar to open or close UI windows.
 - Click the "Actions" button on the toolbar for hotkeys, shortcuts, or scripts.
 - Mouse wheel scrolls lists and text windows.
 - Window positions, sizes, and open/closed state persist between runs.
 
 Chat & Console
 --------------
-- Chat and Console are separate windows. If "Messages to Console" is enabled in settings, chat is merged into the Console.
-- The input bar auto-expands as you type. Use the input bar menu (right-click) for paste/copy/clear.
+- Chat and Console are separate windows. If "Messages to Console" is enabled, chat merges into the Console.
+- The input bar auto-expands as you type. Use the right-click menu for paste, copy, or clear.
 - Messages with `@<your name>` or `@<profession>` highlight in blue and play a tink sound.
 
 Players
 -------
-- The Players window lists nearby/known exiles. Header shows an Online count; share status summary appears when relevant.
+- The Players window lists nearby or known exiles. The header shows an Online count and share status summary when relevant.
 - Tags: ">" means sharing, "<" means sharee, "*" marks same clan.
 - Single-click selects a player.
-- Right-click a player for actions: Thank, Curse, Anon Thank…, Anon Curse…, Share, Unshare, Info, Pull, Push.
+- Right-click a player for actions: Thank, Curse, Anon Thank…, Anon Curse…, Share, Unshare, Info, Pull, or Push.
 
 Inventory
 ---------
 - Single-click selects an item.
 - Double-click equips or unequips an item. Shift + double-click uses an item.
-- Right-click an item for a context menu: Equip/Unequip, Examine, Show, Drop, Drop (Mine).
+- Right-click an item for a context menu: Equip/Unequip, Examine, Show, Drop, or Drop (Mine).
 - If an item has a shortcut, its key appears in brackets before the name (e.g., "[Q]").
 
 Other Windows
 -------------
-- Help: this guide. Open via Windows → Help.
+- Help: this guide (Windows → Help).
 - Hotkeys: configure built-in and script hotkeys.
 - Shortcuts: define text expansions for the input bar.
 - Triggers: view script trigger phrases.
