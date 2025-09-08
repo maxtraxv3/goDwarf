@@ -295,6 +295,13 @@ func showSpellSuggestions(t *eui.ItemData) {
 // adds markers to the scrollbar for quick navigation. It clears highlights when
 // the query is empty.
 func searchTextWindow(win *eui.WindowData, list *eui.ItemData, query string) {
+	if list == nil {
+		if win != nil {
+			win.Refresh()
+		}
+		return
+	}
+
 	q := strings.ToLower(query)
 	total := len(list.Contents)
 	var marks []float32
