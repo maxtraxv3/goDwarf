@@ -2,6 +2,21 @@
 
 This directory holds the built-in color palettes and style themes used by EUI. Themes are JSON files that control the appearance and spacing of all widgets. You can load them at runtime or create your own variants. Set `eui.AutoReload = true` to have changes picked up automatically while editing.
 
+## Loading Themes
+
+Apply a palette and style from Go code:
+
+```go
+if err := eui.LoadTheme("AccentDark"); err != nil {
+    log.Println(err)
+}
+if err := eui.LoadStyle("RoundFlat"); err != nil {
+    log.Println(err)
+}
+```
+
+With `eui.AutoReload` enabled the `themes` folder is watched and files are reloaded on change.
+
 ## Palettes
 
 Color palettes live under `themes/palettes`. Each file defines a `Colors` map followed by style blocks for each widget type. Colors may be written as `#RRGGBBAA` hexadecimal strings or as HSV triples (`h,s,v`). Entries in the `Colors` map can be referenced by name in later fields.
