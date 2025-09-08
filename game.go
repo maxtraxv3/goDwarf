@@ -38,9 +38,6 @@ var uiMouseDown bool
 // integer multiple of the native field size and is composited into the window.
 var worldRT *ebiten.Image
 
-// Track the active sub-rectangle of worldRT used this frame (for resize)
-var worldRTUsedW, worldRTUsedH int
-
 // gameImageItem is the UI image item inside the game window that displays
 // the rendered world, and gameImage is its backing texture.
 var gameImageItem *eui.ItemData
@@ -84,6 +81,7 @@ func keyForRune(r rune) ebiten.Key {
 	}
 	return ebiten.Key(-1)
 }
+
 func ensureWorldRT(w, h int) {
 	if w < 1 {
 		w = 1
@@ -1188,11 +1186,6 @@ func worldDrawInfo() (int, int, float64) {
 	return originX, originY, effScale
 }
 
-// getWorldDrawParams returns the cached draw origin and scale.
-func getWorldDrawParams() (int, int, float64) {
-	return worldOriginX, worldOriginY, worldScale
-}
-
 func (g *Game) Draw(screen *ebiten.Image) {
 	worldOriginX, worldOriginY, worldScale = worldDrawInfo()
 	// Cache now for the whole draw to reduce time.Now overhead.
@@ -1251,8 +1244,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	offW := worldW * offIntScale
 	offH := worldH * offIntScale
 	ensureWorldRT(offW, offH)
-	// Use only the active portion of the (possibly larger) render target
-	worldRTUsedW, worldRTUsedH = offW, offH
 	worldView := worldRT.SubImage(image.Rect(0, 0, offW, offH)).(*ebiten.Image)
 	worldView.Fill(color.Black)
 
@@ -1327,9 +1318,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			bottom = bufH
 		}
 		worldView := gameImage.SubImage(image.Rect(left, top, right, bottom)).(*ebiten.Image)
-		if gs.nameTagsNative {
-			drawMobileNameTags(worldView, snap, alpha)
-		}
 		drawSpeechBubbles(worldView, snap, alpha)
 		// Draw plugin overlays on top of the world view.
 		drawPluginOverlays(worldView, finalScale)
@@ -1385,9 +1373,7 @@ func drawScene(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha float6
 	} else {
 		for _, m := range dead {
 			drawMobile(screen, ox, oy, m, descMap, snap.prevMobiles, snap.prevDescs, snap.picShiftX, snap.picShiftY, alpha, mobileFade, mobileLimit)
-			if !gs.nameTagsNative {
-				drawMobileNameTag(screen, snap, m, alpha)
-			}
+			drawMobileNameTag(screen, snap, m, alpha)
 		}
 		i, j := 0, 0
 		maxInt := int(^uint(0) >> 1)
@@ -1405,9 +1391,7 @@ func drawScene(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha float6
 			if mV < pV || (mV == pV && mH <= pH) {
 				if live[i].State != poseDead {
 					drawMobile(screen, ox, oy, live[i], descMap, snap.prevMobiles, snap.prevDescs, snap.picShiftX, snap.picShiftY, alpha, mobileFade, mobileLimit)
-					if !gs.nameTagsNative {
-						drawMobileNameTag(screen, snap, live[i], alpha)
-					}
+					drawMobileNameTag(screen, snap, live[i], alpha)
 				}
 				i++
 			} else {
@@ -1696,10 +1680,7 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 	offY := float64(int(p.PrevV)-int(p.V)) * (1 - alpha)
 	if p.Moving && !gs.smoothMoving {
 		if int(p.PrevH) == int(p.H)-shiftX && int(p.PrevV) == int(p.V)-shiftY {
-			if gs.dontShiftNewSprites {
-				offX = 0
-				offY = 0
-			}
+			//
 		} else {
 			offX = 0
 			offY = 0
@@ -2094,17 +2075,6 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 	}
 }
 
-// drawMobileNameTags renders mobile name tags and color bars either at native
-// resolution or scaled with the game world.
-func drawMobileNameTags(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
-	if gs.hideMobiles {
-		return
-	}
-	for _, m := range snap.mobiles {
-		drawMobileNameTag(screen, snap, m, alpha)
-	}
-}
-
 // drawSpeechBubbles renders speech bubbles at native resolution.
 func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 	if !gs.SpeechBubbles {
@@ -2327,43 +2297,6 @@ func drawStatusBars(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha f
 	sp := lerpBar(snap.prevSP, snap.sp, alpha)
 	spMax := lerpBar(snap.prevSPMax, snap.spMax, alpha)
 	drawBar(x, y, sp, spMax, color.RGBA{0xff, 0x00, 0x00, 0xff})
-}
-
-var fpsImage *ebiten.Image
-var lastFPS time.Time
-var fpsWidth, fpsHeight float64
-
-func drawServerFPS(screen *ebiten.Image, ox, oy int, fps float64) {
-	if fps <= 0 {
-		return
-	}
-	if time.Since(lastFPS) >= time.Second {
-		lastFPS = time.Now()
-
-		lat := netLatency
-		jit := netJitter
-		drop := droppedPercent()
-		msg := fmt.Sprintf("FPS: %0.2f Server: %0.2f Drop: %0.1f%% Ping: %-3v ms Jit: %-3v ms",
-			ebiten.ActualFPS(), fps, drop, lat.Milliseconds(), jit.Milliseconds())
-		w, h := text.Measure(msg, mainFont, 0)
-
-		if fpsImage == nil || fpsHeight != h {
-			logDebug("Allocated FPS image.")
-			fpsImage = newImage(int(w*1.3), int(h))
-		}
-
-		fpsImage.Clear()
-		opTxt := acquireTextDrawOpts()
-		text.Draw(fpsImage, msg, mainFont, opTxt)
-		releaseTextDrawOpts(opTxt)
-		fpsWidth, fpsHeight = w, h
-	}
-
-	op := acquireDrawOpts()
-	op.GeoM.Translate(float64(ox)-fpsWidth, float64(oy))
-	screen.DrawImage(fpsImage, op)
-	releaseDrawOpts(op)
-
 }
 
 // equippedItemPicts returns pict IDs for items equipped in right and left hands.

@@ -139,20 +139,3 @@ func updateThinkMessages() {
 		layoutThinkMessages()
 	}
 }
-
-func clearThinkMessages() {
-	for _, m := range thinkMessages {
-		if gameWin != nil {
-			for i, it := range gameWin.Contents {
-				if it == m.item {
-					gameWin.Contents = append(gameWin.Contents[:i], gameWin.Contents[i+1:]...)
-					break
-				}
-			}
-		}
-	}
-	thinkMessages = nil
-	if gameWin != nil {
-		gameWin.Refresh()
-	}
-}

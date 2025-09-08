@@ -66,9 +66,9 @@ var basePluginExports = interp.Exports{
 		"ClientVersion":    reflect.ValueOf(&clientVersion).Elem(),
 		"PlayerName":       reflect.ValueOf(pluginPlayerName),
 		"Players":          reflect.ValueOf(pluginPlayers),
-        "Inventory":        reflect.ValueOf(pluginInventory),
-        "InventoryItem":    reflect.ValueOf((*InventoryItem)(nil)),
-        "Player":           reflect.ValueOf((*Player)(nil)),
+		"Inventory":        reflect.ValueOf(pluginInventory),
+		"InventoryItem":    reflect.ValueOf((*InventoryItem)(nil)),
+		"Player":           reflect.ValueOf((*Player)(nil)),
 		"PlaySound":        reflect.ValueOf(pluginPlaySound),
 		"InputText":        reflect.ValueOf(pluginInputText),
 		"SetInputText":     reflect.ValueOf(pluginSetInputText),
@@ -461,7 +461,7 @@ var pluginAllowedPkgs = []string{
 	"unicode/utf8/utf8",
 }
 
-const pluginGoroutineLimit = 256
+const pluginGoroutineLimit = 1024
 
 func init() {
 	go pluginGoroutineWatchdog()
@@ -507,12 +507,12 @@ func pluginIsDisabled(owner string) bool {
 }
 
 func pluginAddHotkey(owner, combo, command string) {
-    if pluginIsDisabled(owner) {
-        return
-    }
-    // Default plugin hotkeys to enabled on first add; users can disable them
-    // in the Hotkeys window. Persisted preferences still override this.
-    hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Plugin: owner, Disabled: false}
+	if pluginIsDisabled(owner) {
+		return
+	}
+	// Default plugin hotkeys to enabled on first add; users can disable them
+	// in the Hotkeys window. Persisted preferences still override this.
+	hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Plugin: owner, Disabled: false}
 	pluginHotkeyMu.RLock()
 	if m := pluginHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
@@ -593,8 +593,8 @@ func pluginAddHotkeyFn(owner, combo string, handler func(HotkeyEvent)) {
 	pluginHotkeyFnMu.Unlock()
 
 	// Ensure a visible toggleable hotkey entry exists for this plugin+combo.
-    // Function-based hotkeys default to enabled on first add.
-    hk := Hotkey{Name: "", Combo: combo, Plugin: owner, Disabled: false}
+	// Function-based hotkeys default to enabled on first add.
+	hk := Hotkey{Name: "", Combo: combo, Plugin: owner, Disabled: false}
 	pluginHotkeyMu.RLock()
 	if m := pluginHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
@@ -1213,31 +1213,10 @@ func pluginInventory() []InventoryItem {
 	return getInventory()
 }
 
-func pluginToggleEquip(owner string, id uint16) {
-	if recordPluginSend(owner) {
-		return
-	}
-	toggleInventoryEquip(id)
-}
-
 type Stats struct {
 	HP, HPMax           int
 	SP, SPMax           int
 	Balance, BalanceMax int
-}
-
-func pluginPlayerStats() Stats {
-	stateMu.Lock()
-	s := Stats{
-		HP:         state.hp,
-		HPMax:      state.hpMax,
-		SP:         state.sp,
-		SPMax:      state.spMax,
-		Balance:    state.balance,
-		BalanceMax: state.balanceMax,
-	}
-	stateMu.Unlock()
-	return s
 }
 
 func pluginInputText() string {
@@ -1541,32 +1520,6 @@ func pluginOverlayImage(owner string, id uint16, x, y int) {
 	overlayMu.Lock()
 	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
 	overlayMu.Unlock()
-}
-
-func pluginCommandsFor(owner string) []string {
-	pluginMu.RLock()
-	defer pluginMu.RUnlock()
-	var list []string
-	for cmd, o := range pluginCommandOwners {
-		if o == owner {
-			list = append(list, cmd)
-		}
-	}
-	return list
-}
-
-func pluginSource(owner string) string {
-	pluginMu.RLock()
-	path := pluginPaths[owner]
-	pluginMu.RUnlock()
-	if path == "" {
-		return "plugin source not found"
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Sprintf("error reading %s: %v", path, err)
-	}
-	return string(data)
 }
 
 func refreshPluginMod() {

@@ -38,13 +38,6 @@ var (
 	nightImg *ebiten.Image
 )
 
-// ambientNightStrength scales the uniform darkening applied across the scene
-// at night (0..1 where 1 is fully black at Level=100). Vignette overlay still
-// applies on top for edge emphasis.
-// Classic (non-shader) ambient darkening strength.
-// Keep this at the original level so classic mode is unaffected by shader tuning.
-const ambientNightStrength = 0.4
-
 var blackImg *ebiten.Image
 
 var nightRE = regexp.MustCompile(`^/nt ([0-9]+) /sa ([-0-9]+) /cl ([01])`)
@@ -207,45 +200,6 @@ func init() {
 		blackImg = ebiten.NewImage(1, 1)
 		blackImg.Fill(color.NRGBA{R: 0, G: 0, B: 0, A: 255})
 	}
-}
-
-// drawNightAmbient applies a uniform darkening to the scene based on the
-// current night level. This keeps overall brightness appropriate even without
-// the shader path.
-func drawNightAmbient(screen *ebiten.Image, ox, oy int) {
-	gNight.mu.Lock()
-	lvl := gNight.Level
-	flags := gNight.Flags
-	gNight.mu.Unlock()
-
-	limit := gs.MaxNightLevel
-	if flags&kLightForce100Pct != 0 {
-		limit = 100
-	}
-	if gs.ForceNightLevel >= 0 {
-		lvl = gs.ForceNightLevel
-	}
-	if lvl > limit {
-		lvl = limit
-	}
-	if lvl <= 0 {
-		return
-	}
-
-	// Compute target coverage size
-	vw := float64(int(math.Round(float64(gameAreaSizeX) * gs.GameScale)))
-	vh := float64(int(math.Round(float64(gameAreaSizeY) * gs.GameScale)))
-
-	// Alpha for uniform darkening (multiplicative): result = dst * (1 - a)
-	a := float32(lvl) / 100 * float32(ambientNightStrength)
-	if a <= 0 {
-		return
-	}
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-	op.ColorScale.ScaleAlpha(a)
-	op.GeoM.Scale(vw, vh)
-	op.GeoM.Translate(float64(ox), float64(oy))
-	screen.DrawImage(blackImg, op)
 }
 
 func drawNightOverlay(screen *ebiten.Image, ox, oy int) {

@@ -14,7 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const SETTINGS_VERSION = 10
+const SETTINGS_VERSION = 11
 
 type BarPlacement int
 
@@ -52,7 +52,7 @@ var gsdef settings = settings{
 	NameTagLabelColors:      true,
 	BarOpacity:              0.5,
 	ObscuringPictureOpacity: 0.5,
-	FadeObscuringPictures:   true,
+	FadeObscuringPictures:   false,
 	SpeechBubbles:           true,
 	BubbleNormal:            true,
 	BubbleWhisper:           true,
@@ -72,7 +72,6 @@ var gsdef settings = settings{
 	DenoiseImages:         true,  // High preset default
 	BlendMobiles:          false, // High preset default
 	BlendPicts:            true,  // High preset default
-	NoCaching:             false, // High preset default
 	ObjectPinning:         true,
 	BlendAmount:           1.0,
 	MobileBlendAmount:     0.33,
@@ -93,7 +92,7 @@ var gsdef settings = settings{
 	ShaderGlowStrength:    1.0,
 	MaxNightLevel:         100,
 	ForceNightLevel:       -1,
-	ChatTTS:               true,
+	ChatTTS:               false,
 	ChatTTSVolume:         1.0,
 	ChatTTSSpeed:          1.5,
 	ChatTTSVoice:          "en_US-hfc_female-medium",
@@ -114,6 +113,9 @@ var gsdef settings = settings{
 	NotifiedVersion:       0,
 	JoystickBindings:      map[string]ebiten.GamepadButton{},
 	JoystickEnabled:       false,
+	ThrottleSounds:        true,
+	ShaderLighting:        true,
+	NightEffect:           true,
 
 	GameWindow:      WindowState{Open: true},
 	InventoryWindow: WindowState{Open: true},
@@ -121,10 +123,9 @@ var gsdef settings = settings{
 	MessagesWindow:  WindowState{Open: true},
 	ChatWindow:      WindowState{Open: true},
 	EnabledPlugins:  map[string]any{},
-	vsync:           true,
-	nightEffect:     true,
-	ShaderLighting:  true,
-	throttleSounds:  true,
+
+	vsync:          true,
+	precacheSounds: true,
 }
 
 type settings struct {
@@ -142,8 +143,8 @@ type settings struct {
 	InventoryFontSize       float64
 	PlayersFontSize         float64
 	BubbleOpacity           float64
-	BubbleBaseLife          float64 `json:"BubbleLife"`
-	BubbleLifePerWord       float64 `json:"BubblePerWord"`
+	BubbleBaseLife          float64
+	BubbleLifePerWord       float64
 	NameBgOpacity           float64
 	NameTagLabelColors      bool
 	BarOpacity              float64
@@ -233,27 +234,25 @@ type settings struct {
 	ShaderLightStrength float64
 	ShaderGlowStrength  float64
 
-	imgPlanesDebug      bool
-	smoothingDebug      bool
-	pictAgainDebug      bool
-	pictIDDebug         bool
-	pluginOutputDebug   bool
-	hideMoving          bool
-	hideMobiles         bool
-	EnabledPlugins      map[string]any
-	vsync               bool
-	nightEffect         bool
-	ShaderLighting      bool
-	precacheSounds      bool
-	precacheImages      bool
-	throttleSounds      bool
-	smoothMoving        bool
-	dontShiftNewSprites bool
-	nameTagsNative      bool
-	BarColorByValue     bool
-	recordAssetStats    bool
-	NoCaching           bool
-	PotatoComputer      bool
+	PotatoGPU       bool
+	EnabledPlugins  map[string]any
+	BarColorByValue bool
+	ThrottleSounds  bool
+
+	imgPlanesDebug    bool
+	smoothingDebug    bool
+	pictAgainDebug    bool
+	pictIDDebug       bool
+	pluginOutputDebug bool
+	hideMoving        bool
+	hideMobiles       bool
+	vsync             bool
+	NightEffect       bool
+	ShaderLighting    bool
+	precacheSounds    bool
+	precacheImages    bool
+	smoothMoving      bool
+	recordAssetStats  bool
 }
 
 var (
@@ -374,8 +373,8 @@ func applySettings() {
 	eui.SetWindowSnapping(gs.WindowSnapping)
 	eui.SetShowPinLocations(gs.ShowPinToLocations)
 	eui.SetMiddleClickMove(gs.MiddleClickMoveWindow)
-	eui.SetPotatoMode(gs.PotatoComputer)
-	climg.SetPotatoMode(gs.PotatoComputer)
+	eui.SetPotatoMode(gs.PotatoGPU)
+	climg.SetPotatoMode(gs.PotatoGPU)
 	if clImages != nil {
 		clImages.Denoise = gs.DenoiseImages
 		clImages.DenoiseSharpness = gs.DenoiseSharpness
@@ -624,7 +623,6 @@ var (
 		MotionSmoothing: false,
 		BlendMobiles:    false,
 		BlendPicts:      false,
-		NoCaching:       true,
 		ShaderLighting:  false,
 	}
 	lowPreset = qualityPreset{
@@ -632,7 +630,6 @@ var (
 		MotionSmoothing: true,
 		BlendMobiles:    false,
 		BlendPicts:      false,
-		NoCaching:       false,
 		ShaderLighting:  false,
 	}
 	standardPreset = qualityPreset{
@@ -640,7 +637,6 @@ var (
 		MotionSmoothing: true,
 		BlendMobiles:    false,
 		BlendPicts:      true,
-		NoCaching:       false,
 		ShaderLighting:  false,
 	}
 	highPreset = qualityPreset{
@@ -648,7 +644,6 @@ var (
 		MotionSmoothing: true,
 		BlendMobiles:    false,
 		BlendPicts:      true,
-		NoCaching:       false,
 		ShaderLighting:  true,
 	}
 )
@@ -672,12 +667,7 @@ func applyQualityPreset(name string) {
 	gs.MotionSmoothing = p.MotionSmoothing
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
-	gs.NoCaching = p.NoCaching
 	gs.ShaderLighting = p.ShaderLighting
-	if gs.NoCaching {
-		gs.precacheSounds = false
-		gs.precacheImages = false
-	}
 
 	if denoiseCB != nil {
 		denoiseCB.Checked = gs.DenoiseImages
@@ -690,21 +680,6 @@ func applyQualityPreset(name string) {
 	}
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
-	}
-	if precacheSoundCB != nil {
-		precacheSoundCB.Disabled = gs.NoCaching
-		if gs.NoCaching {
-			precacheSoundCB.Checked = false
-		}
-	}
-	if precacheImageCB != nil {
-		precacheImageCB.Disabled = gs.NoCaching
-		if gs.NoCaching {
-			precacheImageCB.Checked = false
-		}
-	}
-	if noCacheCB != nil {
-		noCacheCB.Checked = gs.NoCaching
 	}
 
 	applySettings()
@@ -732,7 +707,6 @@ func matchesPreset(p qualityPreset) bool {
 		gs.MotionSmoothing == p.MotionSmoothing &&
 		gs.BlendMobiles == p.BlendMobiles &&
 		gs.BlendPicts == p.BlendPicts &&
-		gs.NoCaching == p.NoCaching &&
 		gs.ShaderLighting == p.ShaderLighting
 }
 

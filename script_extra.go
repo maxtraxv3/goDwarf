@@ -44,23 +44,9 @@ func mouseButtonFromName(name string) (ebiten.MouseButton, bool) {
 	return 0, false
 }
 
-func pluginKeyPressed(name string) bool {
-	if k, ok := keyFromName(name); ok {
-		return ebiten.IsKeyPressed(k)
-	}
-	return false
-}
-
 func pluginKeyJustPressed(name string) bool {
 	if k, ok := keyFromName(name); ok {
 		return inpututil.IsKeyJustPressed(k)
-	}
-	return false
-}
-
-func pluginMousePressed(name string) bool {
-	if b, ok := mouseButtonFromName(name); ok {
-		return ebiten.IsMouseButtonPressed(b)
 	}
 	return false
 }
@@ -94,26 +80,22 @@ func pluginEquippedItems() []InventoryItem {
 }
 
 func pluginHasItem(name string) bool {
-    n := strings.ToLower(name)
-    for _, it := range getInventory() {
-        if strings.ToLower(it.Name) == n {
-            return true
-        }
-    }
-    return false
+	n := strings.ToLower(name)
+	for _, it := range getInventory() {
+		if strings.ToLower(it.Name) == n {
+			return true
+		}
+	}
+	return false
 }
 
 // pluginIsEquipped reports whether any equipped item matches the given name.
 func pluginIsEquipped(name string) bool {
-    n := strings.ToLower(name)
-    for _, it := range getInventory() {
-        if it.Equipped && strings.ToLower(it.Name) == n {
-            return true
-        }
-    }
-    return false
-}
-
-func pluginFrameNumber() int {
-	return frameCounter
+	n := strings.ToLower(name)
+	for _, it := range getInventory() {
+		if it.Equipped && strings.ToLower(it.Name) == n {
+			return true
+		}
+	}
+	return false
 }

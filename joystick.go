@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"gothoom/eui"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 var joystickWin *eui.WindowData

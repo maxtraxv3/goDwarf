@@ -240,14 +240,12 @@ var (
 // by using the decoded pixel data directly and falls back to a generic path
 // otherwise.
 func nonTransparentPixels(id uint16) int {
-	if !gs.NoCaching {
-		pixelCountMu.RLock()
-		if c, ok := pixelCountCache[id]; ok {
-			pixelCountMu.RUnlock()
-			return c
-		}
+	pixelCountMu.RLock()
+	if c, ok := pixelCountCache[id]; ok {
 		pixelCountMu.RUnlock()
+		return c
 	}
+	pixelCountMu.RUnlock()
 
 	count := 0
 	if clImages != nil {
@@ -264,11 +262,9 @@ func nonTransparentPixels(id uint16) int {
 		}
 	}
 
-	if !gs.NoCaching {
-		pixelCountMu.Lock()
-		pixelCountCache[id] = count
-		pixelCountMu.Unlock()
-	}
+	pixelCountMu.Lock()
+	pixelCountCache[id] = count
+	pixelCountMu.Unlock()
 	return count
 }
 
@@ -1614,7 +1610,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		id := binary.BigEndian.Uint16(stateData[:2])
 		stateData = stateData[2:]
 
-		if gs.throttleSounds {
+		if gs.ThrottleSounds {
 			var found bool
 			for _, item := range prevSounds {
 				if item == id {

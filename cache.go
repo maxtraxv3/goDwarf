@@ -36,9 +36,6 @@ func clearCaches() {
 var assetsPrecached = false
 
 func precacheAssets() {
-	if gs.NoCaching {
-		return
-	}
 
 	for {
 		if (gs.precacheImages && clImages == nil) || (gs.precacheSounds && clSounds == nil) {
