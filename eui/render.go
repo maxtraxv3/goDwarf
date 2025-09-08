@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,6 +20,18 @@ const shadowAlphaDivisor = 16
 
 var dumpDone bool
 var zoneIndicatorWin *windowData
+
+var drawImageOptionsPool = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
+
+func acquireDrawImageOptions() *ebiten.DrawImageOptions {
+	op := drawImageOptionsPool.Get().(*ebiten.DrawImageOptions)
+	*op = ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	return op
+}
+
+func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {
+	drawImageOptionsPool.Put(op)
+}
 
 type openDropdown struct {
 	item   *itemData
@@ -220,10 +233,8 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 		win.drawBG(screen)
 		win.drawItems(screen, point{}, dropdowns)
 		win.drawScrollbars(screen)
-		titleArea := screen.SubImage(win.getTitleRect().getRectangle()).(*ebiten.Image)
-		win.drawWinTitle(titleArea)
-		windowArea := screen.SubImage(win.getWinRect().getRectangle()).(*ebiten.Image)
-		win.drawBorder(windowArea)
+		win.drawWinTitle(screen)
+		win.drawBorder(screen)
 		win.Dirty = false
 		// Collect dropdowns for separate overlay rendering and draw debug.
 		win.collectDropdowns(dropdowns)
@@ -254,18 +265,17 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 		win.drawBG(win.Render)
 		win.drawItems(win.Render, basePos, dropdowns)
 		win.drawScrollbars(win.Render)
-		titleArea := win.Render.SubImage(win.getTitleRect().getRectangle()).(*ebiten.Image)
-		win.drawWinTitle(titleArea)
-		windowArea := win.Render.SubImage(win.getWinRect().getRectangle()).(*ebiten.Image)
-		win.drawBorder(windowArea)
+		win.drawWinTitle(win.Render)
+		win.drawBorder(win.Render)
 		win.Position = origPos
 		win.Dirty = false
 	} else {
 		win.collectDropdowns(dropdowns)
 	}
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op := acquireDrawImageOptions()
 	op.GeoM.Translate(float64(win.getPosition().X), float64(win.getPosition().Y))
 	screen.DrawImage(win.Render, op)
+	releaseDrawImageOptions(op)
 	win.drawDebug(screen)
 	if CacheCheck {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
@@ -305,7 +315,8 @@ func (win *windowData) drawBG(screen *ebiten.Image) {
 func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 	// Window Title
 	if win.TitleHeight > 0 {
-		screen.Fill(win.Theme.Window.TitleBGColor)
+		tr := win.getTitleRect()
+		drawFilledRect(screen, tr.X0, tr.Y0, tr.X1-tr.X0, tr.Y1-tr.Y0, win.Theme.Window.TitleBGColor, true)
 
 		textSize := ((win.GetTitleSize()) / 2)
 		face := textFace(textSize)
@@ -324,11 +335,12 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 				PrimaryAlign:   text.AlignStart,
 				SecondaryAlign: text.AlignCenter,
 			}
-			tdop := ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+			tdop := acquireDrawImageOptions()
 			tdop.GeoM.Translate(float64(win.getPosition().X+((win.GetTitleSize())/4)),
 				float64(win.getPosition().Y+((win.GetTitleSize())/2)))
 
-			top := &text.DrawOptions{DrawImageOptions: tdop, LayoutOptions: loo}
+			top := &text.DrawOptions{DrawImageOptions: *tdop, LayoutOptions: loo}
+			releaseDrawImageOptions(tdop)
 
 			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleTextColor)
 			buf := strings.ReplaceAll(win.Title, "\n", "") //Remove newline
@@ -345,8 +357,7 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			color := win.Theme.Window.TitleColor
 			if win.Theme.Window.CloseBGColor.A > 0 {
 				r := win.xRect()
-				closeArea := screen.SubImage(r.getRectangle()).(*ebiten.Image)
-				closeArea.Fill(win.Theme.Window.CloseBGColor)
+				drawFilledRect(screen, r.X0, r.Y0, r.X1-r.X0, r.Y1-r.Y0, win.Theme.Window.CloseBGColor, true)
 			}
 			xThick := 1 * win.scale()
 			if win.HoverClose {
@@ -472,9 +483,10 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			textSize := win.GetTitleSize() / 2
 			face := textFace(textSize)
 			loo := text.LayoutOptions{LineSpacing: 0, PrimaryAlign: text.AlignStart, SecondaryAlign: text.AlignCenter}
-			tdop := ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+			tdop := acquireDrawImageOptions()
 			tdop.GeoM.Translate(float64(sb.X0+textSize/2), float64(sb.Y0+(sb.Y1-sb.Y0)/2))
-			top := &text.DrawOptions{DrawImageOptions: tdop, LayoutOptions: loo}
+			top := &text.DrawOptions{DrawImageOptions: *tdop, LayoutOptions: loo}
+			releaseDrawImageOptions(tdop)
 			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleColor)
 			text.Draw(screen, win.SearchText, face, top)
 			cr := win.searchCloseRect()
