@@ -24,6 +24,8 @@ var (
 	downWin *windowData
 
 	activeSearch *windowData
+
+	inputBuf []rune
 )
 
 // Update processes input and updates window state.
@@ -97,6 +99,8 @@ func Update() error {
 
 	delta := pointSub(mpos, mposOld)
 	c := ebiten.CursorShapeDefault
+
+	chars := ebiten.AppendInputChars(inputBuf[:0])
 
 	// First, give active context menus a chance to handle the click/hover.
 	if handleContextMenus(mpos, click) {
@@ -337,7 +341,7 @@ func Update() error {
 	}
 
 	if focusedItem != nil {
-		for _, r := range ebiten.AppendInputChars(nil) {
+		for _, r := range chars {
 			if r >= 32 && r != 127 && r != '\r' && r != '\n' {
 				if focusedItem.HideText {
 					dispRunes := []rune(focusedItem.Text)
@@ -503,7 +507,7 @@ func Update() error {
 	}
 
 	if activeSearch != nil {
-		for _, r := range ebiten.AppendInputChars(nil) {
+		for _, r := range chars {
 			if r >= 32 && r != 127 && r != '\r' && r != '\n' {
 				if len([]rune(activeSearch.SearchText)) < 64 {
 					activeSearch.SearchText += string(r)
