@@ -31,8 +31,14 @@ var (
 func Update() error {
 	checkThemeStyleMods()
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyGraveAccent) &&
-		(ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)) {
+	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
+	ctrlPressed := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
+	altPressed := ebiten.IsKeyPressed(ebiten.KeyAlt) || ebiten.IsKeyPressed(ebiten.KeyAltLeft) || ebiten.IsKeyPressed(ebiten.KeyAltRight)
+	metaPressed := ebiten.IsKeyPressed(ebiten.KeyMeta) || ebiten.IsKeyPressed(ebiten.KeyMetaLeft) || ebiten.IsKeyPressed(ebiten.KeyMetaRight)
+	_ = altPressed
+	_ = metaPressed
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyGraveAccent) && shiftPressed {
 		_ = DumpTree()
 	}
 
@@ -367,8 +373,7 @@ func Update() error {
 			}
 		}
 
-		ctrl := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
-		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyV) {
+		if ctrlPressed && inpututil.IsKeyJustPressed(ebiten.KeyV) {
 			if txt := clipboard.Read(clipboard.FmtText); len(txt) > 0 {
 				runes := []rune(string(txt))
 				pos := focusedItem.CursorPos
@@ -398,7 +403,7 @@ func Update() error {
 				}
 			}
 		}
-		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		if ctrlPressed && inpututil.IsKeyJustPressed(ebiten.KeyC) {
 			text := focusedItem.Text
 			if focusedItem.HideText {
 				text = focusedItem.SecretText
@@ -557,7 +562,7 @@ func Update() error {
 						}
 					}
 					next := 0
-					if ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
+					if shiftPressed {
 						if idx == -1 {
 							next = len(inputs) - 1
 						} else {
