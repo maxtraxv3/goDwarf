@@ -25,8 +25,6 @@ func appendTextLog(msg string) {
 	if msg == "" {
 		return
 	}
-	// Best-effort; never panic here.
-	defer func() { _ = recover() }()
 
 	ensureTextLog()
 	if textLogPath == "" {

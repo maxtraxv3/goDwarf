@@ -135,11 +135,6 @@ func main() {
 	applySettings()
 	setupLogging(doDebug)
 	go versionCheckLoop()
-	defer func() {
-		if r := recover(); r != nil {
-			logPanic(r)
-		}
-	}()
 
 	clmovPath := ""
 	if clmov != "" {

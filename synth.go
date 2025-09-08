@@ -235,11 +235,6 @@ func renderSong(program int, notes []Note) ([]float32, []float32, error) {
 // returned as an error so callers can fail gracefully instead of crashing the
 // entire client.
 func safeRender(s synthesizer, left, right []float32) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic in synth.Render: %v", r)
-		}
-	}()
 	s.Render(left, right)
 	return nil
 }
@@ -363,11 +358,6 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 
 // safeIsPlaying checks IsPlaying and recovers if the player has been closed.
 func safeIsPlaying(p *audio.Player) (ok bool) {
-	defer func() {
-		if recover() != nil {
-			ok = false
-		}
-	}()
 	return p.IsPlaying()
 }
 
