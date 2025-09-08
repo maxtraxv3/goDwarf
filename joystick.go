@@ -61,7 +61,7 @@ func makeJoystickWindow() {
 		joystickNames = append(joystickNames, ebiten.GamepadName(id))
 	}
 
-	controllerDD, controllerEvents := eui.NewDropdown()
+	controllerDD, controllerEvents = eui.NewDropdown()
 	controllerDD.Label = "Controller"
 	controllerDD.Options = joystickNames
 	controllerDD.Size = eui.Point{X: 350, Y: 24}
@@ -124,7 +124,7 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(enableCB)
 
-	walkStickDD, walkEvents := eui.NewDropdown()
+	walkStickDD, walkEvents = eui.NewDropdown()
 	walkStickDD.Label = "Walk Stick"
 	walkStickDD.Size = eui.Point{X: 260, Y: 24}
 	walkEvents.Handle = func(ev eui.UIEvent) {
@@ -135,7 +135,7 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(walkStickDD)
 
-	walkDeadzoneSlider, walkDZEvents := eui.NewSlider()
+	walkDeadzoneSlider, walkDZEvents = eui.NewSlider()
 	walkDeadzoneSlider.Label = "Walk Deadzone"
 	walkDeadzoneSlider.MinValue = 0.01
 	walkDeadzoneSlider.MaxValue = 0.2
@@ -149,7 +149,7 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(walkDeadzoneSlider)
 
-	cursorStickDD, cursorEvents := eui.NewDropdown()
+	cursorStickDD, cursorEvents = eui.NewDropdown()
 	cursorStickDD.Label = "Cursor Stick"
 	cursorStickDD.Size = eui.Point{X: 260, Y: 24}
 	cursorEvents.Handle = func(ev eui.UIEvent) {
@@ -160,7 +160,7 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(cursorStickDD)
 
-	cursorDeadzoneSlider, cursorDZEvents := eui.NewSlider()
+	cursorDeadzoneSlider, cursorDZEvents = eui.NewSlider()
 	cursorDeadzoneSlider.Label = "Cursor Deadzone"
 	cursorDeadzoneSlider.MinValue = 0.01
 	cursorDeadzoneSlider.MaxValue = 0.2
