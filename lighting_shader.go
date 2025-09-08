@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"gothoom/climg"
-	"image"
 	"math"
 	"os"
 
@@ -121,9 +120,8 @@ type darkSource struct {
 
 func ensureLightingTmp(w, h int) {
 	if lightingTmp == nil || lightingTmp.Bounds().Dx() != w || lightingTmp.Bounds().Dy() != h {
-		// Use unmanaged image for the lighting intermediate to reduce
-		// driver sync and improve throughput on this path.
-		lightingTmp = ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+		// Allocate the intermediate image, respecting potato mode for unmanaged images.
+		lightingTmp = newImage(w, h)
 	}
 }
 
