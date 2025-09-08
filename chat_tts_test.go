@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -127,7 +126,10 @@ func TestChatTTSDisableDropsQueued(t *testing.T) {
 		t.Fatalf("playChatTTS called after disabling")
 	}
 
-	if n := atomic.LoadInt32(&pendingTTS); n != 0 {
+	pendingTTSMu.Lock()
+	n := pendingTTS
+	pendingTTSMu.Unlock()
+	if n != 0 {
 		t.Fatalf("pendingTTS = %d, want 0", n)
 	}
 }
