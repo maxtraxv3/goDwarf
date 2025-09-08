@@ -28,5 +28,5 @@ func newImage(w, h int) *ebiten.Image {
 }
 
 func newImageFast(w, h int) *ebiten.Image {
-	return ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
+	return newImage(w, h)
 }
