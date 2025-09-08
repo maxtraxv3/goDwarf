@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"strconv"
 	"strings"
 
@@ -9,16 +10,29 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 var (
 	joystickWin           *eui.WindowData
 	controllerDD          *eui.ItemData
 	axesText, buttonsText *eui.ItemData
-	bindInput             *eui.ItemData
+	walkStickDD           *eui.ItemData
+	cursorStickDD         *eui.ItemData
+	click1Input           *eui.ItemData
+	click2Input           *eui.ItemData
+	click3Input           *eui.ItemData
+	inputImgItem          *eui.ItemData
+	inputImg              *ebiten.Image
 	joystickIDs           []ebiten.GamepadID
 	joystickNames         []string
 	selectedJoystick      int
+	lastAxisCount         int
+)
+
+const (
+	joystickImgW = 260
+	joystickImgH = 150
 )
 
 func makeJoystickWindow() {
@@ -50,6 +64,9 @@ func makeJoystickWindow() {
 	controllerEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
 			selectedJoystick = ev.Index
+			if selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) {
+				updateStickOptions(ebiten.GamepadAxisCount(joystickIDs[selectedJoystick]))
+			}
 		}
 	}
 	root.AddItem(controllerDD)
@@ -75,15 +92,133 @@ func makeJoystickWindow() {
 	}
 	root.AddItem(enableCB)
 
-	bindInput, _ = eui.NewInput()
-	bindInput.Label = "Bind Action"
-	bindInput.Size = eui.Point{X: 260, Y: 24}
-	root.AddItem(bindInput)
+	walkStickDD, walkEvents := eui.NewDropdown()
+	walkStickDD.Size = eui.Point{X: 260, Y: 24}
+	walkEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventDropdownSelected {
+			gs.JoystickWalkStick = ev.Index
+			settingsDirty = true
+		}
+	}
+	root.AddItem(walkStickDD)
+
+	cursorStickDD, cursorEvents := eui.NewDropdown()
+	cursorStickDD.Size = eui.Point{X: 260, Y: 24}
+	cursorEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventDropdownSelected {
+			gs.JoystickCursorStick = ev.Index
+			settingsDirty = true
+		}
+	}
+	root.AddItem(cursorStickDD)
+
+	click1Input, _ = eui.NewInput()
+	click1Input.Label = "Click1 Button"
+	click1Input.Size = eui.Point{X: 260, Y: 24}
+	root.AddItem(click1Input)
+
+	click2Input, _ = eui.NewInput()
+	click2Input.Label = "Click2 Button"
+	click2Input.Size = eui.Point{X: 260, Y: 24}
+	root.AddItem(click2Input)
+
+	click3Input, _ = eui.NewInput()
+	click3Input.Label = "Click3 Button"
+	click3Input.Size = eui.Point{X: 260, Y: 24}
+	root.AddItem(click3Input)
+
+	inputImgItem, inputImg = eui.NewImageItem(joystickImgW, joystickImgH)
+	root.AddItem(inputImgItem)
+
+	if gs.JoystickBindings != nil {
+		if b, ok := gs.JoystickBindings["click1"]; ok {
+			click1Input.Text = strconv.Itoa(int(b))
+		}
+		if b, ok := gs.JoystickBindings["click2"]; ok {
+			click2Input.Text = strconv.Itoa(int(b))
+		}
+		if b, ok := gs.JoystickBindings["click3"]; ok {
+			click3Input.Text = strconv.Itoa(int(b))
+		}
+	}
+
+	if len(joystickIDs) > 0 {
+		updateStickOptions(ebiten.GamepadAxisCount(joystickIDs[selectedJoystick]))
+	}
 
 	joystickWin.AddWindow(false)
 }
 
+func updateStickOptions(axisCount int) {
+	stickCount := axisCount / 2
+	opts := make([]string, stickCount)
+	for i := 0; i < stickCount; i++ {
+		opts[i] = fmt.Sprintf("Stick %d", i+1)
+	}
+	if walkStickDD != nil {
+		walkStickDD.Options = opts
+		if stickCount > 0 {
+			if gs.JoystickWalkStick >= stickCount {
+				gs.JoystickWalkStick = stickCount - 1
+			}
+			walkStickDD.Selected = gs.JoystickWalkStick
+		}
+		walkStickDD.Dirty = true
+	}
+	if cursorStickDD != nil {
+		cursorStickDD.Options = opts
+		if stickCount > 0 {
+			if gs.JoystickCursorStick >= stickCount {
+				gs.JoystickCursorStick = stickCount - 1
+			}
+			cursorStickDD.Selected = gs.JoystickCursorStick
+		}
+		cursorStickDD.Dirty = true
+	}
+	lastAxisCount = axisCount
+	if joystickWin != nil {
+		joystickWin.Refresh()
+	}
+}
+
+func drawJoystickDisplay(id ebiten.GamepadID) {
+	if inputImg == nil {
+		return
+	}
+	inputImg.Clear()
+
+	drawStick := func(cx, cy float32, stick int) {
+		vector.DrawFilledCircle(inputImg, cx, cy, 40, color.NRGBA{64, 64, 64, 255}, true)
+		axisIndex := stick * 2
+		if axisIndex+1 < ebiten.GamepadAxisCount(id) {
+			ax := ebiten.GamepadAxisValue(id, axisIndex)
+			ay := ebiten.GamepadAxisValue(id, axisIndex+1)
+			vector.DrawFilledCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
+		}
+	}
+
+	drawStick(60, 60, gs.JoystickWalkStick)
+	drawStick(200, 60, gs.JoystickCursorStick)
+
+	drawBtn := func(cx float32, key string) {
+		col := color.NRGBA{128, 128, 128, 255}
+		if btn, ok := gs.JoystickBindings[key]; ok {
+			if ebiten.IsGamepadButtonPressed(id, btn) {
+				col = color.NRGBA{0, 255, 0, 255}
+			}
+		}
+		vector.DrawFilledCircle(inputImg, cx, 120, 10, col, true)
+	}
+
+	drawBtn(100, "click1")
+	drawBtn(130, "click2")
+	drawBtn(160, "click3")
+
+	inputImgItem.Dirty = true
+}
+
 func updateJoystickWindow() {
+	joystickWin.Refresh()
 	newIDs := inpututil.AppendJustConnectedGamepadIDs(nil)
 	if len(newIDs) > 0 {
 		for _, id := range newIDs {
@@ -126,6 +261,9 @@ func updateJoystickWindow() {
 	id := joystickIDs[selectedJoystick]
 
 	axisCount := ebiten.GamepadAxisCount(id)
+	if axisCount != lastAxisCount {
+		updateStickOptions(axisCount)
+	}
 	axes := make([]string, axisCount)
 	for a := 0; a < axisCount; a++ {
 		axes[a] = fmt.Sprintf("%d:%.2f", a, ebiten.GamepadAxisValue(id, a))
@@ -143,19 +281,34 @@ func updateJoystickWindow() {
 	buttonsText.Text = "Pressed: " + strings.Join(pressed, " ")
 	buttonsText.Dirty = true
 
-	if bindInput != nil && bindInput.Focused {
-		if action := strings.TrimSpace(bindInput.Text); action != "" {
-			btns := inpututil.AppendJustPressedGamepadButtons(id, nil)
-			if len(btns) > 0 {
-				if gs.JoystickBindings == nil {
-					gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
-				}
-				gs.JoystickBindings[action] = btns[len(btns)-1]
-				settingsDirty = true
-				bindInput.Text = ""
-				bindInput.Dirty = true
-				joystickWin.Refresh()
+	btns := inpututil.AppendJustPressedGamepadButtons(id, nil)
+	if len(btns) > 0 {
+		if click1Input != nil && click1Input.Focused {
+			if gs.JoystickBindings == nil {
+				gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
 			}
+			gs.JoystickBindings["click1"] = btns[len(btns)-1]
+			click1Input.Text = strconv.Itoa(int(gs.JoystickBindings["click1"]))
+			click1Input.Dirty = true
+			settingsDirty = true
+		} else if click2Input != nil && click2Input.Focused {
+			if gs.JoystickBindings == nil {
+				gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
+			}
+			gs.JoystickBindings["click2"] = btns[len(btns)-1]
+			click2Input.Text = strconv.Itoa(int(gs.JoystickBindings["click2"]))
+			click2Input.Dirty = true
+			settingsDirty = true
+		} else if click3Input != nil && click3Input.Focused {
+			if gs.JoystickBindings == nil {
+				gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
+			}
+			gs.JoystickBindings["click3"] = btns[len(btns)-1]
+			click3Input.Text = strconv.Itoa(int(gs.JoystickBindings["click3"]))
+			click3Input.Dirty = true
+			settingsDirty = true
 		}
 	}
+
+	drawJoystickDisplay(id)
 }

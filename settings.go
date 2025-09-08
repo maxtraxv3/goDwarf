@@ -113,6 +113,8 @@ var gsdef settings = settings{
 	NotifiedVersion:       0,
 	JoystickBindings:      map[string]ebiten.GamepadButton{},
 	JoystickEnabled:       false,
+	JoystickWalkStick:     0,
+	JoystickCursorStick:   1,
 	ThrottleSounds:        true,
 	ShaderLighting:        true,
 	NightEffect:           true,
@@ -218,8 +220,10 @@ type settings struct {
 	WindowSnapping        bool
 	ShowPinToLocations    bool
 
-	JoystickEnabled  bool
-	JoystickBindings map[string]ebiten.GamepadButton
+	JoystickEnabled     bool
+	JoystickBindings    map[string]ebiten.GamepadButton
+	JoystickWalkStick   int
+	JoystickCursorStick int
 
 	WindowWidth  int
 	WindowHeight int
