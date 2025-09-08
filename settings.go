@@ -68,56 +68,58 @@ var gsdef settings = settings{
 	BubbleMonsters:          true,
 	BubbleNarration:         true,
 
-	MotionSmoothing:       true,
-	DenoiseImages:         true,  // High preset default
-	BlendMobiles:          false, // High preset default
-	BlendPicts:            true,  // High preset default
-	ObjectPinning:         true,
-	BlendAmount:           1.0,
-	MobileBlendAmount:     0.33,
-	MobileBlendFrames:     10,
-	PictBlendFrames:       10,
-	DenoiseSharpness:      4.0,
-	DenoiseAmount:         0.33,
-	ShowFPS:               true,
-	UIScale:               1.0,
-	MasterVolume:          1.0,
-	GameVolume:            0.6,
-	MusicVolume:           0.8,
-	Music:                 true,
-	GameSound:             true,
-	GameScale:             2,
-	BarPlacement:          BarPlacementBottom,
-	ShaderLightStrength:   1.0,
-	ShaderGlowStrength:    1.0,
-	MaxNightLevel:         100,
-	ForceNightLevel:       -1,
-	ChatTTS:               false,
-	ChatTTSVolume:         1.0,
-	ChatTTSSpeed:          1.5,
-	ChatTTSVoice:          "en_US-hfc_female-medium",
-	ChatTTSBlocklist:      []string{"koppi", "crius"},
-	Notifications:         true,
-	NotifyFallen:          true,
-	NotifyNotFallen:       true,
-	NotifyShares:          true,
-	NotifyFriendOnline:    true,
-	NotifyCopyText:        true,
-	NotificationVolume:    0.6,
-	NotificationBeep:      false,
-	NotificationDuration:  6,
-	PluginSpamKill:        true,
-	PromptOnSaveRecording: true,
-	TimestampFormat:       "3:04PM",
-	LastUpdateCheck:       time.Time{},
-	NotifiedVersion:       0,
-	JoystickBindings:      map[string]ebiten.GamepadButton{},
-	JoystickEnabled:       false,
-	JoystickWalkStick:     0,
-	JoystickCursorStick:   1,
-	ThrottleSounds:        true,
-	ShaderLighting:        true,
-	NightEffect:           true,
+	MotionSmoothing:        true,
+	DenoiseImages:          true,  // High preset default
+	BlendMobiles:           false, // High preset default
+	BlendPicts:             true,  // High preset default
+	ObjectPinning:          true,
+	BlendAmount:            1.0,
+	MobileBlendAmount:      0.33,
+	MobileBlendFrames:      10,
+	PictBlendFrames:        10,
+	DenoiseSharpness:       4.0,
+	DenoiseAmount:          0.33,
+	ShowFPS:                true,
+	UIScale:                1.0,
+	MasterVolume:           1.0,
+	GameVolume:             0.6,
+	MusicVolume:            0.8,
+	Music:                  true,
+	GameSound:              true,
+	GameScale:              2,
+	BarPlacement:           BarPlacementBottom,
+	ShaderLightStrength:    1.0,
+	ShaderGlowStrength:     1.0,
+	MaxNightLevel:          100,
+	ForceNightLevel:        -1,
+	ChatTTS:                false,
+	ChatTTSVolume:          1.0,
+	ChatTTSSpeed:           1.5,
+	ChatTTSVoice:           "en_US-hfc_female-medium",
+	ChatTTSBlocklist:       []string{"koppi", "crius"},
+	Notifications:          true,
+	NotifyFallen:           true,
+	NotifyNotFallen:        true,
+	NotifyShares:           true,
+	NotifyFriendOnline:     true,
+	NotifyCopyText:         true,
+	NotificationVolume:     0.6,
+	NotificationBeep:       false,
+	NotificationDuration:   6,
+	PluginSpamKill:         true,
+	PromptOnSaveRecording:  true,
+	TimestampFormat:        "3:04PM",
+	LastUpdateCheck:        time.Time{},
+	NotifiedVersion:        0,
+	JoystickBindings:       map[string]ebiten.GamepadButton{},
+	JoystickEnabled:        false,
+	JoystickWalkStick:      0,
+	JoystickCursorStick:    1,
+	JoystickWalkDeadzone:   0.1,
+	JoystickCursorDeadzone: 0.1,
+	ThrottleSounds:         true,
+	ShaderLighting:         true,
+	NightEffect:            true,
 
 	GameWindow:      WindowState{Open: true},
 	InventoryWindow: WindowState{Open: true},
@@ -220,10 +222,12 @@ type settings struct {
 	WindowSnapping        bool
 	ShowPinToLocations    bool
 
-	JoystickEnabled     bool
-	JoystickBindings    map[string]ebiten.GamepadButton
-	JoystickWalkStick   int
-	JoystickCursorStick int
+	JoystickEnabled        bool
+	JoystickBindings       map[string]ebiten.GamepadButton
+	JoystickWalkStick      int
+	JoystickCursorStick    int
+	JoystickWalkDeadzone   float64
+	JoystickCursorDeadzone float64
 
 	WindowWidth  int
 	WindowHeight int
@@ -340,6 +344,13 @@ func loadSettings() bool {
 
 	if gs.JoystickBindings == nil {
 		gs.JoystickBindings = make(map[string]ebiten.GamepadButton)
+	}
+
+	if gs.JoystickWalkDeadzone < 0.01 || gs.JoystickWalkDeadzone > 0.2 {
+		gs.JoystickWalkDeadzone = gsdef.JoystickWalkDeadzone
+	}
+	if gs.JoystickCursorDeadzone < 0.01 || gs.JoystickCursorDeadzone > 0.2 {
+		gs.JoystickCursorDeadzone = gsdef.JoystickCursorDeadzone
 	}
 
 	if gs.DenoiseAmount < 0 || gs.DenoiseAmount > 1 {
