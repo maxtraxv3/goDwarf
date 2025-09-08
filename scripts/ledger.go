@@ -42,7 +42,7 @@ func Init() {
 }
 
 func ledgerFind(args string) {
-	gt.Console("ledger: find trainers")
+	gt.Print("ledger: find trainers")
 	gt.Run("/equip trainingledger")
 	fields := gt.Words(args)
 	// (trimmed debug output)
@@ -75,7 +75,7 @@ func ledgerFind(args string) {
 }
 
 func ledgerLanguage(args string) {
-	gt.Console("ledger: judge language")
+	gt.Print("ledger: judge language")
 	gt.Run("/equip trainingledger")
 	fields := gt.Words(args)
 	if len(fields) == 0 {

@@ -62,11 +62,11 @@ func cwCmd(args string) {
 		clTotal = 0
 		gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
 		gt.Save("total", "0")
-		gt.Console("Coin Lord started")
+		gt.Print("Coin Lord started")
 	} else {
 		gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
 		gt.Save("total", strconv.Itoa(clTotal))
-		gt.Console("Coin Lord stopped")
+		gt.Print("Coin Lord stopped")
 	}
 }
 
@@ -75,13 +75,13 @@ func cwNewCmd(args string) {
 	clTotal = 0
 	gt.Save("start", strconv.FormatInt(clStart.Unix(), 10))
 	gt.Save("total", "0")
-	gt.Console("Coin data reset")
+	gt.Print("Coin data reset")
 }
 
 func cwClearCmd(args string) {
 	clTotal = 0
 	gt.Save("total", "0")
-	gt.Console("Coin total cleared")
+	gt.Print("Coin total cleared")
 }
 
 func cwDataCmd(args string) {
@@ -90,7 +90,7 @@ func cwDataCmd(args string) {
 	if hours > 0 {
 		rate = float64(clTotal) / hours
 	}
-	gt.Console(fmt.Sprintf("Coins: %d (%.0f/hr)", clTotal, rate))
+	gt.Print(fmt.Sprintf("Coins: %d (%.0f/hr)", clTotal, rate))
 }
 
 func cwDataHotkey() { cwDataCmd("") }
