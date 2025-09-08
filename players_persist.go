@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -63,7 +64,7 @@ func loadPlayersPersist() {
 		return
 	}
 	for _, p := range pp.Players {
-		if p.Name == "" {
+		if p.Name == "" || strings.HasPrefix(p.Name, agratisPrefix) {
 			continue
 		}
 		last := time.Unix(p.LastSeen, 0)
@@ -115,7 +116,7 @@ func savePlayersPersist() {
 	list := make([]persistPlayer, 0, len(players))
 	names := make([]string, 0, len(players))
 	for name, p := range players {
-		if p == nil || p.IsNPC || name == "" {
+		if p == nil || p.IsNPC || name == "" || strings.HasPrefix(name, agratisPrefix) {
 			continue
 		}
 		names = append(names, name)
@@ -123,7 +124,7 @@ func savePlayersPersist() {
 	sort.Strings(names)
 	for _, name := range names {
 		p := players[name]
-		if p == nil {
+		if p == nil || strings.HasPrefix(name, agratisPrefix) {
 			continue
 		}
 		// Build colors payload as [count][colors...]
