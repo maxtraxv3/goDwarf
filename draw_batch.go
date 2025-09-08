@@ -6,19 +6,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-// acquireDrawOpts returns a DrawImageOptions from the shared pool initialized
-// with nearest filtering and mipmaps disabled. Call releaseDrawOpts when done.
-func acquireDrawOpts() *ebiten.DrawImageOptions {
-	op := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	*op = ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-	return op
-}
-
-// releaseDrawOpts returns a DrawImageOptions to the shared pool.
-func releaseDrawOpts(op *ebiten.DrawImageOptions) {
-	drawOptsPool.Put(op)
-}
-
 // rectBatch batches solid rectangle draws into a single DrawTriangles call.
 type rectBatch struct {
 	vs []ebiten.Vertex
