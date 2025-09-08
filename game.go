@@ -51,6 +51,11 @@ var inAspectResize bool
 // updateDimmedScreenBG refreshes this color when the theme changes.
 var dimmedScreenBG = color.RGBA{0, 0, 0, 255}
 
+var (
+	drawOptsPool     = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
+	textDrawOptsPool = sync.Pool{New: func() any { return &text.DrawOptions{} }}
+)
+
 func updateDimmedScreenBG() {
 	c := color.RGBA{0, 0, 0, 255}
 	if gameWin != nil && gameWin.Theme != nil {
@@ -176,6 +181,26 @@ func exactScale(scale float64, maxDenom int, eps float64) (float64, bool) {
 		}
 	}
 	return best, false
+}
+
+func acquireDrawOpts() *ebiten.DrawImageOptions {
+	op := drawOptsPool.Get().(*ebiten.DrawImageOptions)
+	*op = ebiten.DrawImageOptions{}
+	return op
+}
+
+func releaseDrawOpts(op *ebiten.DrawImageOptions) {
+	drawOptsPool.Put(op)
+}
+
+func acquireTextDrawOpts() *text.DrawOptions {
+	op := textDrawOptsPool.Get().(*text.DrawOptions)
+	*op = text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}}
+	return op
+}
+
+func releaseTextDrawOpts(op *text.DrawOptions) {
+	textDrawOptsPool.Put(op)
 }
 
 type inputState struct {
@@ -1258,7 +1283,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+	op := acquireDrawOpts()
+	op.Filter = ebiten.FilterLinear
+	op.DisableMipmaps = true
 	if isExactInt {
 		op.Filter = ebiten.FilterNearest
 	}
@@ -1267,6 +1294,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op.GeoM.Scale(sx, sy)
 	op.GeoM.Translate(tx, ty)
 	gameImage.DrawImage(worldView, op)
+	releaseDrawOpts(op)
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
@@ -1302,9 +1330,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		x, y := float64(screen.Bounds().Dx())/2, float64(screen.Bounds().Dy())/2
 		vector.DrawFilledRect(screen, float32(x+2), float32(y+2), 90, 40, color.Black, false)
 
-		op := &text.DrawOptions{}
+		op := acquireTextDrawOpts()
 		op.GeoM.Translate(x, y)
 		text.Draw(screen, "SEEKING...", mainFontBold, op)
+		releaseTextDrawOpts(op)
 	}
 }
 
@@ -1481,20 +1510,24 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 		scale := gs.GameScale
 		scaled := float64(roundToInt(float64(drawSize) * scale))
 		scale = scaled / float64(drawSize)
-		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+		op := acquireDrawOpts()
+		op.Filter = ebiten.FilterNearest
+		op.DisableMipmaps = true
 		op.GeoM.Scale(scale, scale)
 		tx := float64(x) - scaled/2
 		ty := float64(y) - scaled/2
 		op.GeoM.Translate(tx, ty)
 		screen.DrawImage(src, op)
+		releaseDrawOpts(op)
 		if gs.imgPlanesDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%dm", plane)
 			xPos := x - int(float64(size)*gs.GameScale/2)
-			op := &text.DrawOptions{}
+			op := acquireTextDrawOpts()
 			op.GeoM.Translate(float64(xPos), float64(y)-float64(size)*gs.GameScale/2-metrics.HAscent)
 			op.ColorScale.ScaleWithColor(color.RGBA{0, 255, 255, 255})
 			text.Draw(screen, lbl, mainFont, op)
+			releaseTextDrawOpts(op)
 		}
 	} else {
 		// Fallback marker when image missing; no per-frame bounds check.
@@ -1503,10 +1536,11 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%dm", plane)
 			xPos := x - int(3*gs.GameScale)
-			op := &text.DrawOptions{}
+			op := acquireTextDrawOpts()
 			op.GeoM.Translate(float64(xPos), float64(y)-3*gs.GameScale-metrics.HAscent)
 			op.ColorScale.ScaleWithColor(color.White)
 			text.Draw(screen, lbl, mainFont, op)
+			releaseTextDrawOpts(op)
 		}
 	}
 }
@@ -1763,7 +1797,9 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 		scaledH := float64(roundToInt(float64(drawH) * sy))
 		sx = scaledW / float64(drawW)
 		sy = scaledH / float64(drawH)
-		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+		op := acquireDrawOpts()
+		op.Filter = ebiten.FilterNearest
+		op.DisableMipmaps = true
 		op.GeoM.Scale(sx, sy)
 		tx := float64(x) - scaledW/2
 		ty := float64(y) - scaledH/2
@@ -1777,26 +1813,29 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 			op.ColorScale.ScaleAlpha(fadeAlpha)
 		}
 		screen.DrawImage(src, op)
+		releaseDrawOpts(op)
 
 		if gs.pictIDDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%d", p.PictID)
 			txtW, _ := text.Measure(lbl, mainFont, 0)
 			xPos := x + int(float64(w)*gs.GameScale/2) - roundToInt(txtW)
-			opTxt := &text.DrawOptions{}
+			opTxt := acquireTextDrawOpts()
 			opTxt.GeoM.Translate(float64(xPos), float64(y)-float64(h)*gs.GameScale/2-metrics.HAscent)
 			opTxt.ColorScale.ScaleWithColor(eui.ColorRed)
 			text.Draw(screen, lbl, mainFont, opTxt)
+			releaseTextDrawOpts(opTxt)
 		}
 
 		if gs.imgPlanesDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%dp", plane)
 			xPos := x - int(float64(w)*gs.GameScale/2)
-			opTxt := &text.DrawOptions{}
+			opTxt := acquireTextDrawOpts()
 			opTxt.GeoM.Translate(float64(xPos), float64(y)-float64(h)*gs.GameScale/2-metrics.HAscent)
 			opTxt.ColorScale.ScaleWithColor(color.RGBA{255, 255, 0, 0})
 			text.Draw(screen, lbl, mainFont, opTxt)
+			releaseTextDrawOpts(opTxt)
 		}
 	} else {
 		clr := color.RGBA{0, 0, 0xff, 0xff}
@@ -1813,19 +1852,21 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 			txtW, _ := text.Measure(lbl, mainFont, 0)
 			half := int(2 * gs.GameScale)
 			xPos := x + half - roundToInt(txtW)
-			opTxt := &text.DrawOptions{}
+			opTxt := acquireTextDrawOpts()
 			opTxt.GeoM.Translate(float64(xPos), float64(y)-float64(half)-metrics.HAscent)
 			opTxt.ColorScale.ScaleWithColor(eui.ColorRed)
 			text.Draw(screen, lbl, mainFont, opTxt)
+			releaseTextDrawOpts(opTxt)
 		}
 		if gs.imgPlanesDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%dp", plane)
 			xPos := x - int(2*gs.GameScale)
-			opTxt := &text.DrawOptions{}
+			opTxt := acquireTextDrawOpts()
 			opTxt.GeoM.Translate(float64(xPos), float64(y)-2*gs.GameScale-metrics.HAscent)
 			opTxt.ColorScale.ScaleWithColor(color.RGBA{255, 255, 0, 0})
 			text.Draw(screen, lbl, mainFont, opTxt)
+			releaseTextDrawOpts(opTxt)
 		}
 	}
 }
@@ -1971,9 +2012,12 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 			if m.nameTag != nil && m.nameTagKey.FontGen == fontGen && m.nameTagKey.Opacity == nameAlpha && m.nameTagKey.Text == d.Name && m.nameTagKey.Colors == m.Colors && m.nameTagKey.Style == style {
 				top := y + int(offset)
 				left := x - int(float64(m.nameTagW)/2)
-				op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+				op := acquireDrawOpts()
+				op.Filter = ebiten.FilterNearest
+				op.DisableMipmaps = true
 				op.GeoM.Translate(float64(left), float64(top))
 				screen.DrawImage(m.nameTag, op)
+				releaseDrawOpts(op)
 			} else {
 				// Rebuild the cached name tag image on mismatch to avoid per-frame vector draws.
 				// Respect label color frames if enabled.
@@ -2002,9 +2046,12 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 
 					top := y + int(offset)
 					left := x - int(float64(iw)/2)
-					op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+					op := acquireDrawOpts()
+					op.Filter = ebiten.FilterNearest
+					op.DisableMipmaps = true
 					op.GeoM.Translate(float64(left), float64(top))
 					screen.DrawImage(img, op)
+					releaseDrawOpts(op)
 				}
 			}
 		} else {
@@ -2017,11 +2064,14 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 				barClr.A = nameAlpha
 				top := y + int(offset+2*gs.GameScale)
 				left := x - int(6*gs.GameScale)
-				op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+				op := acquireDrawOpts()
+				op.Filter = ebiten.FilterNearest
+				op.DisableMipmaps = true
 				op.GeoM.Scale(12*gs.GameScale, 2*gs.GameScale)
 				op.GeoM.Translate(float64(left), float64(top))
 				op.ColorScale.ScaleWithColor(barClr)
 				screen.DrawImage(whiteImage, op)
+				releaseDrawOpts(op)
 			}
 		}
 	}
@@ -2134,12 +2184,15 @@ func lerpBar(prev, cur int, alpha float64) int {
 // drawStatusBars renders health, balance and spirit bars.
 func drawStatusBars(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha float64) {
 	drawRect := func(x, y, w, h int, clr color.RGBA) {
-		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+		op := acquireDrawOpts()
+		op.Filter = ebiten.FilterNearest
+		op.DisableMipmaps = true
 		op.GeoM.Scale(float64(w), float64(h))
 		op.GeoM.Translate(float64(ox+x), float64(oy+y))
 		op.ColorScale.ScaleWithColor(clr)
 		op.ColorScale.ScaleAlpha(float32(gs.BarOpacity))
 		screen.DrawImage(whiteImage, op)
+		releaseDrawOpts(op)
 	}
 	barWidth := int(110 * gs.GameScale)
 	barHeight := int(8 * gs.GameScale)
@@ -2283,13 +2336,16 @@ func drawServerFPS(screen *ebiten.Image, ox, oy int, fps float64) {
 		}
 
 		fpsImage.Clear()
-		text.Draw(fpsImage, msg, mainFont, &text.DrawOptions{})
+		opTxt := acquireTextDrawOpts()
+		text.Draw(fpsImage, msg, mainFont, opTxt)
+		releaseTextDrawOpts(opTxt)
 		fpsWidth, fpsHeight = w, h
 	}
 
-	op := &ebiten.DrawImageOptions{}
+	op := acquireDrawOpts()
 	op.GeoM.Translate(float64(ox)-fpsWidth, float64(oy))
 	screen.DrawImage(fpsImage, op)
+	releaseDrawOpts(op)
 
 }
 
