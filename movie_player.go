@@ -129,7 +129,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	backb, backbEv := eui.NewButton()
 	backb.Text = "<<<"
 	backb.Size = eui.Point{X: 40, Y: 24}
-	backb.Tooltip = "Skip back 30s"
+	backb.SetTooltip("Skip back 30s")
 	backbEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.skipBackMilli(30 * 1000)
@@ -140,7 +140,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	back, backEv := eui.NewButton()
 	back.Text = "<<"
 	back.Size = eui.Point{X: 40, Y: 24}
-	back.Tooltip = "Skip back 5s"
+	back.SetTooltip("Skip back 5s")
 	backEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.skipBackMilli(5 * 1000)
@@ -150,7 +150,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 
 	play, playEv := eui.NewButton()
 	play.Text = "Play/Pause"
-	play.Tooltip = "Toggle playback"
+	play.SetTooltip("Toggle playback")
 	play.Size = eui.Point{X: 140, Y: 24}
 	p.playButton = play
 	changePlayButton(p, p.playButton)
@@ -169,7 +169,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	forwardb, fwdbEv := eui.NewButton()
 	forwardb.Text = ">>"
 	forwardb.Size = eui.Point{X: 40, Y: 24}
-	forwardb.Tooltip = "Skip forward 5s"
+	forwardb.SetTooltip("Skip forward 5s")
 	fwdbEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.skipForwardMilli(5 * 1000)
@@ -180,7 +180,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	forward, fwdEv := eui.NewButton()
 	forward.Text = ">>>"
 	forward.Size = eui.Point{X: 40, Y: 24}
-	forward.Tooltip = "Skip forward 30s"
+	forward.SetTooltip("Skip forward 30s")
 	fwdEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.skipForwardMilli(30 * 1000)
@@ -196,7 +196,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	half, halfEv := eui.NewButton()
 	half.Text = "--"
 	half.Size = eui.Point{X: 40, Y: 24}
-	half.Tooltip = "Half speed"
+	half.SetTooltip("Half speed")
 	halfEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.setFPS(p.fps / 2)
@@ -207,7 +207,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	dec, decEv := eui.NewButton()
 	dec.Text = "-"
 	dec.Size = eui.Point{X: 40, Y: 24}
-	dec.Tooltip = "Slow down"
+	dec.SetTooltip("Slow down")
 	decEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.setFPS(p.fps - 1)
@@ -217,7 +217,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 
 	reset, resetEv := eui.NewButton()
 	reset.Text = "RESET"
-	reset.Tooltip = "Reset playback speed"
+	reset.SetTooltip("Reset playback speed")
 	reset.Size = eui.Point{X: 140, Y: 24}
 	resetEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -229,7 +229,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	inc, incEv := eui.NewButton()
 	inc.Text = "+"
 	inc.Size = eui.Point{X: 40, Y: 24}
-	inc.Tooltip = "Speed up"
+	inc.SetTooltip("Speed up")
 	incEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.setFPS(p.fps + 1)
@@ -240,7 +240,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 	dbl, dblEv := eui.NewButton()
 	dbl.Text = "++"
 	dbl.Size = eui.Point{X: 40, Y: 24}
-	dbl.Tooltip = "Double speed"
+	dbl.SetTooltip("Double speed")
 	dblEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			p.setFPS(p.fps * 2)

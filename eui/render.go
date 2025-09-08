@@ -179,12 +179,14 @@ func drawZoneOverlay(screen *ebiten.Image, win *windowData) {
 }
 
 func drawTooltip(screen *ebiten.Image, item *itemData) {
+	if item.tooltipW == 0 && item.Tooltip != "" {
+		item.updateTooltipBounds()
+	}
 	faceSize := float32(12) * uiScale
 	face := textFace(faceSize)
-	w, h := text.Measure(item.Tooltip, face, 0)
 	pad := float32(4) * uiScale
-	width := float32(w) + pad*2
-	height := float32(h) + pad*2
+	width := item.tooltipW + pad*2
+	height := item.tooltipH + pad*2
 
 	x := item.DrawRect.X0
 	y := item.DrawRect.Y1 + pad

@@ -265,7 +265,7 @@ func makeHotkeysWindow() {
 	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
 	addBtn, addEvents := eui.NewButton()
 	addBtn.Text = "+"
-	addBtn.Tooltip = "Create a new hotkey"
+	addBtn.SetTooltip("Create a new hotkey")
 	addBtn.Size = eui.Point{X: 20, Y: 20}
 	addBtn.FontSize = 14
 	addEvents.Handle = func(ev eui.UIEvent) {
@@ -334,7 +334,7 @@ func refreshHotkeysList() {
 		row.AddItem(btn)
 		delBtn, delEvents := eui.NewButton()
 		delBtn.Text = "x"
-		delBtn.Tooltip = "Remove this hotkey"
+		delBtn.SetTooltip("Remove this hotkey")
 		delBtn.Size = eui.Point{X: 20, Y: 20}
 		delBtn.FontSize = 10
 		delEvents.Handle = func(ev eui.UIEvent) {
@@ -475,7 +475,7 @@ func openHotkeyEditor(idx int) {
 	row.AddItem(hotkeyComboText)
 	hotkeyRecordBtn, recordEvents := eui.NewButton()
 	hotkeyRecordBtn.Text = "Record"
-	hotkeyRecordBtn.Tooltip = "Capture a key/mouse combo"
+	hotkeyRecordBtn.SetTooltip("Capture a key/mouse combo")
 	hotkeyRecordBtn.Size = eui.Point{X: 60, Y: 20}
 	hotkeyRecordBtn.FontSize = 12
 	recordEvents.Handle = func(ev eui.UIEvent) {
@@ -505,7 +505,7 @@ func openHotkeyEditor(idx int) {
 	// Row to add a command input
 	addCmdRow, addCmdEvents := eui.NewButton()
 	addCmdRow.Text = "+"
-	addCmdRow.Tooltip = "Add another command line"
+	addCmdRow.SetTooltip("Add another command line")
 	addCmdRow.Size = eui.Point{X: 20, Y: 20}
 	addCmdRow.FontSize = 14
 	addCmdEvents.Handle = func(ev eui.UIEvent) {
@@ -956,44 +956,44 @@ func hotkeyEquipAlreadyEquipped(cmd string) bool {
 }
 
 func checkHotkeys() {
-    if recording {
-        return
-    }
-    // Detect any just-pressed combo first.
-    if combo := detectCombo(); combo != "" {
-        // If the console/input or another UI text field is active, allow
-        // only non-text triggers (e.g., function keys, arrows, mouse, wheel).
-        // This keeps typing unaffected while still letting F12, etc. work.
-        if inputActive || typingInUI() {
-            parts := strings.Split(combo, "-")
-            trig := ""
-            if len(parts) > 0 {
-                trig = parts[len(parts)-1]
-            }
-            // Treat single-character triggers (e.g., "c", "1") as text keys
-            // and ignore them while typing. Everything else (e.g., "F12",
-            // "ArrowUp", "RightClick", "WheelUp") is allowed.
-            if len([]rune(trig)) == 1 {
-                return
-            }
-        }
-        hotkeysMu.RLock()
-        list := append([]Hotkey(nil), hotkeys...)
-        hotkeysMu.RUnlock()
-        for _, hk := range list {
-            if !hk.Disabled && (hk.Combo == combo || strings.EqualFold(hk.Combo, combo) || sameCombo(hk.Combo, combo)) {
-                // If this is a plugin hotkey with a function handler, call it.
-                if hk.Plugin != "" {
-                    if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
-                        parts := strings.Split(combo, "-")
-                        trig := ""
-                        if len(parts) > 0 {
-                            trig = parts[len(parts)-1]
-                        }
-                        ev := HotkeyEvent{Combo: combo, Parts: parts, Trigger: trig}
-                        go fn(ev)
-                    }
-                }
+	if recording {
+		return
+	}
+	// Detect any just-pressed combo first.
+	if combo := detectCombo(); combo != "" {
+		// If the console/input or another UI text field is active, allow
+		// only non-text triggers (e.g., function keys, arrows, mouse, wheel).
+		// This keeps typing unaffected while still letting F12, etc. work.
+		if inputActive || typingInUI() {
+			parts := strings.Split(combo, "-")
+			trig := ""
+			if len(parts) > 0 {
+				trig = parts[len(parts)-1]
+			}
+			// Treat single-character triggers (e.g., "c", "1") as text keys
+			// and ignore them while typing. Everything else (e.g., "F12",
+			// "ArrowUp", "RightClick", "WheelUp") is allowed.
+			if len([]rune(trig)) == 1 {
+				return
+			}
+		}
+		hotkeysMu.RLock()
+		list := append([]Hotkey(nil), hotkeys...)
+		hotkeysMu.RUnlock()
+		for _, hk := range list {
+			if !hk.Disabled && (hk.Combo == combo || strings.EqualFold(hk.Combo, combo) || sameCombo(hk.Combo, combo)) {
+				// If this is a plugin hotkey with a function handler, call it.
+				if hk.Plugin != "" {
+					if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
+						parts := strings.Split(combo, "-")
+						trig := ""
+						if len(parts) > 0 {
+							trig = parts[len(parts)-1]
+						}
+						ev := HotkeyEvent{Combo: combo, Parts: parts, Trigger: trig}
+						go fn(ev)
+					}
+				}
 				for _, c := range hk.Commands {
 					cmd := strings.TrimSpace(c.Command)
 					lower := strings.ToLower(cmd)
@@ -1026,9 +1026,9 @@ func checkHotkeys() {
 				}
 				nextCommand()
 				break
-        }
-    }
-}
+			}
+		}
+	}
 
 }
 
@@ -1036,42 +1036,42 @@ func checkHotkeys() {
 // order and verbosity of modifier keys (Ctrl/Control, Alt, Shift). The final
 // trigger token (e.g., "F3", "RightClick", "WheelUp") must match ignoring case.
 func sameCombo(a, b string) bool {
-    norm := func(s string) (mods map[string]bool, trig string) {
-        parts := strings.Split(strings.TrimSpace(s), "-")
-        if len(parts) == 0 {
-            return map[string]bool{}, ""
-        }
-        trig = strings.ToLower(parts[len(parts)-1])
-        mods = map[string]bool{}
-        for _, p := range parts[:len(parts)-1] {
-            switch strings.ToLower(strings.TrimSpace(p)) {
-            case "ctrl", "control", "controlleft", "controlright":
-                mods["ctrl"] = true
-            case "alt", "altleft", "altright":
-                mods["alt"] = true
-            case "shift", "shiftleft", "shiftright":
-                mods["shift"] = true
-            default:
-                // Treat any unknown modifier token as-is to be strict
-                if p != "" {
-                    mods[strings.ToLower(p)] = true
-                }
-            }
-        }
-        return mods, trig
-    }
-    am, at := norm(a)
-    bm, bt := norm(b)
-    if at != bt {
-        return false
-    }
-    if len(am) != len(bm) {
-        return false
-    }
-    for k := range am {
-        if !bm[k] {
-            return false
-        }
-    }
-    return true
+	norm := func(s string) (mods map[string]bool, trig string) {
+		parts := strings.Split(strings.TrimSpace(s), "-")
+		if len(parts) == 0 {
+			return map[string]bool{}, ""
+		}
+		trig = strings.ToLower(parts[len(parts)-1])
+		mods = map[string]bool{}
+		for _, p := range parts[:len(parts)-1] {
+			switch strings.ToLower(strings.TrimSpace(p)) {
+			case "ctrl", "control", "controlleft", "controlright":
+				mods["ctrl"] = true
+			case "alt", "altleft", "altright":
+				mods["alt"] = true
+			case "shift", "shiftleft", "shiftright":
+				mods["shift"] = true
+			default:
+				// Treat any unknown modifier token as-is to be strict
+				if p != "" {
+					mods[strings.ToLower(p)] = true
+				}
+			}
+		}
+		return mods, trig
+	}
+	am, at := norm(a)
+	bm, bt := norm(b)
+	if at != bt {
+		return false
+	}
+	if len(am) != len(bm) {
+		return false
+	}
+	for k := range am {
+		if !bm[k] {
+			return false
+		}
+	}
+	return true
 }

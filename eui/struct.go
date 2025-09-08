@@ -106,6 +106,8 @@ type itemData struct {
 	Text      string
 	Label     string
 	Tooltip   string
+	tooltipW  float32 // cached tooltip text width
+	tooltipH  float32 // cached tooltip text height
 	Position  point
 	Size      point
 	Alignment alignType
