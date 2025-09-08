@@ -1099,6 +1099,11 @@ func makeToolbar() {
 	}()
 }
 
+var (
+	overlayHandOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	overlayItemOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+)
+
 func overlayItemOnHand(hand, item *ebiten.Image) *ebiten.Image {
 	if hand == nil {
 		return item
@@ -1118,13 +1123,17 @@ func overlayItemOnHand(hand, item *ebiten.Image) *ebiten.Image {
 	out := newImage(w, h)
 	offX := (w - hand.Bounds().Dx()) / 2
 	offY := (h - hand.Bounds().Dy()) / 2
-	opHand := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	opHand := overlayHandOpts
+	opHand.ColorScale.Reset()
 	opHand.ColorScale.ScaleAlpha(0.5)
+	opHand.GeoM.Reset()
 	opHand.GeoM.Translate(float64(offX), float64(offY))
 	out.DrawImage(hand, opHand)
 	offX = (w - iw) / 2
 	offY = (h - ih) / 2
-	opItem := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	opItem := overlayItemOpts
+	opItem.ColorScale.Reset()
+	opItem.GeoM.Reset()
 	opItem.GeoM.Translate(float64(offX), float64(offY))
 	out.DrawImage(item, opItem)
 	return out
