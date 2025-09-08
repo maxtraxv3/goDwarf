@@ -15,7 +15,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -31,7 +30,8 @@ var (
 	chatTTSCtx    context.Context
 	chatTTSCancel func()
 
-	pendingTTS      int32
+	pendingTTSMu    sync.Mutex
+	pendingTTS      int
 	playChatTTSFunc func(context.Context, string)
 
 	piperPath   string
@@ -64,7 +64,9 @@ func stopAllTTS() {
 	}
 	ttsPlayersMu.Unlock()
 	resetChatTTSWorker()
-	atomic.StoreInt32(&pendingTTS, 0)
+	pendingTTSMu.Lock()
+	pendingTTS = 0
+	pendingTTSMu.Unlock()
 }
 
 func disableTTS() {
@@ -110,7 +112,9 @@ func chatTTSWorker(ctx context.Context, queue <-chan string) {
 			default:
 			}
 			playChatTTSFunc(ctx, strings.Join(msgs, ". "))
-			atomic.AddInt32(&pendingTTS, -int32(len(msgs)))
+			pendingTTSMu.Lock()
+			pendingTTS -= len(msgs)
+			pendingTTSMu.Unlock()
 		}
 	}
 }
@@ -243,15 +247,20 @@ func speakChatMessage(msg string) {
 		lastTTSTime = now
 	}
 
-	if atomic.LoadInt32(&pendingTTS) >= 10 {
+	pendingTTSMu.Lock()
+	if pendingTTS >= 10 {
+		pendingTTSMu.Unlock()
 		logError("chat tts: too many pending messages, dropping message")
 		return
 	}
-	atomic.AddInt32(&pendingTTS, 1)
+	pendingTTS++
+	pendingTTSMu.Unlock()
 	select {
 	case chatTTSQueue <- ttsMsg:
 	default:
-		atomic.AddInt32(&pendingTTS, -1)
+		pendingTTSMu.Lock()
+		pendingTTS--
+		pendingTTSMu.Unlock()
 		logError("chat tts: queue full, dropping message")
 	}
 }
