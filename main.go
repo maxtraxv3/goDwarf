@@ -107,7 +107,6 @@ func main() {
 
 	if *genPGO {
 		clmov = filepath.Join("clmovFiles", "test.clMov")
-		clMovFPS = 300
 	}
 
 	loadSettings()
@@ -156,7 +155,7 @@ func main() {
 			f.Close()
 		}()
 		go func() {
-			time.Sleep(30 * time.Second)
+			time.Sleep(300 * time.Second)
 			cancel()
 		}()
 	}
