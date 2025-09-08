@@ -461,7 +461,7 @@ var pluginAllowedPkgs = []string{
 	"unicode/utf8/utf8",
 }
 
-const pluginGoroutineLimit = 256
+const pluginGoroutineLimit = 1024
 
 func init() {
 	go pluginGoroutineWatchdog()
