@@ -626,13 +626,15 @@ func (g *Game) Update() error {
 	hy := int16(float64(my-origY)/worldScale - float64(fieldCenterY))
 	updateWorldHover(hx, hy)
 
-	inventoryShortcutMu.RLock()
-	for idx, r := range inventoryShortcuts {
-		if k := keyForRune(r); k >= 0 && inpututil.IsKeyJustPressed(k) {
+	if keys := inpututil.AppendJustPressedKeys(nil); len(keys) > 0 {
+		lastPressedKey := keys[len(keys)-1]
+		inventoryShortcutMu.RLock()
+		idx, ok := shortcutKeyToIndex[lastPressedKey]
+		inventoryShortcutMu.RUnlock()
+		if ok {
 			triggerInventoryShortcut(idx)
 		}
 	}
-	inventoryShortcutMu.RUnlock()
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		// Input bar menu takes precedence when right-clicking on input.
