@@ -145,7 +145,12 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 		wrappedIn := strings.Join(inLines, "\n")
 		var miss []eui.TextSpan
 		if inputMsg != "" && !strings.HasPrefix(inputMsg, "[") {
-			miss = findMisspellings(wrappedIn)
+			if len(input.Contents) > 0 && input.Contents[0].Text == wrappedIn && !spellDirty {
+				miss = input.Contents[0].Underlines
+			} else if spellDirty {
+				miss = findMisspellings(wrappedIn)
+				spellDirty = false
+			}
 		}
 		inLinesN := len(inLines)
 		if inLinesN < 1 {

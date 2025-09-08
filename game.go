@@ -537,9 +537,9 @@ func computeInterpolation(now, prevTime, curTime time.Time, mobileRate, pictRate
 	alpha = 1.0
 	mobileFade = 1.0
 	pictFade = 1.0
-    if (gs.MotionSmoothing || gs.BlendMobiles || gs.BlendPicts) && !curTime.IsZero() && curTime.After(prevTime) {
-        // Use cached frame time to avoid repeated runtime.Now calls
-        elapsed := now.Sub(prevTime)
+	if (gs.MotionSmoothing || gs.BlendMobiles || gs.BlendPicts) && !curTime.IsZero() && curTime.After(prevTime) {
+		// Use cached frame time to avoid repeated runtime.Now calls
+		elapsed := now.Sub(prevTime)
 		interval := curTime.Sub(prevTime)
 		if gs.MotionSmoothing {
 			alpha = float64(elapsed) / float64(interval)
@@ -585,8 +585,8 @@ var lastBackpace time.Time
 var lastPlayersRefreshTick time.Time
 
 func (g *Game) Update() error {
-    // Cache the current time once per frame and reuse everywhere.
-    now := time.Now()
+	// Cache the current time once per frame and reuse everywhere.
+	now := time.Now()
 	select {
 	case <-gameCtx.Done():
 		syncWindowSettings()
@@ -602,8 +602,8 @@ func (g *Game) Update() error {
 		inputFlow.Contents[0].Focused = false
 	}
 	eui.Update() //We really need this to return eaten clicks
-    // Advance plugin tick waiters once per frame
-    pluginAdvanceTick()
+	// Advance plugin tick waiters once per frame
+	pluginAdvanceTick()
 	typingElsewhere := typingInUI()
 	if inputActive && inputFlow != nil && len(inputFlow.Contents) > 0 {
 		item := inputFlow.Contents[0]
@@ -613,12 +613,12 @@ func (g *Game) Update() error {
 	}
 	checkPluginMods()
 	updateNotifications()
-    updateThinkMessages()
-    // Throttle player maintenance to reduce idle CPU (every ~250ms)
-    if now.Sub(lastPlayersRefreshTick) >= 250*time.Millisecond {
-        requestPlayersData()
-        lastPlayersRefreshTick = now
-    }
+	updateThinkMessages()
+	// Throttle player maintenance to reduce idle CPU (every ~250ms)
+	if now.Sub(lastPlayersRefreshTick) >= 250*time.Millisecond {
+		requestPlayersData()
+		lastPlayersRefreshTick = now
+	}
 
 	mx, my := eui.PointerPosition()
 	origX, origY, worldScale := worldDrawInfo()
@@ -648,12 +648,12 @@ func (g *Game) Update() error {
 		}
 	}
 
-    if debugWin != nil && debugWin.IsOpen() {
-        if now.Sub(lastDebugStatsUpdate) >= time.Second {
-            updateDebugStats()
-            lastDebugStatsUpdate = now
-        }
-    }
+	if debugWin != nil && debugWin.IsOpen() {
+		if now.Sub(lastDebugStatsUpdate) >= time.Second {
+			updateDebugStats()
+			lastDebugStatsUpdate = now
+		}
+	}
 
 	if inventoryDirty {
 		updateInventoryWindow()
@@ -666,48 +666,50 @@ func (g *Game) Update() error {
 		playersDirty = false
 	}
 
-    if syncWindowSettings() {
-        settingsDirty = true
-    }
+	if syncWindowSettings() {
+		settingsDirty = true
+	}
 
-    if now.Sub(lastQualityPresetCheck) >= time.Second {
-        if settingsDirty && qualityPresetDD != nil {
-            qualityPresetDD.Selected = detectQualityPreset()
-        }
-        lastQualityPresetCheck = now
-    }
+	if now.Sub(lastQualityPresetCheck) >= time.Second {
+		if settingsDirty && qualityPresetDD != nil {
+			qualityPresetDD.Selected = detectQualityPreset()
+		}
+		lastQualityPresetCheck = now
+	}
 
-    if now.Sub(lastSettingsSave) >= time.Second {
-        if settingsDirty {
-            saveSettings()
-            settingsDirty = false
-        }
-        lastSettingsSave = now
-    }
+	if now.Sub(lastSettingsSave) >= time.Second {
+		if settingsDirty {
+			saveSettings()
+			settingsDirty = false
+		}
+		lastSettingsSave = now
+	}
 
-    if now.Sub(lastPlayersSave) >= 10*time.Second {
-        if clmov == "" && !playingMovie && (playersDirty || playersPersistDirty) {
-            savePlayersPersist()
-            playersPersistDirty = false
-        }
-        lastPlayersSave = now
-    }
+	if now.Sub(lastPlayersSave) >= 10*time.Second {
+		if clmov == "" && !playingMovie && (playersDirty || playersPersistDirty) {
+			savePlayersPersist()
+			playersPersistDirty = false
+		}
+		lastPlayersSave = now
+	}
 
-    if movieWin != nil && movieWin.IsOpen() {
-        if now.Sub(lastMovieWinRefresh) >= time.Second {
-            movieWin.Refresh()
-            lastMovieWinRefresh = now
-        }
-    }
+	if movieWin != nil && movieWin.IsOpen() {
+		if now.Sub(lastMovieWinRefresh) >= time.Second {
+			movieWin.Refresh()
+			lastMovieWinRefresh = now
+		}
+	}
 
 	/* Console input */
 	changedInput := false
+	textChanged := false
 	if typingElsewhere && inputActive {
 		inputActive = false
 		inputText = inputText[:0]
 		inputPos = 0
 		historyPos = len(inputHistory)
 		changedInput = true
+		textChanged = true
 	}
 	if inputActive {
 		if newChars := ebiten.AppendInputChars(nil); len(newChars) > 0 {
@@ -720,6 +722,7 @@ func (g *Game) Update() error {
 			inputText = append(inputText[:inputPos], append(newChars, inputText[inputPos:]...)...)
 			inputPos += len(newChars)
 			changedInput = true
+			textChanged = true
 		}
 		ctrl := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
 		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyV) {
@@ -728,6 +731,7 @@ func (g *Game) Update() error {
 				inputText = append(inputText[:inputPos], append(runes, inputText[inputPos:]...)...)
 				inputPos += len(runes)
 				changedInput = true
+				textChanged = true
 			}
 		}
 		if ctrl && inpututil.IsKeyJustPressed(ebiten.KeyC) {
@@ -755,6 +759,7 @@ func (g *Game) Update() error {
 				inputText = []rune(inputHistory[historyPos])
 				inputPos = len(inputText)
 				changedInput = true
+				textChanged = true
 			}
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
@@ -764,28 +769,32 @@ func (g *Game) Update() error {
 					inputText = []rune(inputHistory[historyPos])
 					inputPos = len(inputText)
 					changedInput = true
+					textChanged = true
 				} else {
 					historyPos = len(inputHistory)
 					inputText = inputText[:0]
 					inputPos = 0
 					changedInput = true
+					textChanged = true
 				}
 			}
 		}
-        if len(inputText) > 0 && now.Sub(lastBackpace) > time.Millisecond*keyRepeatRate {
+		if len(inputText) > 0 && now.Sub(lastBackpace) > time.Millisecond*keyRepeatRate {
 			if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
 				if inputPos > 0 {
-                    lastBackpace = now
+					lastBackpace = now
 					inputText = append(inputText[:inputPos-1], inputText[inputPos:]...)
 					inputPos--
 					changedInput = true
+					textChanged = true
 				}
 			} else if d := inpututil.KeyPressDuration(ebiten.KeyBackspace); d > 30 {
-                if inputPos > 0 {
-                    lastBackpace = now
+				if inputPos > 0 {
+					lastBackpace = now
 					inputText = append(inputText[:inputPos-1], inputText[inputPos:]...)
 					inputPos--
 					changedInput = true
+					textChanged = true
 				}
 			}
 		}
@@ -841,7 +850,7 @@ func (g *Game) Update() error {
 					} else {
 						pendingCommand = txt
 					}
-					//consoleMessage("> " + txt)
+					// consoleMessage("> " + txt)
 				}
 				inputHistory = append(inputHistory, txt)
 			}
@@ -854,6 +863,7 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			inputActive = false
@@ -861,6 +871,7 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 	} else if !typingElsewhere {
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
@@ -869,9 +880,13 @@ func (g *Game) Update() error {
 			inputPos = 0
 			historyPos = len(inputHistory)
 			changedInput = true
+			textChanged = true
 		}
 	}
 
+	if textChanged {
+		spellDirty = true
+	}
 	if changedInput {
 		updateConsoleWindow()
 		if consoleWin != nil {
@@ -1138,19 +1153,19 @@ func worldDrawInfo() (int, int, float64) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-    // Cache now for the whole draw to reduce time.Now overhead.
-    now := time.Now()
+	// Cache now for the whole draw to reduce time.Now overhead.
+	now := time.Now()
 
 	//Reduce render load while seeking clMov
-    if seekingMov {
-        if now.Sub(lastSeekPrev) < time.Millisecond*200 {
-            return
-        }
-        lastSeekPrev = now
-        gameImageItem.Disabled = true
-    } else {
-        gameImageItem.Disabled = false
-    }
+	if seekingMov {
+		if now.Sub(lastSeekPrev) < time.Millisecond*200 {
+			return
+		}
+		lastSeekPrev = now
+		gameImageItem.Disabled = true
+	} else {
+		gameImageItem.Disabled = false
+	}
 	if backgroundImg != nil {
 		drawBackground(screen)
 	} else {
@@ -1211,7 +1226,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	} else {
 		snap = captureDrawSnapshot()
 		var mobileFade, pictFade float32
-        alpha, mobileFade, pictFade = computeInterpolation(now, snap.prevTime, snap.curTime, gs.MobileBlendAmount, gs.BlendAmount)
+		alpha, mobileFade, pictFade = computeInterpolation(now, snap.prevTime, snap.curTime, gs.MobileBlendAmount, gs.BlendAmount)
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
 		drawScene(worldView, 0, 0, snap, alpha, mobileFade, pictFade)
@@ -2355,13 +2370,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func runGame(ctx context.Context) {
-    gameCtx = ctx
+	gameCtx = ctx
 
-    ebiten.SetScreenClearedEveryFrame(false)
-    ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-    // Ensure Update() TPS is synced with Draw FPS from the start.
-    ebiten.SetTPS(ebiten.SyncWithFPS)
-    w, h := ebiten.Monitor().Size()
+	ebiten.SetScreenClearedEveryFrame(false)
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	// Ensure Update() TPS is synced with Draw FPS from the start.
+	ebiten.SetTPS(ebiten.SyncWithFPS)
+	w, h := ebiten.Monitor().Size()
 	if w == 0 || h == 0 {
 		w, h = initialWindowW, initialWindowH
 	}

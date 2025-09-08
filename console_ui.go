@@ -95,6 +95,7 @@ func handleConsoleInputContext(mx, my int) bool {
 			// and the console updates immediately.
 			cur := string(inputText)
 			pluginSetInputText(cur + clip)
+			spellDirty = true
 			updateConsoleWindow()
 			if consoleWin != nil {
 				consoleWin.Refresh()
@@ -117,6 +118,7 @@ func handleConsoleInputContext(mx, my int) bool {
 	actions = append(actions, func() {
 		// Clear the input and switch to input mode so the empty state is visible.
 		pluginSetInputText("")
+		spellDirty = true
 		updateConsoleWindow()
 		if consoleWin != nil {
 			consoleWin.Refresh()
