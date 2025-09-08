@@ -12,8 +12,12 @@ import (
 )
 
 var (
-	shortcutsWin  *eui.WindowData
-	shortcutsList *eui.ItemData
+	shortcutsWin      *eui.WindowData
+	shortcutsList     *eui.ItemData
+	shortcutEditWin   *eui.WindowData
+	shortcutShortInp  *eui.ItemData
+	shortcutFullInp   *eui.ItemData
+	shortcutEditOwner string
 )
 
 func makeShortcutsWindow() {
@@ -32,6 +36,27 @@ func makeShortcutsWindow() {
 	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
 	shortcutsWin.AddItem(flow)
 
+	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+	addUserBtn, addUserEvents := eui.NewButton()
+	addUserBtn.Text = "Add User"
+	addUserBtn.Size = eui.Point{X: 90, Y: 24}
+	addUserEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			openShortcutEditor("user")
+		}
+	}
+	btnRow.AddItem(addUserBtn)
+	addGlobalBtn, addGlobalEvents := eui.NewButton()
+	addGlobalBtn.Text = "Add Global"
+	addGlobalBtn.Size = eui.Point{X: 90, Y: 24}
+	addGlobalEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			openShortcutEditor("global")
+		}
+	}
+	btnRow.AddItem(addGlobalBtn)
+	flow.AddItem(btnRow)
+
 	shortcutsList = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Scrollable: true, Fixed: true}
 	flow.AddItem(shortcutsList)
 	shortcutsWin.OnResize = func() {
@@ -42,6 +67,99 @@ func makeShortcutsWindow() {
 	}
 	shortcutsWin.AddWindow(false)
 	refreshShortcutsList()
+}
+
+func openShortcutEditor(owner string) {
+	if shortcutEditWin != nil {
+		return
+	}
+	shortcutEditOwner = owner
+	shortcutEditWin = eui.NewWindow()
+	shortcutEditWin.OnClose = func() { shortcutEditWin = nil }
+	if owner == "global" {
+		shortcutEditWin.Title = "Global Shortcut"
+	} else {
+		shortcutEditWin.Title = "User Shortcut"
+	}
+	shortcutEditWin.Size = eui.Point{X: 280, Y: 120}
+	shortcutEditWin.AutoSize = true
+	shortcutEditWin.Closable = true
+	shortcutEditWin.Movable = true
+	shortcutEditWin.Resizable = false
+	shortcutEditWin.NoScroll = true
+	shortcutEditWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
+
+	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
+	shortcutEditWin.AddItem(flow)
+
+	shortRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+	shortLbl, _ := eui.NewText()
+	shortLbl.Text = "Key:"
+	shortLbl.Size = eui.Point{X: 40, Y: 20}
+	shortLbl.FontSize = 12
+	shortRow.AddItem(shortLbl)
+	shortcutShortInp, _ = eui.NewInput()
+	shortcutShortInp.Size = eui.Point{X: 200, Y: 20}
+	shortcutShortInp.FontSize = 12
+	shortRow.AddItem(shortcutShortInp)
+	flow.AddItem(shortRow)
+
+	fullRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+	fullLbl, _ := eui.NewText()
+	fullLbl.Text = "Command:"
+	fullLbl.Size = eui.Point{X: 60, Y: 20}
+	fullLbl.FontSize = 12
+	fullRow.AddItem(fullLbl)
+	shortcutFullInp, _ = eui.NewInput()
+	shortcutFullInp.Size = eui.Point{X: 200, Y: 20}
+	shortcutFullInp.FontSize = 12
+	fullRow.AddItem(shortcutFullInp)
+	flow.AddItem(fullRow)
+
+	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+	okBtn, okEvents := eui.NewButton()
+	okBtn.Text = "OK"
+	okBtn.Size = eui.Point{X: 80, Y: 20}
+	okBtn.FontSize = 12
+	okEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			finishShortcutEdit(true)
+		}
+	}
+	btnRow.AddItem(okBtn)
+	cancelBtn, cancelEvents := eui.NewButton()
+	cancelBtn.Text = "Cancel"
+	cancelBtn.Size = eui.Point{X: 80, Y: 20}
+	cancelBtn.FontSize = 12
+	cancelEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			finishShortcutEdit(false)
+		}
+	}
+	btnRow.AddItem(cancelBtn)
+	flow.AddItem(btnRow)
+
+	shortcutEditWin.AddWindow(true)
+	shortcutEditWin.MarkOpen()
+}
+
+func finishShortcutEdit(ok bool) {
+	if shortcutEditWin == nil {
+		return
+	}
+	if ok {
+		short := strings.TrimSpace(shortcutShortInp.Text)
+		full := strings.TrimSpace(shortcutFullInp.Text)
+		if short != "" && full != "" {
+			if shortcutEditOwner == "global" {
+				addGlobalShortcut(short, full)
+			} else {
+				addUserShortcut(short, full)
+			}
+		}
+	}
+	shortcutEditWin.Close()
+	shortcutEditWin = nil
 }
 
 func refreshShortcutsList() {
@@ -116,12 +234,32 @@ func refreshShortcutsList() {
 		shortcutsList.AddItem(ht)
 		sort.Slice(p.macros, func(i, j int) bool { return p.macros[i].short < p.macros[j].short })
 		for _, m := range p.macros {
+			row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+			width := clientWAvail
+			if p.owner == "user" || p.owner == "global" {
+				width -= rowUnits
+			}
 			txt := fmt.Sprintf("  %s = %s", m.short, strings.TrimSpace(m.full))
 			t, _ := eui.NewText()
 			t.Text = txt
 			t.FontSize = float32(fontSize)
-			t.Size = eui.Point{X: clientWAvail, Y: rowUnits}
-			shortcutsList.AddItem(t)
+			t.Size = eui.Point{X: width, Y: rowUnits}
+			row.AddItem(t)
+			if p.owner == "user" || p.owner == "global" {
+				delBtn, delEvents := eui.NewButton()
+				delBtn.Text = "X"
+				delBtn.Size = eui.Point{X: rowUnits, Y: rowUnits}
+				delBtn.FontSize = float32(fontSize)
+				owner := p.owner
+				short := m.short
+				delEvents.Handle = func(ev eui.UIEvent) {
+					if ev.Type == eui.EventClick {
+						removeShortcut(owner, short)
+					}
+				}
+				row.AddItem(delBtn)
+			}
+			shortcutsList.AddItem(row)
 		}
 	}
 	if shortcutsWin != nil {

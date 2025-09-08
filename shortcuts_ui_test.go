@@ -90,6 +90,45 @@ func TestPluginRemoveShortcutsRefresh(t *testing.T) {
 	}
 }
 
+// Test that removing a user shortcut refreshes the window and clears the entry.
+func TestRemoveUserShortcutRefresh(t *testing.T) {
+	shortcutMu = sync.RWMutex{}
+	shortcutMaps = map[string]map[string]string{}
+	pluginDisplayNames = map[string]string{}
+	pluginCategories = map[string]string{}
+	pluginSubCategories = map[string]string{}
+	shortcutsWin = nil
+	shortcutsList = nil
+	t.Cleanup(func() {
+		shortcutMu = sync.RWMutex{}
+		shortcutMaps = map[string]map[string]string{}
+		pluginDisplayNames = map[string]string{}
+		pluginCategories = map[string]string{}
+		pluginSubCategories = map[string]string{}
+		shortcutsWin = nil
+		shortcutsList = nil
+	})
+
+	makeShortcutsWindow()
+	if shortcutsList == nil {
+		t.Fatalf("shortcuts window not initialized")
+	}
+
+	addUserShortcut("yy", "/yell ")
+	if len(shortcutsList.Contents) != 2 {
+		t.Fatalf("items not added to list: %d", len(shortcutsList.Contents))
+	}
+
+	shortcutsWin.Dirty = false
+	removeUserShortcut("yy")
+	if len(shortcutsList.Contents) != 0 {
+		t.Fatalf("shortcuts list not cleared: %d", len(shortcutsList.Contents))
+	}
+	if !shortcutsWin.Dirty {
+		t.Fatalf("shortcuts window not refreshed")
+	}
+}
+
 // Test that opening the macros window after macros have been added lists them correctly.
 func TestShortcutsWindowLoadsExistingShortcuts(t *testing.T) {
 	// Reset state and ensure cleanup after the test.
