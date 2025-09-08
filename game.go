@@ -690,6 +690,10 @@ func (g *Game) Update() error {
 		}
 	}
 
+	if joystickWin != nil && joystickWin.IsOpen() {
+		updateJoystickWindow()
+	}
+
 	if inventoryDirty {
 		updateInventoryWindow()
 		updateHandsWindow()
