@@ -3,12 +3,17 @@
 
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 func TestInventoryOrderSortedWithShortcuts(t *testing.T) {
 	resetInventory()
 	inventoryShortcutMu.Lock()
 	inventoryShortcuts = map[int]rune{}
+	shortcutKeyToIndex = map[ebiten.Key]int{}
 	inventoryShortcutMu.Unlock()
 
 	addInventoryItem(1, -1, "Banana", false)
@@ -18,6 +23,7 @@ func TestInventoryOrderSortedWithShortcuts(t *testing.T) {
 
 	inventoryShortcutMu.Lock()
 	inventoryShortcuts[1] = '1'
+	refreshShortcutKeyMapLocked()
 	inventoryShortcutMu.Unlock()
 
 	inventoryWin = nil

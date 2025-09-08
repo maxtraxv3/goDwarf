@@ -3,13 +3,27 @@ package main
 import (
 	"sync"
 	"unicode"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 // inventoryShortcuts maps item indices to assigned shortcut key runes.
 var (
 	inventoryShortcuts  = map[int]rune{}
+	shortcutKeyToIndex  = map[ebiten.Key]int{}
 	inventoryShortcutMu sync.RWMutex
 )
+
+// refreshShortcutKeyMapLocked rebuilds shortcutKeyToIndex from inventoryShortcuts.
+// inventoryShortcutMu must be held by the caller.
+func refreshShortcutKeyMapLocked() {
+	shortcutKeyToIndex = make(map[ebiten.Key]int, len(inventoryShortcuts))
+	for idx, r := range inventoryShortcuts {
+		if k := keyForRune(r); k >= 0 {
+			shortcutKeyToIndex[k] = idx
+		}
+	}
+}
 
 // getInventoryShortcut returns the shortcut key for a given inventory index.
 func getInventoryShortcut(idx int) (rune, bool) {
@@ -35,6 +49,7 @@ func setInventoryShortcut(idx int, r rune) {
 	} else {
 		inventoryShortcuts[idx] = r
 	}
+	refreshShortcutKeyMapLocked()
 	inventoryShortcutMu.Unlock()
 }
 
@@ -44,8 +59,8 @@ func inventoryIndexForShortcut(r rune) int {
 	inventoryShortcutMu.RLock()
 	defer inventoryShortcutMu.RUnlock()
 	r = unicode.ToLower(r)
-	for idx, v := range inventoryShortcuts {
-		if v == r {
+	if k := keyForRune(r); k >= 0 {
+		if idx, ok := shortcutKeyToIndex[k]; ok {
 			return idx
 		}
 	}
