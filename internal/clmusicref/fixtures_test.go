@@ -20,7 +20,7 @@ func TestTune_Coriakin_Scaffold(t *testing.T) {
 	if len(s) >= len(pref) && s[:len(pref)] == pref {
 		s = s[len(pref):]
 	}
-	evs := GoParse(s, 120)
+	evs, _ := ParseRef(s, 120)
 	var end int
 	for _, e := range evs {
 		if e.StartMS+e.DurMS > end {

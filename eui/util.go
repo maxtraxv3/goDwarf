@@ -906,7 +906,8 @@ func (item *itemData) GetSize() Point {
 	if sz.X <= 0 || sz.Y <= 0 {
 		// 1) If this is an image and no size is provided, use the image bounds.
 		if item.Image != nil {
-			w, h := item.Image.Size()
+			b := item.Image.Bounds()
+			w, h := b.Dx(), b.Dy()
 			if sz.X <= 0 {
 				sz.X = float32(w)
 			}
@@ -1029,7 +1030,8 @@ func (item *itemData) UpdateImage(img *ebiten.Image) {
 	}
 	item.Image = img
 	if img != nil {
-		w, h := img.Size()
+		b := img.Bounds()
+		w, h := b.Dx(), b.Dy()
 		if item.Size.X != float32(w) || item.Size.Y != float32(h) {
 			item.Size = point{X: float32(w), Y: float32(h)}
 		}

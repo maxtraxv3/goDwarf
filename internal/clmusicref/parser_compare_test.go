@@ -15,7 +15,7 @@ func TestScaffold_RefVsGoParse_Basics(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseRef error for %q: %v", tt, err)
 		}
-		goev := GoParse(tt, 120)
+		goev := parseRefInternal(tt, 120)
 		if len(ref) != len(goev) {
 			t.Fatalf("len mismatch for %q: ref=%d go=%d", tt, len(ref), len(goev))
 		}
