@@ -17,8 +17,6 @@ const (
 const movieSignature = 0xdeadbeef
 const oldestMovieVersion = 193
 
-var gameFrame int
-
 var movieRevision int32
 
 type movieFrame struct {

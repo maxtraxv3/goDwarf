@@ -100,7 +100,6 @@ func TestMobileOnEdge(t *testing.T) {
 }
 
 func TestPictureShiftBackgroundCap(t *testing.T) {
-	gs.NoCaching = false
 	pixelCountMu.Lock()
 	origCache := pixelCountCache
 	pixelCountCache = map[uint16]int{

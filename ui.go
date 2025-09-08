@@ -84,8 +84,6 @@ var (
 	pictBlendLabel   *eui.ItemData
 	totalCacheLabel  *eui.ItemData
 
-	soundTestLabel    *eui.ItemData
-	soundTestID       int
 	recordBtn         *eui.ItemData
 	recordStatus      *eui.ItemData
 	recordPath        string
@@ -94,7 +92,6 @@ var (
 	shaderGlowSlider  *eui.ItemData
 	denoiseCB         *eui.ItemData
 	motionCB          *eui.ItemData
-	noSmoothCB        *eui.ItemData
 	animCB            *eui.ItemData
 	pictBlendCB       *eui.ItemData
 	throttleSoundCB   *eui.ItemData
@@ -105,7 +102,6 @@ var (
 	volumeSlider      *eui.ItemData
 	muteBtn           *eui.ItemData
 	mixerWin          *eui.WindowData
-	masterMixSlider   *eui.ItemData
 	gameMixSlider     *eui.ItemData
 	musicMixSlider    *eui.ItemData
 	ttsMixSlider      *eui.ItemData
@@ -3252,11 +3248,11 @@ func makeSettingsWindow() {
 	throttleSoundCB = throttleCB
 	throttleSoundCB.Text = "Throttle Sounds"
 	throttleSoundCB.Size = eui.Point{X: panelWidth, Y: 24}
-	throttleSoundCB.Checked = gs.throttleSounds
+	throttleSoundCB.Checked = gs.ThrottleSounds
 	throttleSoundCB.SetTooltip("Prevent same sound from playing every tick.")
 	throttleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.throttleSounds = ev.Checked
+			gs.ThrottleSounds = ev.Checked
 			clearCaches()
 			settingsDirty = true
 		}
@@ -3799,12 +3795,10 @@ func makeQualityWindow() {
 	precacheSoundCB.Size = eui.Point{X: width, Y: 24}
 	precacheSoundCB.Checked = gs.precacheSounds
 	precacheSoundCB.SetTooltip("Load and pre-process all sounds, uses RAM but runs smoother (~300MB)")
-	precacheSoundCB.Disabled = gs.NoCaching
 	precacheSoundEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.precacheSounds = ev.Checked
 			if ev.Checked {
-				gs.NoCaching = false
 				if noCacheCB != nil {
 					noCacheCB.Checked = false
 				}
@@ -3830,12 +3824,10 @@ func makeQualityWindow() {
 	precacheImageCB.Size = eui.Point{X: width, Y: 24}
 	precacheImageCB.Checked = gs.precacheImages
 	precacheImageCB.SetTooltip("Load and pre-process all images, more RAM but runs smoother (<2GB)")
-	precacheImageCB.Disabled = gs.NoCaching
 	precacheImageEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.precacheImages = ev.Checked
 			if ev.Checked {
-				gs.NoCaching = false
 				if noCacheCB != nil {
 					noCacheCB.Checked = false
 				}
@@ -3855,52 +3847,15 @@ func makeQualityWindow() {
 	}
 	left.AddItem(precacheImageCB)
 
-	/*
-		ncCB, noCacheEvents := eui.NewCheckbox()
-		noCacheCB = ncCB
-		noCacheCB.Text = "No caching (Low RAM)"
-		noCacheCB.SetTooltip("Save around 100-200MB RAM at cost of more CPU.")
-		noCacheCB.Size = eui.Point{X: width, Y: 24}
-		noCacheCB.Checked = gs.NoCaching
-		noCacheEvents.Handle = func(ev eui.UIEvent) {
-			if ev.Type == eui.EventCheckboxChanged {
-				gs.NoCaching = ev.Checked
-				precacheSoundCB.Disabled = ev.Checked
-				precacheImageCB.Disabled = ev.Checked
-				if ev.Checked {
-					gs.precacheSounds = false
-					gs.precacheImages = false
-					precacheSoundCB.Checked = false
-					precacheImageCB.Checked = false
-					clearCaches()
-				}
-				settingsDirty = true
-				if qualityPresetDD != nil {
-					qualityPresetDD.Selected = detectQualityPreset()
-				}
-				if qualityWin != nil {
-					qualityWin.Refresh()
-				}
-				if graphicsWin != nil {
-					graphicsWin.Refresh()
-				}
-				if debugWin != nil {
-					debugWin.Refresh()
-				}
-			}
-		}
-		left.AddItem(noCacheCB)
-	*/
-
 	pcCB, potatoEvents := eui.NewCheckbox()
 	potatoCB = pcCB
 	potatoCB.Text = "Potato GPU (low VRAM)"
 	potatoCB.SetTooltip("Work-around for GPUs that only support 4096x4096 size sprites")
 	potatoCB.Size = eui.Point{X: width, Y: 24}
-	potatoCB.Checked = gs.PotatoComputer
+	potatoCB.Checked = gs.PotatoGPU
 	potatoEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.PotatoComputer = ev.Checked
+			gs.PotatoGPU = ev.Checked
 			applySettings()
 			if ev.Checked {
 				clearCaches()
@@ -4508,29 +4463,7 @@ func makeDebugWindow() {
 		}
 	}
 	debugFlow.AddItem(pictAgainCB)
-	shiftSpriteCB, shiftSpriteEvents := eui.NewCheckbox()
-	shiftSpriteCB.Text = "Don't shift new sprites"
-	shiftSpriteCB.Size = eui.Point{X: width, Y: 24}
-	shiftSpriteCB.Checked = gs.dontShiftNewSprites
-	shiftSpriteEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.dontShiftNewSprites = ev.Checked
-			settingsDirty = true
-		}
-	}
-	debugFlow.AddItem(shiftSpriteCB)
-	nameTagsCB, nameTagsEvents := eui.NewCheckbox()
-	nameTagsCB.Text = "Name Tags Native Res"
-	nameTagsCB.Size = eui.Point{X: width, Y: 24}
-	nameTagsCB.Checked = gs.nameTagsNative
-	nameTagsCB.SetTooltip("Render name tags at native resolution instead of in the game world")
-	nameTagsEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.nameTagsNative = ev.Checked
-			settingsDirty = true
-		}
-	}
-	debugFlow.AddItem(nameTagsCB)
+
 	cacheLabel, _ := eui.NewText()
 	cacheLabel.Text = "Caches:"
 	cacheLabel.Size = eui.Point{X: width, Y: 24}
@@ -4631,13 +4564,6 @@ func updateDebugStats() {
 	if totalCacheLabel != nil {
 		totalCacheLabel.Text = fmt.Sprintf("Total: %s", humanize.Bytes(uint64(sheetBytes+frameBytes+mobileBytes+soundBytes+mobileBlendBytes+pictBlendBytes)))
 		totalCacheLabel.Dirty = true
-	}
-}
-
-func updateSoundTestLabel() {
-	if soundTestLabel != nil {
-		soundTestLabel.Text = fmt.Sprintf("%d", soundTestID)
-		soundTestLabel.Dirty = true
 	}
 }
 

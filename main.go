@@ -176,7 +176,7 @@ func main() {
 		// Do not exit; allow UI to open download window.
 	}
 
-	if (gs.precacheSounds || gs.precacheImages) && !gs.NoCaching {
+	if gs.precacheSounds || gs.precacheImages {
 		go precacheAssets()
 	}
 

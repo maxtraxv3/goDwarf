@@ -26,21 +26,21 @@ const playersOfflineThreshold = 5 * time.Minute
 // requestPlayersData progresses the maintenance state machine and
 // updates playersDirty when LastSeen crosses the offline threshold.
 func requestPlayersData() {
-    // Cache time once to avoid repeated runtimeNow calls.
-    now := time.Now()
+	// Cache time once to avoid repeated runtimeNow calls.
+	now := time.Now()
 
 	// track offline transitions
 	changed := false
-    playersMu.RLock()
-    for name, p := range players {
-        // Use the cached now to avoid per-iteration time.Now()
-        offline := now.Sub(p.LastSeen) > playersOfflineThreshold
-        if prev, ok := playersOffline[name]; !ok || prev != offline {
-            playersOffline[name] = offline
-            changed = true
-        }
-    }
-    playersMu.RUnlock()
+	playersMu.RLock()
+	for name, p := range players {
+		// Use the cached now to avoid per-iteration time.Now()
+		offline := now.Sub(p.LastSeen) > playersOfflineThreshold
+		if prev, ok := playersOffline[name]; !ok || prev != offline {
+			playersOffline[name] = offline
+			changed = true
+		}
+	}
+	playersMu.RUnlock()
 	if changed {
 		playersDirty = true
 	}
@@ -48,9 +48,9 @@ func requestPlayersData() {
 	if pendingCommand != "" {
 		return
 	}
-    if now.Sub(playersLastCmd) < time.Second {
-        return
-    }
+	if now.Sub(playersLastCmd) < time.Second {
+		return
+	}
 
 	switch playersPhase {
 	case phaseWho:

@@ -1,7 +1,9 @@
 package main
 
-import "testing"
-import "time"
+import (
+	"testing"
+	"time"
+)
 
 func TestUpdatePlayerAppearanceUnmarksDead(t *testing.T) {
 	players = map[string]*Player{

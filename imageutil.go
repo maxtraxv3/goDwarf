@@ -7,14 +7,14 @@ import (
 )
 
 func newImage(w, h int) *ebiten.Image {
-	if gs.PotatoComputer {
+	if gs.PotatoGPU {
 		return ebiten.NewImageWithOptions(image.Rect(0, 0, w, h), &ebiten.NewImageOptions{Unmanaged: true})
 	}
 	return ebiten.NewImage(w, h)
 }
 
 func newImageFromImage(src image.Image) *ebiten.Image {
-	if gs.PotatoComputer {
+	if gs.PotatoGPU {
 		return ebiten.NewImageFromImageWithOptions(src, &ebiten.NewImageFromImageOptions{Unmanaged: true})
 	}
 	return ebiten.NewImageFromImage(src)

@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -111,21 +110,4 @@ func setDebugLogging(enabled bool) {
 	} else {
 		debugLogger = nil
 	}
-}
-
-func logPanic(r interface{}) {
-	logDir := "logs"
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		fmt.Printf("could not create log directory: %v\n", err)
-		return
-	}
-	ts := time.Now().Format("20060102-150405")
-	panicLogPath := filepath.Join(logDir, fmt.Sprintf("panic-%s.log", ts))
-	if f, err := os.Create(panicLogPath); err == nil {
-		defer f.Close()
-		fmt.Fprintf(f, "panic: %v\n%s", r, debug.Stack())
-	} else {
-		fmt.Printf("could not create panic log: %v\n", err)
-	}
-	logError("panic: %v\n%s", r, debug.Stack())
 }

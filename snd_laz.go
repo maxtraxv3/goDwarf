@@ -12,7 +12,7 @@ import (
 const phases = 1024
 
 // Lanczos "a" parameter: 3 => 6 taps total (k=-2..+3)
-const a = 3
+const a = 64
 const taps = 2 * a // 6
 
 // Low-pass cutoff as a fraction of source Nyquist

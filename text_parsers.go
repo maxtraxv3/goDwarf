@@ -9,51 +9,6 @@ import (
 	"time"
 )
 
-// parseWhoText parses a plain-text /who line with embedded BEPP player tags.
-// Returns true if handled and should be suppressed from console.
-func parseWhoText(raw []byte, s string) bool {
-	if strings.HasPrefix(s, "You are the only one in the lands.") {
-		// Nothing to add
-		return true
-	}
-	if !strings.HasPrefix(s, "In the world are ") {
-		return false
-	}
-	// Find first -pn tag segment and extract all names.
-	// The format is: In the world are …: -pn <name> -pn , realname , <gm> \t ...
-	off := bytes.Index(raw, []byte{0xC2, 'p', 'n'})
-	if off < 0 {
-		return true // handled, but no names
-	}
-	names := parseNames(raw[off:])
-	if len(names) == 0 {
-		return true
-	}
-	for _, name := range names {
-		p := getPlayer(name)
-		playersMu.Lock()
-		prevSC := p.SameClan
-		prevSeen := p.Seen
-		if me, ok := players[playerName]; ok {
-			p.SameClan = sameRealClan(me.clan, p.clan)
-		}
-		p.LastSeen = time.Now()
-		p.Offline = false
-		p.Seen = true
-		playerCopy := *p
-		playersMu.Unlock()
-		if prevSC != p.SameClan {
-			killNameTagCacheFor(name)
-		}
-		if !prevSeen {
-			playersPersistDirty = true
-		}
-		notifyPlayerHandlers(playerCopy)
-	}
-	playersDirty = true
-	return true
-}
-
 // parseShareText parses plain share/unshare lines with embedded -pn tags.
 // Returns true if the line was recognized and handled.
 func parseShareText(raw []byte, s string) bool {
@@ -789,14 +744,6 @@ func parseInterruptCommand(s string) bool {
 		return true
 	}
 	return false
-}
-
-// truncate helps keep debug output short
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
 }
 
 // firstTagContent extracts the first bracketed content for a given 2-letter BEPP tag.

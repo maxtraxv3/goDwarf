@@ -431,7 +431,6 @@ func classicNotesFromTune(tune string, inst instrument, tempo int, velocity int)
 			}
 			notes[idx].Duration = ticksToDur(end) - notes[idx].Start
 		}
-		activeLong = activeLong[:0]
 	}
 
 	// chord–melody gating: if there is no melody timeline at all, drop all chord notes;

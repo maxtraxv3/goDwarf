@@ -7,8 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dustin/go-humanize"
 	"gothoom/eui"
+
+	"github.com/dustin/go-humanize"
 )
 
 var (
