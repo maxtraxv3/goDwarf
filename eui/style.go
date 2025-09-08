@@ -135,7 +135,7 @@ func LoadStyle(name string) error {
 	if err := json.Unmarshal(data, currentStyle); err != nil {
 		return err
 	}
-	currentStyleName = name
+	SetCurrentStyleName(name)
 	if currentTheme != nil {
 		applyStyleToTheme(currentTheme)
 		applyStyleToItems(currentTheme)

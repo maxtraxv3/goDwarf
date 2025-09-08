@@ -156,13 +156,19 @@ func ListStyles() ([]string, error) { return listStyles() }
 func CurrentThemeName() string { return currentThemeName }
 
 // SetCurrentThemeName updates the active theme name.
-func SetCurrentThemeName(name string) { currentThemeName = name }
+func SetCurrentThemeName(name string) {
+	currentThemeName = name
+	updateThemePath()
+}
 
 // CurrentStyleName returns the active style theme name.
 func CurrentStyleName() string { return currentStyleName }
 
 // SetCurrentStyleName updates the active style theme name.
-func SetCurrentStyleName(name string) { currentStyleName = name }
+func SetCurrentStyleName(name string) {
+	currentStyleName = name
+	updateStylePath()
+}
 
 // AccentSaturation returns the current accent color saturation value.
 func AccentSaturation() float64 { return accentSaturation }
@@ -174,11 +180,11 @@ func AccentColor() Color {
 
 // ClearFocus removes focus from the provided item if it is currently focused.
 func ClearFocus(it *ItemData) {
-    if focusedItem == it {
-        focusedItem.Focused = false
-        focusedItem.markDirty()
-        focusedItem = nil
-    }
+	if focusedItem == it {
+		focusedItem.Focused = false
+		focusedItem.markDirty()
+		focusedItem = nil
+	}
 }
 
 // SetActiveSearchForTest sets the active search window for tests.
@@ -186,8 +192,8 @@ func ClearFocus(it *ItemData) {
 // is activated. It exists so external tests can simulate an active
 // search without poking unexported symbols.
 func SetActiveSearchForTest(win *WindowData) {
-    activeSearch = win
-    if win != nil {
-        win.searchOpen = true
-    }
+	activeSearch = win
+	if win != nil {
+		win.searchOpen = true
+	}
 }
