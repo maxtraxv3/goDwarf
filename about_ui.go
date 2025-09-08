@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"strings"
 
+	"gothoom/eui"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/pkg/browser"
-	"gothoom/eui"
 )
 
 //go:embed data/about.txt
@@ -24,6 +25,7 @@ var patreonBox *eui.ItemData
 var patreonList *eui.ItemData
 
 const patreonsURL = "https://m45sci.xyz/u/dist/goThoom/patreons.json"
+const websiteURL = "https://gothoom.xyz"
 
 func initAboutUI() {
 	if aboutWin != nil {
@@ -40,7 +42,7 @@ func initAboutUI() {
 	linkBtn.Fixed = true
 	linkEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
-			browser.OpenURL("https://m45sci.xyz/u/dist/goThoom")
+			browser.OpenURL(websiteURL)
 		}
 	}
 
@@ -113,9 +115,6 @@ func loadPatreons() {
 		url := p.Avatar
 		if url == "" {
 			continue
-		}
-		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-			url = "https://m45sci.xyz/u/dist/goThoom/" + strings.TrimPrefix(url, "/")
 		}
 		imgResp, err := http.Get(url)
 		if err != nil {
