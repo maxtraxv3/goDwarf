@@ -53,7 +53,6 @@ var (
 	clientVersion int
 	experimental  bool
 	showUIScale   bool
-	hdTextures    bool
 )
 
 func main() {
@@ -73,7 +72,6 @@ func main() {
 	flag.BoolVar(&musicDebug, "musicDebug", false, "show bard music messages in chat")
 	flag.BoolVar(&experimental, "experimental", false, "enable experimental features like CL_Images/CL_Sounds patching")
 	flag.BoolVar(&showUIScale, "uiscale", false, "show UI scaling options")
-	flag.BoolVar(&hdTextures, "hd", false, "enable HD texture loading from data/hd")
 	genPGO := flag.Bool("pgo", false, "create default.pgo using test.clMov at 30 fps for 30s")
 	flag.Parse()
 
