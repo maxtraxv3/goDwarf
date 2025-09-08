@@ -902,6 +902,7 @@ func SetUIScale(scale float32) {
 		}
 		win.clampToScreen()
 	}
+	updateAllTooltipBounds()
 	markAllDirty()
 }
 
@@ -1062,6 +1063,28 @@ func (item *itemData) GetTextPtr() *string {
 	return &item.Text
 }
 
+// SetTooltip assigns tooltip text and caches its measured size.
+func (item *itemData) SetTooltip(tip string) {
+	item.Tooltip = tip
+	item.updateTooltipBounds()
+}
+
+// updateTooltipBounds recalculates the cached tooltip size.
+func (item *itemData) updateTooltipBounds() {
+	if item == nil {
+		return
+	}
+	if item.Tooltip == "" {
+		item.tooltipW, item.tooltipH = 0, 0
+		return
+	}
+	faceSize := float32(12) * uiScale
+	face := textFace(faceSize)
+	w, h := text.Measure(item.Tooltip, face, 0)
+	item.tooltipW = float32(w)
+	item.tooltipH = float32(h)
+}
+
 func (win *windowData) markDirty() {
 	if win != nil {
 		win.Dirty = true
@@ -1148,6 +1171,28 @@ func markItemTreeDirty(it *itemData) {
 	}
 	for _, tab := range it.Tabs {
 		markItemTreeDirty(tab)
+	}
+}
+
+// updateItemTooltipTree walks items and updates cached tooltip bounds.
+func updateItemTooltipTree(it *itemData) {
+	if it == nil {
+		return
+	}
+	it.updateTooltipBounds()
+	for _, child := range it.Contents {
+		updateItemTooltipTree(child)
+	}
+	for _, tab := range it.Tabs {
+		updateItemTooltipTree(tab)
+	}
+}
+
+func updateAllTooltipBounds() {
+	for _, win := range windows {
+		for _, it := range win.Contents {
+			updateItemTooltipTree(it)
+		}
 	}
 }
 

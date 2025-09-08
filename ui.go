@@ -222,7 +222,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	winBtn, winEvents := eui.NewButton()
 	winBtn.Text = "Windows"
-	winBtn.Tooltip = "Manage windows layout and visibility"
+	winBtn.SetTooltip("Manage windows layout and visibility")
 	winBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	winBtn.FontSize = toolFontSize
 	winEvents.Handle = func(ev eui.UIEvent) {
@@ -234,7 +234,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	btn, setEvents := eui.NewButton()
 	btn.Text = "Settings"
-	btn.Tooltip = "Open settings"
+	btn.SetTooltip("Open settings")
 	btn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	btn.FontSize = toolFontSize
 	setEvents.Handle = func(ev eui.UIEvent) {
@@ -246,7 +246,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	actionsBtn, actionsEvents := eui.NewButton()
 	actionsBtn.Text = "Actions"
-	actionsBtn.Tooltip = "Hotkeys, Shortcuts, Triggers, Scripts"
+	actionsBtn.SetTooltip("Hotkeys, Shortcuts, Triggers, Scripts")
 	actionsBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	actionsBtn.FontSize = toolFontSize
 	actionsEvents.Handle = func(ev eui.UIEvent) {
@@ -284,7 +284,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	recordBtn, recordEvents := eui.NewButton()
 	recordBtn.Text = "Record"
-	recordBtn.Tooltip = "Start/stop recording (.clmov)"
+	recordBtn.SetTooltip("Start/stop recording (.clmov)")
 	recordBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	recordBtn.FontSize = toolFontSize
 	recordEvents.Handle = func(ev eui.UIEvent) {
@@ -296,7 +296,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	helpBtn, helpEvents := eui.NewButton()
 	helpBtn.Text = "Help"
-	helpBtn.Tooltip = "Open help"
+	helpBtn.SetTooltip("Open help")
 	helpBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	helpBtn.FontSize = toolFontSize
 	helpEvents.Handle = func(ev eui.UIEvent) {
@@ -308,7 +308,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	shotBtn, shotEvents := eui.NewButton()
 	shotBtn.Text = "Snapshot"
-	shotBtn.Tooltip = "Save screenshot"
+	shotBtn.SetTooltip("Save screenshot")
 	shotBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	shotBtn.FontSize = toolFontSize
 	shotEvents.Handle = func(ev eui.UIEvent) {
@@ -320,7 +320,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	exitSessBtn, exitSessEv := eui.NewButton()
 	exitSessBtn.Text = "Exit"
-	exitSessBtn.Tooltip = "Exit session"
+	exitSessBtn.SetTooltip("Exit session")
 	exitSessBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	exitSessBtn.FontSize = toolFontSize
 	exitSessEv.Handle = func(ev eui.UIEvent) {
@@ -332,8 +332,8 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	mixBtn, mixEvents := eui.NewButton()
 	mixBtn.Text = "Mixer"
-	mixBtn.Tooltip = "Adjust volumes and enable channels"
-	mixBtn.Tooltip = "Open audio mixer"
+	mixBtn.SetTooltip("Adjust volumes and enable channels")
+	mixBtn.SetTooltip("Open audio mixer")
 	mixBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
 	mixBtn.FontSize = toolFontSize
 	mixEvents.Handle = func(ev eui.UIEvent) {
@@ -407,7 +407,7 @@ func makePluginsWindow() {
 
 	refreshBtn, rh := eui.NewButton()
 	refreshBtn.Text = "Refresh"
-	refreshBtn.Tooltip = "Rescan scripts and reload list"
+	refreshBtn.SetTooltip("Rescan scripts and reload list")
 	refreshBtn.Size = eui.Point{X: 64, Y: 24}
 	rh.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -572,7 +572,7 @@ func refreshPluginsWindow() {
 			if !e.invalid {
 				reloadBtn, rh := eui.NewButton()
 				reloadBtn.Text = "Reload"
-				reloadBtn.Tooltip = "Restart this plugin if enabled"
+				reloadBtn.SetTooltip("Restart this plugin if enabled")
 				reloadBtn.Size = eui.Point{X: 55, Y: 24}
 				rh.Handle = func(ev eui.UIEvent) {
 					if ev.Type == eui.EventClick {
@@ -2184,7 +2184,7 @@ func makeLoginWindow() {
 
 	demoBtn, demoEvents := eui.NewButton()
 	demoBtn.Text = "Try the demo"
-	demoBtn.Tooltip = "Connect with a random demo character"
+	demoBtn.SetTooltip("Connect with a random demo character")
 	demoBtn.Size = eui.Point{X: charWinWidth, Y: 24}
 	demoEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -2219,7 +2219,7 @@ func makeLoginWindow() {
 
 	openBtn, openEvents := eui.NewButton()
 	openBtn.Text = "Play movie file"
-	openBtn.Tooltip = "Open and play a .clmov recording"
+	openBtn.SetTooltip("Open and play a .clmov recording")
 	openBtn.Size = eui.Point{X: charWinWidth, Y: 24}
 	openEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -2280,7 +2280,7 @@ func makeLoginWindow() {
 
 	changeBtn, changeEvents := eui.NewButton()
 	changeBtn.Text = "Changelog"
-	changeBtn.Tooltip = "View recent changes"
+	changeBtn.SetTooltip("View recent changes")
 	changeBtn.Size = eui.Point{X: 70, Y: 24}
 	changeBtn.FontSize = 10
 	changeEvents.Handle = func(ev eui.UIEvent) {
@@ -2463,7 +2463,7 @@ func makeSettingsWindow() {
 				tilingCB.Text = "Tiling window mode (buggy)"
 				tilingCB.Size = eui.Point{X: panelWidth, Y: 24}
 				tilingCB.Checked = gs.WindowTiling
-				tilingCB.Tooltip = "Prevent windows from overlapping"
+				tilingCB.SetTooltip("Prevent windows from overlapping")
 				tilingEvents.Handle = func(ev eui.UIEvent) {
 					if ev.Type == eui.EventCheckboxChanged {
 						gs.WindowTiling = ev.Checked
@@ -2477,7 +2477,7 @@ func makeSettingsWindow() {
 		               snapCB.Text = "Window snapping"
 		               snapCB.Size = eui.Point{X: panelWidth, Y: 24}
 		               snapCB.Checked = gs.WindowSnapping
-		               snapCB.Tooltip = "Snap windows to edges and others"
+		               snapCB.SetTooltip("Snap windows to edges and others")
 				snapEvents.Handle = func(ev eui.UIEvent) {
 					if ev.Type == eui.EventCheckboxChanged {
 						gs.WindowSnapping = ev.Checked
@@ -2670,7 +2670,7 @@ func makeSettingsWindow() {
 	toggle.Text = "Click-to-toggle movement"
 	toggle.Size = eui.Point{X: panelWidth, Y: 24}
 	toggle.Checked = gs.ClickToToggle
-	toggle.Tooltip = "Click once to start walking, click again to stop."
+	toggle.SetTooltip("Click once to start walking, click again to stop.")
 	toggleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -2689,7 +2689,7 @@ func makeSettingsWindow() {
 	midMove.Text = "Middle-click moves windows"
 	midMove.Size = eui.Point{X: panelWidth, Y: 24}
 	midMove.Checked = gs.MiddleClickMoveWindow
-	midMove.Tooltip = "Drag windows using the middle mouse button"
+	midMove.SetTooltip("Drag windows using the middle mouse button")
 	midMoveEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -2705,7 +2705,7 @@ func makeSettingsWindow() {
 	inputOpenCB.Text = "Input bar always open"
 	inputOpenCB.Size = eui.Point{X: panelWidth, Y: 24}
 	inputOpenCB.Checked = gs.InputBarAlwaysOpen
-	inputOpenCB.Tooltip = "Keep console input active after sending"
+	inputOpenCB.SetTooltip("Keep console input active after sending")
 	inputOpenEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -2775,7 +2775,7 @@ func makeSettingsWindow() {
 
 	qualityBtn, qualityEvents := eui.NewButton()
 	qualityBtn.Text = "Quality Settings"
-	qualityBtn.Tooltip = "Open detailed quality options"
+	qualityBtn.SetTooltip("Open detailed quality options")
 	qualityBtn.Size = eui.Point{X: panelWidth, Y: 24}
 	qualityEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -2849,7 +2849,7 @@ func makeSettingsWindow() {
 	notifCB.Text = "Game Notifications"
 	notifCB.Size = eui.Point{X: panelWidth, Y: 24}
 	notifCB.Checked = gs.Notifications
-	notifCB.Tooltip = "Show in-game notifications"
+	notifCB.SetTooltip("Show in-game notifications")
 	notifEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -2868,7 +2868,7 @@ func makeSettingsWindow() {
 	tsFormatInput.Text = gs.TimestampFormat
 	tsFormatInput.TextPtr = &gs.TimestampFormat
 	tsFormatInput.Size = eui.Point{X: panelWidth, Y: 24}
-	tsFormatInput.Tooltip = "mo,day,hour,min,sec,yr:01,02,03..."
+	tsFormatInput.SetTooltip("mo,day,hour,min,sec,yr:01,02,03...")
 	tsFormatEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventInputChanged {
 			SettingsLock.Lock()
@@ -3010,7 +3010,7 @@ func makeSettingsWindow() {
 	nameBorderCB.Text = "Name Tag Label Colors"
 	nameBorderCB.Size = eui.Point{X: panelWidth - 10, Y: 24}
 	nameBorderCB.Checked = gs.NameTagLabelColors
-	nameBorderCB.Tooltip = "Show player label colors on name tag borders"
+	nameBorderCB.SetTooltip("Show player label colors on name tag borders")
 	nameBorderEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -3253,7 +3253,7 @@ func makeSettingsWindow() {
 	throttleSoundCB.Text = "Throttle Sounds"
 	throttleSoundCB.Size = eui.Point{X: panelWidth, Y: 24}
 	throttleSoundCB.Checked = gs.throttleSounds
-	throttleSoundCB.Tooltip = "Prevent same sound from playing every tick."
+	throttleSoundCB.SetTooltip("Prevent same sound from playing every tick.")
 	throttleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.throttleSounds = ev.Checked
@@ -3389,7 +3389,7 @@ func makeSettingsWindow() {
 	pluginKillCB.Text = "Auto-kill spammy plugins"
 	pluginKillCB.Size = eui.Point{X: panelWidth, Y: 24}
 	pluginKillCB.Checked = gs.PluginSpamKill
-	pluginKillCB.Tooltip = "Stop plugins that send too many lines"
+	pluginKillCB.SetTooltip("Stop plugins that send too many lines")
 	pluginKillEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
@@ -3417,7 +3417,7 @@ func makeSettingsWindow() {
 	dlBtn, dlEvents := eui.NewButton()
 	dlBtn.Text = "Download Files"
 	dlBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	dlBtn.Tooltip = "Download missing or optional files"
+	dlBtn.SetTooltip("Download missing or optional files")
 	dlEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			SettingsLock.Lock()
@@ -3442,7 +3442,7 @@ func makeSettingsWindow() {
 	resetBtn.Size = eui.Point{X: panelWidth, Y: 24}
 	resetBtn.Color = eui.ColorDarkRed
 	resetBtn.HoverColor = eui.ColorRed
-	resetBtn.Tooltip = "Restore defaults and reapply"
+	resetBtn.SetTooltip("Restore defaults and reapply")
 	resetEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			SettingsLock.Lock()
@@ -3757,7 +3757,7 @@ func makeQualityWindow() {
 
 	renderScale.Value = float32(math.Round(gs.GameScale))
 	renderScale.Size = eui.Point{X: width - 10, Y: 24}
-	renderScale.Tooltip = "Game render resolution (1x - 4x). Higher will be shaper on higher-res displays."
+	renderScale.SetTooltip("Game render resolution (1x - 4x). Higher will be shaper on higher-res displays.")
 	renderScaleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			v := math.Round(float64(ev.Value))
@@ -3783,7 +3783,7 @@ func makeQualityWindow() {
 		showFPSCB.Text = "Show FPS + UPS"
 		showFPSCB.Size = eui.Point{X: width, Y: 24}
 		showFPSCB.Checked = gs.ShowFPS
-		showFPSCB.Tooltip = "Display frames per second, and updates per second"
+		showFPSCB.SetTooltip("Display frames per second, and updates per second")
 		showFPSEvents.Handle = func(ev eui.UIEvent) {
 			if ev.Type == eui.EventCheckboxChanged {
 				gs.ShowFPS = ev.Checked
@@ -3798,7 +3798,7 @@ func makeQualityWindow() {
 	precacheSoundCB.Text = "Precache Sounds"
 	precacheSoundCB.Size = eui.Point{X: width, Y: 24}
 	precacheSoundCB.Checked = gs.precacheSounds
-	precacheSoundCB.Tooltip = "Load and pre-process all sounds, uses RAM but runs smoother (~300MB)"
+	precacheSoundCB.SetTooltip("Load and pre-process all sounds, uses RAM but runs smoother (~300MB)")
 	precacheSoundCB.Disabled = gs.NoCaching
 	precacheSoundEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
@@ -3829,7 +3829,7 @@ func makeQualityWindow() {
 	precacheImageCB.Text = "Precache Images"
 	precacheImageCB.Size = eui.Point{X: width, Y: 24}
 	precacheImageCB.Checked = gs.precacheImages
-	precacheImageCB.Tooltip = "Load and pre-process all images, more RAM but runs smoother (<2GB)"
+	precacheImageCB.SetTooltip("Load and pre-process all images, more RAM but runs smoother (<2GB)")
 	precacheImageCB.Disabled = gs.NoCaching
 	precacheImageEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
@@ -3859,7 +3859,7 @@ func makeQualityWindow() {
 		ncCB, noCacheEvents := eui.NewCheckbox()
 		noCacheCB = ncCB
 		noCacheCB.Text = "No caching (Low RAM)"
-		noCacheCB.Tooltip = "Save around 100-200MB RAM at cost of more CPU."
+		noCacheCB.SetTooltip("Save around 100-200MB RAM at cost of more CPU.")
 		noCacheCB.Size = eui.Point{X: width, Y: 24}
 		noCacheCB.Checked = gs.NoCaching
 		noCacheEvents.Handle = func(ev eui.UIEvent) {
@@ -3895,7 +3895,7 @@ func makeQualityWindow() {
 	pcCB, potatoEvents := eui.NewCheckbox()
 	potatoCB = pcCB
 	potatoCB.Text = "Potato GPU (low VRAM)"
-	potatoCB.Tooltip = "Work-around for GPUs that only support 4096x4096 size sprites"
+	potatoCB.SetTooltip("Work-around for GPUs that only support 4096x4096 size sprites")
 	potatoCB.Size = eui.Point{X: width, Y: 24}
 	potatoCB.Checked = gs.PotatoComputer
 	potatoEvents.Handle = func(ev eui.UIEvent) {
@@ -3918,7 +3918,7 @@ func makeQualityWindow() {
 	shaderQualityCB.Text = "Shader Lighting Effects"
 	shaderQualityCB.Size = eui.Point{X: width, Y: 24}
 	shaderQualityCB.Checked = gs.ShaderLighting
-	shaderQualityCB.Tooltip = "Enable shader-based lighting (disabled in Low/Ultra-Low presets)"
+	shaderQualityCB.SetTooltip("Enable shader-based lighting (disabled in Low/Ultra-Low presets)")
 	shaderQualityEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.ShaderLighting = ev.Checked
@@ -3948,7 +3948,7 @@ func makeQualityWindow() {
 	shaderLightSlider.Value = float32(gs.ShaderLightStrength * 100)
 	shaderLightSlider.Size = eui.Point{X: width - 10, Y: 24}
 	shaderLightSlider.Disabled = !gs.ShaderLighting
-	shaderLightSlider.Tooltip = "Adjust intensity of shader lighting"
+	shaderLightSlider.SetTooltip("Adjust intensity of shader lighting")
 	shaderLightEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.ShaderLightStrength = float64(ev.Value / 100)
@@ -3969,7 +3969,7 @@ func makeQualityWindow() {
 	shaderGlowSlider.Value = float32(gs.ShaderGlowStrength * 100)
 	shaderGlowSlider.Size = eui.Point{X: width - 10, Y: 24}
 	shaderGlowSlider.Disabled = !gs.ShaderLighting
-	shaderGlowSlider.Tooltip = "Adjust strength of glow halos"
+	shaderGlowSlider.SetTooltip("Adjust strength of glow halos")
 	shaderGlowEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.ShaderGlowStrength = float64(ev.Value / 100)
@@ -3985,7 +3985,7 @@ func makeQualityWindow() {
 	vsyncCB.Text = "VSync - Limit FPS"
 	vsyncCB.Size = eui.Point{X: width, Y: 24}
 	vsyncCB.Checked = gs.vsync
-	vsyncCB.Tooltip = "Limit framerate to monitor Hz. OFF can improve speed"
+	vsyncCB.SetTooltip("Limit framerate to monitor Hz. OFF can improve speed")
 	vsyncEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.vsync = ev.Checked
@@ -4006,7 +4006,7 @@ func makeQualityWindow() {
 	denoiseCB.Text = "Blend Image Dithering"
 	denoiseCB.Size = eui.Point{X: width, Y: 24}
 	denoiseCB.Checked = gs.DenoiseImages
-	denoiseCB.Tooltip = "Attempts to blend image dithering to recover color information"
+	denoiseCB.SetTooltip("Attempts to blend image dithering to recover color information")
 	denoiseEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.DenoiseImages = ev.Checked
@@ -4025,7 +4025,7 @@ func makeQualityWindow() {
 	denoiseSharpSlider.MaxValue = 100
 	denoiseSharpSlider.Value = float32(gs.DenoiseSharpness * 5)
 	denoiseSharpSlider.Size = eui.Point{X: width - 10, Y: 24}
-	denoiseSharpSlider.Tooltip = "High is bias for not losing fine details"
+	denoiseSharpSlider.SetTooltip("High is bias for not losing fine details")
 	denoiseSharpEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.DenoiseSharpness = float64(ev.Value / 5)
@@ -4044,7 +4044,7 @@ func makeQualityWindow() {
 	denoiseAmtSlider.MaxValue = 50
 	denoiseAmtSlider.Value = float32(gs.DenoiseAmount * 100)
 	denoiseAmtSlider.Size = eui.Point{X: width - 10, Y: 24}
-	denoiseAmtSlider.Tooltip = "How strongly to blend dithered areas"
+	denoiseAmtSlider.SetTooltip("How strongly to blend dithered areas")
 	denoiseAmtEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.DenoiseAmount = float64(ev.Value / 100)
@@ -4068,7 +4068,7 @@ func makeQualityWindow() {
 	motionCB.Text = "Smooth Motion"
 	motionCB.Size = eui.Point{X: width, Y: 24}
 	motionCB.Checked = gs.MotionSmoothing
-	motionCB.Tooltip = "Interpolate camera and mobile movement"
+	motionCB.SetTooltip("Interpolate camera and mobile movement")
 	motionEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.MotionSmoothing = ev.Checked
@@ -4082,7 +4082,7 @@ func makeQualityWindow() {
 	pinCB.Text = "Object Effect Pinning"
 	pinCB.Size = eui.Point{X: width, Y: 24}
 	pinCB.Checked = gs.ObjectPinning
-	pinCB.Tooltip = "Objects or effects on mobiles are motion smoothed"
+	pinCB.SetTooltip("Objects or effects on mobiles are motion smoothed")
 	pinEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.ObjectPinning = ev.Checked
@@ -4097,7 +4097,7 @@ func makeQualityWindow() {
 		noSmoothCB.Text = "Smooth moving objects,glitchy WIP"
 		noSmoothCB.Size = eui.Point{X: width, Y: 24}
 		noSmoothCB.Checked = gs.smoothMoving
-		noSmoothCB.Tooltip = "Smooth moving objects that are not 'mobiles' such as chains, clouds, etc"
+		noSmoothCB.SetTooltip("Smooth moving objects that are not 'mobiles' such as chains, clouds, etc")
 		noSmoothEvents.Handle = func(ev eui.UIEvent) {
 			if ev.Type == eui.EventCheckboxChanged {
 				gs.smoothMoving = ev.Checked
@@ -4118,7 +4118,7 @@ func makeQualityWindow() {
 	animCB.Text = "Mobile Animation Blending"
 	animCB.Size = eui.Point{X: width, Y: 24}
 	animCB.Checked = gs.BlendMobiles
-	animCB.Tooltip = "Gives appearance of more frames of animation at cost of latency."
+	animCB.SetTooltip("Gives appearance of more frames of animation at cost of latency.")
 	animEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.BlendMobiles = ev.Checked
@@ -4133,7 +4133,7 @@ func makeQualityWindow() {
 	pictBlendCB.Text = "World Animation Blending"
 	pictBlendCB.Size = eui.Point{X: width, Y: 24}
 	pictBlendCB.Checked = gs.BlendPicts
-	pictBlendCB.Tooltip = "Gives appearance of more frames of animation for water, grass, etc"
+	pictBlendCB.SetTooltip("Gives appearance of more frames of animation for water, grass, etc")
 	pictBlendEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.BlendPicts = ev.Checked
@@ -4149,7 +4149,7 @@ func makeQualityWindow() {
 	mobileBlendSlider.MaxValue = 1.0
 	mobileBlendSlider.Value = float32(gs.MobileBlendAmount)
 	mobileBlendSlider.Size = eui.Point{X: width - 10, Y: 24}
-	mobileBlendSlider.Tooltip = "Generally looks best at 0.25-0.5, increases latency"
+	mobileBlendSlider.SetTooltip("Generally looks best at 0.25-0.5, increases latency")
 	mobileBlendEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.MobileBlendAmount = float64(ev.Value)
@@ -4164,7 +4164,7 @@ func makeQualityWindow() {
 	blendSlider.MaxValue = 1.0
 	blendSlider.Value = float32(gs.BlendAmount)
 	blendSlider.Size = eui.Point{X: width - 10, Y: 24}
-	blendSlider.Tooltip = "This looks amazing at max (1.0)"
+	blendSlider.SetTooltip("This looks amazing at max (1.0)")
 	blendEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.BlendAmount = float64(ev.Value)
@@ -4180,7 +4180,7 @@ func makeQualityWindow() {
 	mobileFramesSlider.Value = float32(gs.MobileBlendFrames)
 	mobileFramesSlider.Size = eui.Point{X: width - 10, Y: 24}
 	mobileFramesSlider.IntOnly = true
-	mobileFramesSlider.Tooltip = "Number of blending steps. 10 blend frames = ~60fps"
+	mobileFramesSlider.SetTooltip("Number of blending steps. 10 blend frames = ~60fps")
 	mobileFramesEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.MobileBlendFrames = int(ev.Value)
@@ -4196,7 +4196,7 @@ func makeQualityWindow() {
 	pictFramesSlider.Value = float32(gs.PictBlendFrames)
 	pictFramesSlider.Size = eui.Point{X: width - 10, Y: 24}
 	pictFramesSlider.IntOnly = true
-	pictFramesSlider.Tooltip = "Number of blending steps. 10 blend frames = ~60fps"
+	pictFramesSlider.SetTooltip("Number of blending steps. 10 blend frames = ~60fps")
 	pictFramesEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			gs.PictBlendFrames = int(ev.Value)
@@ -4288,7 +4288,7 @@ func makeBubbleWindow() {
 	bubblesQuickCB.Text = "Message Bubbles"
 	bubblesQuickCB.Size = eui.Point{X: width, Y: 24}
 	bubblesQuickCB.Checked = gs.SpeechBubbles
-	bubblesQuickCB.Tooltip = "Show speech bubbles in game"
+	bubblesQuickCB.SetTooltip("Show speech bubbles in game")
 	bubblesQuickEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.SpeechBubbles = ev.Checked
@@ -4351,7 +4351,7 @@ func makeDebugWindow() {
 	recordStatsCB.Text = "Record Asset Stats"
 	recordStatsCB.Size = eui.Point{X: width, Y: 24}
 	recordStatsCB.Checked = gs.recordAssetStats
-	recordStatsCB.Tooltip = "Writes stats.json with number of times image-id is loaded"
+	recordStatsCB.SetTooltip("Writes stats.json with number of times image-id is loaded")
 	recordStatsEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.recordAssetStats = ev.Checked
@@ -4362,7 +4362,7 @@ func makeDebugWindow() {
 
 	hideMoveCB, hideMoveEvents := eui.NewCheckbox()
 	hideMoveCB.Text = "Hide Moving Objects"
-	hideMoveCB.Tooltip = "Helpful for screenshots"
+	hideMoveCB.SetTooltip("Helpful for screenshots")
 	hideMoveCB.Size = eui.Point{X: width, Y: 24}
 	hideMoveCB.Checked = gs.hideMoving
 	hideMoveEvents.Handle = func(ev eui.UIEvent) {
@@ -4375,7 +4375,7 @@ func makeDebugWindow() {
 
 	hideMobCB, hideMobEvents := eui.NewCheckbox()
 	hideMobCB.Text = "Hide Mobiles"
-	hideMobCB.Tooltip = "Helpful for screenshots"
+	hideMobCB.SetTooltip("Helpful for screenshots")
 	hideMobCB.Size = eui.Point{X: width, Y: 24}
 	hideMobCB.Checked = gs.hideMobiles
 	hideMobEvents.Handle = func(ev eui.UIEvent) {
@@ -4388,7 +4388,7 @@ func makeDebugWindow() {
 
 	planesCB, planesEvents := eui.NewCheckbox()
 	planesCB.Text = "Show image planes"
-	planesCB.Tooltip = "Shows plane (layer) number on each sprite"
+	planesCB.SetTooltip("Shows plane (layer) number on each sprite")
 	planesCB.Size = eui.Point{X: width, Y: 24}
 	planesCB.Checked = gs.imgPlanesDebug
 	planesEvents.Handle = func(ev eui.UIEvent) {
@@ -4401,7 +4401,7 @@ func makeDebugWindow() {
 
 	pictIDCB, pictIDEvents := eui.NewCheckbox()
 	pictIDCB.Text = "Show picture IDs"
-	pictIDCB.Tooltip = "Shows picture ID on each sprite"
+	pictIDCB.SetTooltip("Shows picture ID on each sprite")
 	pictIDCB.Size = eui.Point{X: width, Y: 24}
 	pictIDCB.Checked = gs.pictIDDebug
 	pictIDEvents.Handle = func(ev eui.UIEvent) {
@@ -4428,7 +4428,7 @@ func makeDebugWindow() {
 	reloadBtn, reloadEv := eui.NewButton()
 	reloadBtn.Text = "Reload Shaders"
 	reloadBtn.Size = eui.Point{X: 160, Y: 24}
-	reloadBtn.Tooltip = "Recompile the lighting shader from data/shaders/light.kage"
+	reloadBtn.SetTooltip("Recompile the lighting shader from data/shaders/light.kage")
 	reloadEv.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			if err := ReloadLightingShader(); err != nil {
@@ -4523,7 +4523,7 @@ func makeDebugWindow() {
 	nameTagsCB.Text = "Name Tags Native Res"
 	nameTagsCB.Size = eui.Point{X: width, Y: 24}
 	nameTagsCB.Checked = gs.nameTagsNative
-	nameTagsCB.Tooltip = "Render name tags at native resolution instead of in the game world"
+	nameTagsCB.SetTooltip("Render name tags at native resolution instead of in the game world")
 	nameTagsEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.nameTagsNative = ev.Checked
@@ -4576,7 +4576,7 @@ func makeDebugWindow() {
 	clearCacheBtn, clearCacheEvents := eui.NewButton()
 	clearCacheBtn.Text = "Clear All Caches"
 	clearCacheBtn.Size = eui.Point{X: width, Y: 24}
-	clearCacheBtn.Tooltip = "Clear cached assets"
+	clearCacheBtn.SetTooltip("Clear cached assets")
 	clearCacheEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			clearCaches()
