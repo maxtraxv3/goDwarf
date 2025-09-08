@@ -1,0 +1,29 @@
+tts: if the same person speaks within a short time, it just says "and then said".
+Updated about page.
+purchased gothoom.xyz
+Added customizable theme accent color. 
+Added changelogs and in-progress to gothoom.xyz
+Caps lock warning on login/pass
+Further improvement of audio resampling quality
+Fixed hotkeys not triggering.
+Turned TTS to OFF by default
+No longer save agratis characters into player list data 
+Updated icon
+Large number of optimizations:
+Added draw call batching for better GPU performance 
+Adjust game/shader images for better performance.
+Added draw options pooling. 
+Removed many old/disused functions and variables.
+Improved spellcheck performance
+Removed some atomic operations that were not needed
+Audio pre-caching enabled by default 
+Slightly adjusted quality presets
+Optimized input polling routines
+Optimized ebiten/glfw calls
+Optimized indeterminate progress bars
+EUI library optimizations and additional caching
+Draw parameter caching
+Font metrics and bounds caching 
+Tooltip caching
+Many other smaller optimizations.
+CPU use dropped by 40-60% 
