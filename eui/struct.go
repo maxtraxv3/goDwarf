@@ -80,6 +80,10 @@ type windowData struct {
 	// SearchText holds the current text in the window's search box.
 	SearchText string
 
+	// HasIndeterminate reports whether any contained progress bar is
+	// currently indeterminate.
+	HasIndeterminate bool
+
 	// OnClose is an optional callback invoked when the window is closed,
 	// either by user action or programmatically. The callback runs before the
 	// window is removed from the active list.

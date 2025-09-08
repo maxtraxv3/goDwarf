@@ -104,6 +104,9 @@ func (parent *itemData) addItemTo(item *itemData) {
 	if parent.ItemType == ITEM_FLOW {
 		parent.resizeFlow(parent.GetSize())
 	}
+	if parent.ParentWindow != nil {
+		parent.ParentWindow.updateHasIndeterminate()
+	}
 }
 
 func (parent *itemData) prependItemTo(item *itemData) {
@@ -116,6 +119,9 @@ func (parent *itemData) prependItemTo(item *itemData) {
 	if parent.ItemType == ITEM_FLOW {
 		parent.resizeFlow(parent.GetSize())
 	}
+	if parent.ParentWindow != nil {
+		parent.ParentWindow.updateHasIndeterminate()
+	}
 }
 
 func (parent *windowData) addItemTo(item *itemData) {
@@ -124,6 +130,7 @@ func (parent *windowData) addItemTo(item *itemData) {
 	}
 	parent.Contents = append(parent.Contents, item)
 	item.setParentWindow(parent)
+	parent.updateHasIndeterminate()
 	item.resizeFlow(parent.GetSize())
 	parent.markDirty()
 }
@@ -134,7 +141,43 @@ func (parent *windowData) prependItemTo(item *itemData) {
 	}
 	parent.Contents = append([]*itemData{item}, parent.Contents...)
 	item.setParentWindow(parent)
+	parent.updateHasIndeterminate()
 	item.resizeFlow(parent.GetSize())
+	parent.markDirty()
+}
+
+func (parent *itemData) removeItem(child *itemData) {
+	if child == nil {
+		return
+	}
+	for i, it := range parent.Contents {
+		if it == child {
+			parent.Contents = append(parent.Contents[:i], parent.Contents[i+1:]...)
+			break
+		}
+	}
+	child.setParentWindow(nil)
+	if parent.ItemType == ITEM_FLOW {
+		parent.resizeFlow(parent.GetSize())
+	}
+	if parent.ParentWindow != nil {
+		parent.ParentWindow.updateHasIndeterminate()
+		parent.ParentWindow.markDirty()
+	}
+}
+
+func (parent *windowData) removeItem(child *itemData) {
+	if child == nil {
+		return
+	}
+	for i, it := range parent.Contents {
+		if it == child {
+			parent.Contents = append(parent.Contents[:i], parent.Contents[i+1:]...)
+			break
+		}
+	}
+	child.setParentWindow(nil)
+	parent.updateHasIndeterminate()
 	parent.markDirty()
 }
 
@@ -1058,6 +1101,41 @@ func (item *itemData) setParentWindow(win *windowData) {
 	for _, tab := range item.Tabs {
 		tab.setParentWindow(win)
 	}
+}
+
+// itemsHaveIndeterminate reports whether any of the provided items or their
+// children contain an indeterminate progress bar.
+func itemsHaveIndeterminate(items []*itemData) bool {
+	for _, it := range items {
+		if it.ItemType == ITEM_PROGRESS && it.Indeterminate {
+			return true
+		}
+		if len(it.Tabs) > 0 {
+			if it.ActiveTab >= len(it.Tabs) {
+				if len(it.Tabs) > 0 {
+					it.ActiveTab = 0
+				}
+			}
+			if it.ActiveTab >= 0 && it.ActiveTab < len(it.Tabs) {
+				if itemsHaveIndeterminate(it.Tabs[it.ActiveTab].Contents) {
+					return true
+				}
+			}
+		}
+		if itemsHaveIndeterminate(it.Contents) {
+			return true
+		}
+	}
+	return false
+}
+
+// updateHasIndeterminate refreshes the window's HasIndeterminate flag based on
+// its current contents.
+func (win *windowData) updateHasIndeterminate() {
+	if win == nil {
+		return
+	}
+	win.HasIndeterminate = itemsHaveIndeterminate(win.Contents)
 }
 
 func markItemTreeDirty(it *itemData) {
