@@ -70,10 +70,38 @@ func makeJoystickWindow() {
 			selectedJoystick = ev.Index
 			if selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) {
 				updateStickOptions(ebiten.GamepadAxisCount(joystickIDs[selectedJoystick]))
+			} else {
+				updateStickOptions(0)
 			}
 		}
 	}
 	root.AddItem(controllerDD)
+
+	refreshBtn, refreshEvents := eui.NewButton()
+	refreshBtn.Text = "Refresh"
+	refreshBtn.Size = eui.Point{X: 80, Y: 24}
+	refreshEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			joystickIDs = ebiten.AppendGamepadIDs(joystickIDs[:0])
+			joystickNames = joystickNames[:0]
+			for _, id := range joystickIDs {
+				joystickNames = append(joystickNames, ebiten.GamepadName(id))
+			}
+			controllerDD.Options = joystickNames
+			controllerDD.Dirty = true
+			if selectedJoystick >= len(joystickIDs) {
+				selectedJoystick = len(joystickIDs) - 1
+				controllerDD.Selected = selectedJoystick
+			}
+			if selectedJoystick >= 0 && selectedJoystick < len(joystickIDs) {
+				updateStickOptions(ebiten.GamepadAxisCount(joystickIDs[selectedJoystick]))
+			} else {
+				updateStickOptions(0)
+			}
+			joystickWin.Refresh()
+		}
+	}
+	root.AddItem(refreshBtn)
 
 	axesText, _ = eui.NewText()
 	axesText.FontSize = 12
@@ -86,7 +114,7 @@ func makeJoystickWindow() {
 	root.AddItem(buttonsText)
 
 	enableCB, enableEvents := eui.NewCheckbox()
-	enableCB.Text = "Enable Joystick"
+	enableCB.Text = "Enable Gamepad"
 	enableCB.Checked = gs.JoystickEnabled
 	enableEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
@@ -178,6 +206,8 @@ func makeJoystickWindow() {
 
 	if len(joystickIDs) > 0 {
 		updateStickOptions(ebiten.GamepadAxisCount(joystickIDs[selectedJoystick]))
+	} else {
+		updateStickOptions(0)
 	}
 
 	joystickWin.AddWindow(false)
@@ -189,23 +219,32 @@ func updateStickOptions(axisCount int) {
 	for i := 0; i < stickCount; i++ {
 		opts[i] = fmt.Sprintf("Stick %d", i+1)
 	}
+	if stickCount == 0 {
+		opts = []string{"none"}
+	}
 	if walkStickDD != nil {
 		walkStickDD.Options = opts
+		walkStickDD.Disabled = stickCount == 0
 		if stickCount > 0 {
 			if gs.JoystickWalkStick >= stickCount {
 				gs.JoystickWalkStick = stickCount - 1
 			}
 			walkStickDD.Selected = gs.JoystickWalkStick
+		} else {
+			walkStickDD.Selected = 0
 		}
 		walkStickDD.Dirty = true
 	}
 	if cursorStickDD != nil {
 		cursorStickDD.Options = opts
+		cursorStickDD.Disabled = stickCount == 0
 		if stickCount > 0 {
 			if gs.JoystickCursorStick >= stickCount {
 				gs.JoystickCursorStick = stickCount - 1
 			}
 			cursorStickDD.Selected = gs.JoystickCursorStick
+		} else {
+			cursorStickDD.Selected = 0
 		}
 		cursorStickDD.Dirty = true
 	}
@@ -240,22 +279,23 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 	drawStick(60, 60, gs.JoystickWalkStick, "Walk", gs.JoystickWalkDeadzone)
 	drawStick(200, 60, gs.JoystickCursorStick, "Cursor", gs.JoystickCursorDeadzone)
 
-	drawBtn := func(cx float32, key, lbl string) {
+	drawBtn := func(cx, cy float32, btn ebiten.GamepadButton, lbl string) {
 		col := color.NRGBA{128, 128, 128, 255}
-		if btn, ok := gs.JoystickBindings[key]; ok {
-			if ebiten.IsGamepadButtonPressed(id, btn) {
-				col = color.NRGBA{0, 255, 0, 255}
-			}
+		if ebiten.IsGamepadButtonPressed(id, btn) {
+			col = color.NRGBA{0, 255, 0, 255}
 		}
-		vector.DrawFilledCircle(inputImg, cx, 120, 10, col, true)
+		vector.DrawFilledCircle(inputImg, cx, cy, 10, col, true)
 		op := &text.DrawOptions{}
-		op.GeoM.Translate(float64(cx-6), 135)
+		op.GeoM.Translate(float64(cx-8), float64(cy+15))
 		text.Draw(inputImg, lbl, mainFont, op)
 	}
 
-	drawBtn(100, "click1", "1")
-	drawBtn(130, "click2", "2")
-	drawBtn(160, "click3", "3")
+	labels := []string{"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "Back", "Start", "L3", "R3", "Up", "Right", "Down", "Left"}
+	for i, lbl := range labels {
+		cx := float32(20 + (i%8)*30)
+		cy := float32(110 + (i/8)*20)
+		drawBtn(cx, cy, ebiten.GamepadButton(i), lbl)
+	}
 
 	inputImgItem.Dirty = true
 }
@@ -293,7 +333,12 @@ func updateJoystickWindow() {
 		i++
 	}
 
+	if len(joystickIDs) == 0 {
+		updateStickOptions(0)
+	}
+
 	if selectedJoystick < 0 || selectedJoystick >= len(joystickIDs) {
+		updateStickOptions(0)
 		axesText.Text = ""
 		buttonsText.Text = ""
 		axesText.Dirty = true
