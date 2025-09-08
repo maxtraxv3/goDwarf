@@ -17,11 +17,12 @@ import (
 
 	"gothoom/eui"
 
+	"unicode"
+
 	"github.com/dustin/go-humanize"
 	"github.com/hajimehoshi/ebiten/v2"
 	open "github.com/skratchdot/open-golang/open"
 	"github.com/sqweek/dialog"
-	"unicode"
 
 	"gothoom/climg"
 	"gothoom/clsnd"
@@ -1981,7 +1982,8 @@ func makeAddCharacterWindow() {
 
 	addCharPassWarn, _ = eui.NewText()
 	addCharPassWarn.TextColor = eui.NewColor(255, 0, 0, 255)
-	addCharPassWarn.Size = eui.Point{X: 200, Y: 12}
+	addCharPassWarn.Size = eui.Point{X: 200, Y: 24}
+	addCharPassWarn.FontSize = 12
 	flow.AddItem(addCharPassWarn)
 
 	rememberCB, rememberEvents := eui.NewCheckbox()
@@ -2096,7 +2098,8 @@ func makePasswordWindow() {
 
 	passWarn, _ = eui.NewText()
 	passWarn.TextColor = eui.NewColor(255, 0, 0, 255)
-	passWarn.Size = eui.Point{X: 200, Y: 12}
+	passWarn.Size = eui.Point{X: 200, Y: 24}
+	passWarn.FontSize = 12
 	flow.AddItem(passWarn)
 
 	btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
