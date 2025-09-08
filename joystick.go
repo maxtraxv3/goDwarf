@@ -40,7 +40,7 @@ func makeJoystickWindow() {
 		return
 	}
 	joystickWin = eui.NewWindow()
-	joystickWin.Title = "Joystick"
+	joystickWin.Title = "Gamepad"
 	joystickWin.Closable = true
 	joystickWin.Movable = true
 	joystickWin.Resizable = true
@@ -49,7 +49,7 @@ func makeJoystickWindow() {
 	joystickWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
 
 	root := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
-	root.Size = eui.Point{X: 300, Y: 200}
+	root.Size = eui.Point{X: 350, Y: 200}
 	joystickWin.AddItem(root)
 
 	joystickIDs = ebiten.AppendGamepadIDs(joystickIDs[:0])
@@ -60,7 +60,7 @@ func makeJoystickWindow() {
 
 	controllerDD, controllerEvents := eui.NewDropdown()
 	controllerDD.Options = joystickNames
-	controllerDD.Size = eui.Point{X: 260, Y: 24}
+	controllerDD.Size = eui.Point{X: 350, Y: 24}
 	controllerEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
 			selectedJoystick = ev.Index
@@ -73,12 +73,12 @@ func makeJoystickWindow() {
 
 	axesText, _ = eui.NewText()
 	axesText.FontSize = 12
-	axesText.Size = eui.Point{X: 260, Y: 24}
+	axesText.Size = eui.Point{X: 350, Y: 24}
 	root.AddItem(axesText)
 
 	buttonsText, _ = eui.NewText()
 	buttonsText.FontSize = 12
-	buttonsText.Size = eui.Point{X: 260, Y: 24}
+	buttonsText.Size = eui.Point{X: 350, Y: 24}
 	root.AddItem(buttonsText)
 
 	enableCB, enableEvents := eui.NewCheckbox()
@@ -93,7 +93,8 @@ func makeJoystickWindow() {
 	root.AddItem(enableCB)
 
 	walkStickDD, walkEvents := eui.NewDropdown()
-	walkStickDD.Size = eui.Point{X: 260, Y: 24}
+	walkStickDD.Size = eui.Point{X: 350, Y: 24}
+	walkStickDD.Label = "Walk Stick"
 	walkEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
 			gs.JoystickWalkStick = ev.Index
@@ -103,7 +104,8 @@ func makeJoystickWindow() {
 	root.AddItem(walkStickDD)
 
 	cursorStickDD, cursorEvents := eui.NewDropdown()
-	cursorStickDD.Size = eui.Point{X: 260, Y: 24}
+	cursorStickDD.Size = eui.Point{X: 350, Y: 24}
+	cursorStickDD.Label = "Cursor Stick"
 	cursorEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventDropdownSelected {
 			gs.JoystickCursorStick = ev.Index
@@ -114,17 +116,17 @@ func makeJoystickWindow() {
 
 	click1Input, _ = eui.NewInput()
 	click1Input.Label = "Click1 Button"
-	click1Input.Size = eui.Point{X: 260, Y: 24}
+	click1Input.Size = eui.Point{X: 350, Y: 24}
 	root.AddItem(click1Input)
 
 	click2Input, _ = eui.NewInput()
 	click2Input.Label = "Click2 Button"
-	click2Input.Size = eui.Point{X: 260, Y: 24}
+	click2Input.Size = eui.Point{X: 350, Y: 24}
 	root.AddItem(click2Input)
 
 	click3Input, _ = eui.NewInput()
 	click3Input.Label = "Click3 Button"
-	click3Input.Size = eui.Point{X: 260, Y: 24}
+	click3Input.Size = eui.Point{X: 350, Y: 24}
 	root.AddItem(click3Input)
 
 	inputImgItem, inputImg = eui.NewImageItem(joystickImgW, joystickImgH)
