@@ -1315,19 +1315,19 @@ func stopRecording() {
 }
 
 func toggleRecording() {
-    if recorder != nil {
-        stopRecording()
-        return
-    }
-    if clmov != "" || playingMovie || pcapPath != "" || fake {
-        consoleMessage("cannot record during playback or replay")
-        return
-    }
-    if tcpConn == nil { // not connected yet
-        consoleMessage("not connected — start recording after you connect")
-        return
-    }
-    startRecording()
+	if recorder != nil {
+		stopRecording()
+		return
+	}
+	if clmov != "" || playingMovie || pcapPath != "" || fake {
+		consoleMessage("cannot record during playback or replay")
+		return
+	}
+	if tcpConn == nil { // not connected yet
+		consoleMessage("not connected — start recording after you connect")
+		return
+	}
+	startRecording()
 }
 
 var dlMutex sync.Mutex

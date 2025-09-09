@@ -14,14 +14,14 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"time"
+    "time"
 
 	"gothoom/eui"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	text "github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
+    text "github.com/hajimehoshi/ebiten/v2/text/v2"
+    "github.com/hajimehoshi/ebiten/v2/vector"
 	dark "github.com/thiagokokada/dark-mode-go"
 	clipboard "golang.design/x/clipboard"
 )
@@ -1377,11 +1377,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			bottom = bufH
 		}
 		worldView := gameImage.SubImage(image.Rect(left, top, right, bottom)).(*ebiten.Image)
-		drawSpeechBubbles(worldView, snap, alpha)
-		// Draw plugin overlays on top of the world view.
-		drawPluginOverlays(worldView, finalScale)
-		gs.GameScale = prev
-	}
+        drawSpeechBubbles(worldView, snap, alpha)
+        // Draw plugin overlays on top of the world view.
+        drawPluginOverlays(worldView, finalScale)
+        // Recording/Playback badge in top-left of world view
+        drawRecPlayBadge(worldView)
+        gs.GameScale = prev
+    }
 
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
@@ -1402,6 +1404,41 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 var lastSeekPrev time.Time
+
+func drawRecPlayBadge(dst *ebiten.Image) {
+    // Only show when actively recording/armed or playing back.
+    showRec := recorder != nil || recordWhenConnected
+    showPlay := !showRec && playingMovie
+    if !showRec && !showPlay {
+        return
+    }
+    // Pulse alpha between ~0.5 and 1.0
+    t := float64(time.Now().UnixNano()) / 1e9
+    s := 0.5 + 0.5*math.Sin(t*2*math.Pi/1.6)
+    alpha := 0.6 + 0.4*s
+    var base color.RGBA
+    var label string
+    if showRec {
+        base = color.RGBA{R: 203, G: 67, B: 53, A: 255} // red
+        label = "REC"
+    } else {
+        base = color.RGBA{R: 40, G: 180, B: 99, A: 255} // green
+        label = "PLAY"
+    }
+    col := color.RGBA{R: base.R, G: base.G, B: base.B, A: uint8(alpha * 255)}
+    // Position near top-left
+    pad := float32(6)
+    cx := float32(10)
+    cy := float32(10)
+    r := float32(6)
+    vector.DrawFilledCircle(dst, cx+pad, cy+pad, r, col, false)
+    // Text to the right
+    op := acquireTextDrawOpts()
+    op.GeoM.Translate(float64(2*pad+r*2), float64(4+pad))
+    op.ColorScale.Scale(1, 1, 1, float32(alpha))
+    text.Draw(dst, label, mainFontBold, op)
+    releaseTextDrawOpts(op)
+}
 
 // drawScene renders all world objects for the current frame.
 func drawScene(screen *ebiten.Image, ox, oy int, snap drawSnapshot, alpha float64, mobileFade, pictFade float32) {
@@ -2689,7 +2726,7 @@ func sendInputLoop(ctx context.Context, udpConn, tcpConn net.Conn) {
 }
 
 func udpReadLoop(ctx context.Context, conn net.Conn) {
-	for {
+    for {
 		if err := conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
 			return
 		}
@@ -2706,8 +2743,30 @@ func udpReadLoop(ctx context.Context, conn net.Conn) {
 			handleDisconnect()
 			return
 		}
-		tag := binary.BigEndian.Uint16(m[:2])
-		flags := frameFlags(m)
+        tag := binary.BigEndian.Uint16(m[:2])
+        flags := frameFlags(m)
+        // Arm-to-record behavior: collect pre-login blocks and start on first draw.
+        if recorder == nil && recordWhenConnected {
+            if tag == 2 {
+                startRecording()
+                recordWhenConnected = false
+            } else {
+                if flags&flagGameState != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    parseGameState(payload, uint16(clVersion), uint16(movieRevision))
+                    loginGameState = payload
+                }
+                if flags&flagMobileData != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    parseMobileTable(payload, 0, uint16(clVersion), uint16(movieRevision))
+                    loginMobileData = payload
+                }
+                if flags&flagPictureTable != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    loginPictureTable = payload
+                }
+            }
+        }
 		if recorder != nil {
 			if !wroteLoginBlocks {
 				if tag == 2 { // first draw state
@@ -2791,8 +2850,29 @@ loop:
 			handleDisconnect()
 			break
 		}
-		tag := binary.BigEndian.Uint16(m[:2])
-		flags := frameFlags(m)
+        tag := binary.BigEndian.Uint16(m[:2])
+        flags := frameFlags(m)
+        if recorder == nil && recordWhenConnected {
+            if tag == 2 {
+                startRecording()
+                recordWhenConnected = false
+            } else {
+                if flags&flagGameState != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    parseGameState(payload, uint16(clVersion), uint16(movieRevision))
+                    loginGameState = payload
+                }
+                if flags&flagMobileData != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    parseMobileTable(payload, 0, uint16(clVersion), uint16(movieRevision))
+                    loginMobileData = payload
+                }
+                if flags&flagPictureTable != 0 {
+                    payload := append([]byte(nil), m[2:]...)
+                    loginPictureTable = payload
+                }
+            }
+        }
 		if recorder != nil {
 			if !wroteLoginBlocks {
 				if tag == 2 { // first draw state

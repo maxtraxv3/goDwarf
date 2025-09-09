@@ -287,7 +287,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 
 	// When the movie controls window is closed, stop playback and return to
 	// the login window so a new movie can be selected.
-	win.OnClose = func() {
+    win.OnClose = func() {
 		// Pause and stop ticker
 		p.pause()
 		if p.ticker != nil {
@@ -300,8 +300,9 @@ func (p *moviePlayer) makePlaybackWindow() {
 		if p.cancel != nil {
 			p.cancel()
 		}
-		playingMovie = false
-		movieMode = false
+        playingMovie = false
+        movieMode = false
+        updateRecordButton()
 		// Clear any players loaded during playback so GT_Players.json
 		// is unaffected.
 		playersMu.Lock()
@@ -316,10 +317,11 @@ func (p *moviePlayer) makePlaybackWindow() {
 		pcapPath = ""
 		if loginWin != nil {
 			loginWin.MarkOpen()
-		}
+    }
 	}
 
-	p.updateUI()
+    p.updateUI()
+    updateRecordButton()
 }
 
 func changePlayButton(p *moviePlayer, play *eui.ItemData) {
@@ -373,11 +375,12 @@ func (p *moviePlayer) step() {
 		stateMu.Unlock()
 		p.checkpoints = append(p.checkpoints, cp)
 	}
-	if p.cur >= len(p.frames) {
-		p.playing = false
-		playingMovie = false
-	}
-	p.updateUI()
+    if p.cur >= len(p.frames) {
+        p.playing = false
+        playingMovie = false
+        updateRecordButton()
+    }
+    p.updateUI()
 }
 
 func (p *moviePlayer) updateUI() {
