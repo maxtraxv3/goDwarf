@@ -61,19 +61,19 @@ var (
 )
 
 func loadHotkeys() {
-    path := filepath.Join(dataDirPath, hotkeysFile)
-    pluginHotkeyMu.Lock()
-    pluginHotkeyEnabled = map[string]map[string]bool{}
-    data, err := os.ReadFile(path)
+	path := filepath.Join(dataDirPath, hotkeysFile)
+	pluginHotkeyMu.Lock()
+	pluginHotkeyEnabled = map[string]map[string]bool{}
+	data, err := os.ReadFile(path)
 
-    var newList []Hotkey
-    noFile := false
-    if err == nil {
-        type hotkeyJSON struct {
-            Combo    string          `json:"combo"`
-            Name     string          `json:"name,omitempty"`
-            Commands []HotkeyCommand `json:"commands"`
-            Command  string          `json:"command"`
+	var newList []Hotkey
+	noFile := false
+	if err == nil {
+		type hotkeyJSON struct {
+			Combo    string          `json:"combo"`
+			Name     string          `json:"name,omitempty"`
+			Commands []HotkeyCommand `json:"commands"`
+			Command  string          `json:"command"`
 			Text     string          `json:"text,omitempty"`
 			Plugin   string          `json:"plugin,omitempty"`
 			Disabled *bool           `json:"disabled,omitempty"`
@@ -121,41 +121,29 @@ func loadHotkeys() {
 				}
 			}
 			newList = append(newList, hk)
-        }
-    } else if os.IsNotExist(err) {
-        noFile = true
-    } else {
-        pluginHotkeyMu.Unlock()
-        return
-    }
-    pluginHotkeyMu.Unlock()
+		}
+	} else if os.IsNotExist(err) {
+		noFile = true
+	} else {
+		pluginHotkeyMu.Unlock()
+		return
+	}
+	pluginHotkeyMu.Unlock()
 
-    // Add default hotkeys only on first run (no existing config file).
-    if noFile {
-        def := Hotkey{Name: "Click To Use", Combo: "RightClick", Commands: []HotkeyCommand{{Command: "/use @right.clicked"}}, Disabled: true}
-        exists := false
-        for _, hk := range newList {
-            if hk.Combo == def.Combo && hk.Plugin == "" {
-                exists = true
-                break
-            }
-        }
-        if !exists {
-            newList = append(newList, def)
-        }
-
-        fs := Hotkey{Name: "Toggle Fullscreen", Combo: "F12", Commands: []HotkeyCommand{{Command: "/fullscreen"}}}
-        exists = false
-        for _, hk := range newList {
-            if hk.Combo == fs.Combo && hk.Plugin == "" {
-                exists = true
-                break
-            }
-        }
-        if !exists {
-            newList = append(newList, fs)
-        }
-    }
+	// Add default hotkeys only on first run (no existing config file).
+	if noFile {
+		fs := Hotkey{Name: "Toggle Fullscreen", Combo: "F12", Commands: []HotkeyCommand{{Command: "/fullscreen"}}}
+		exists := false
+		for _, hk := range newList {
+			if hk.Combo == fs.Combo && hk.Plugin == "" {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			newList = append(newList, fs)
+		}
+	}
 
 	hotkeysMu.Lock()
 	hotkeys = newList
