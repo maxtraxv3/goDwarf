@@ -94,24 +94,24 @@ func openShortcutEditor(owner string) {
 
 	shortRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
 	shortLbl, _ := eui.NewText()
-	shortLbl.Text = "Key:"
-	shortLbl.Size = eui.Point{X: 40, Y: 20}
+	shortLbl.Text = "In:"
+	shortLbl.Size = eui.Point{X: 80, Y: 20}
 	shortLbl.FontSize = 12
 	shortRow.AddItem(shortLbl)
 	shortcutShortInp, _ = eui.NewInput()
-	shortcutShortInp.Size = eui.Point{X: 200, Y: 20}
+	shortcutShortInp.Size = eui.Point{X: 400, Y: 20}
 	shortcutShortInp.FontSize = 12
 	shortRow.AddItem(shortcutShortInp)
 	flow.AddItem(shortRow)
 
 	fullRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
 	fullLbl, _ := eui.NewText()
-	fullLbl.Text = "Command:"
-	fullLbl.Size = eui.Point{X: 60, Y: 20}
+	fullLbl.Text = "Out:"
+	fullLbl.Size = eui.Point{X: 80, Y: 20}
 	fullLbl.FontSize = 12
 	fullRow.AddItem(fullLbl)
 	shortcutFullInp, _ = eui.NewInput()
-	shortcutFullInp.Size = eui.Point{X: 200, Y: 20}
+	shortcutFullInp.Size = eui.Point{X: 400, Y: 20}
 	shortcutFullInp.FontSize = 12
 	fullRow.AddItem(shortcutFullInp)
 	flow.AddItem(fullRow)
@@ -197,13 +197,8 @@ func refreshShortcutsList() {
 	linePx := math.Ceil(metrics.HAscent + metrics.HDescent + 2)
 	rowUnits := float32(linePx) / ui
 
-	// Size the outer flow and list to the client area.
-	if shortcutsList.Parent != nil {
-		shortcutsList.Parent.Size.X = clientWAvail
-		shortcutsList.Parent.Size.Y = clientHAvail
-	}
 	shortcutsList.Size.X = clientWAvail
-	shortcutsList.Size.Y = clientHAvail
+	shortcutsList.Size.Y = clientHAvail - (rowUnits * 2)
 
 	shortcutsList.Contents = shortcutsList.Contents[:0]
 	shortcutMu.RLock()
@@ -249,6 +244,7 @@ func refreshShortcutsList() {
 				delBtn, delEvents := eui.NewButton()
 				delBtn.Text = "X"
 				delBtn.Size = eui.Point{X: rowUnits, Y: rowUnits}
+				delBtn.Position = eui.Point{X: -20, Y: 0}
 				delBtn.FontSize = float32(fontSize)
 				owner := p.owner
 				short := m.short
