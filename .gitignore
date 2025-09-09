@@ -43,3 +43,4 @@ go/mod/cache/
 go/mod/
 themes/
 .VSCodeCounter/
+data/shortcuts.json
