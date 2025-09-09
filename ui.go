@@ -203,13 +203,15 @@ func init() {
 }
 
 func initUI() {
-	var err error
-	status, err = checkDataFiles(clVersion)
-	if err != nil {
-		logError("check data files: %v", err)
-	}
+    var err error
+    status, err = checkDataFiles(clVersion)
+    if err != nil {
+        logError("check data files: %v", err)
+    }
 
-	loadHotkeys()
+    loadHotkeys()
+    // Load persisted user/global shortcuts before showing UI or handling input
+    loadShortcuts()
 
 	eui.SetUIScale(float32(gs.UIScale))
 
@@ -217,7 +219,7 @@ func initUI() {
 	makeDownloadsWindow()
 	makeLoginWindow()
 	makeAddCharacterWindow()
-	makeChatWindow()
+    makeChatWindow()
 	makeConsoleWindow()
 	makeSettingsWindow()
 	makeQualityWindow()

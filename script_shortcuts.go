@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"strings"
-	"sync"
+    "encoding/json"
+    "fmt"
+    "log"
+    "os"
+    "path/filepath"
+    "strings"
+    "sync"
 )
 
 // This file implements helpers for chat shortcuts registered by scripts.
@@ -17,8 +20,10 @@ var (
 	// shortcuts safely.
 	shortcutMu sync.RWMutex
 	// shortcutMaps keeps shortcuts separate for each script by name.
-	shortcutMaps = map[string]map[string]string{}
+    shortcutMaps = map[string]map[string]string{}
 )
+
+const shortcutsFile = "shortcuts.json"
 
 // pluginAddShortcut registers a single shortcut for the script identified by owner.
 // Typing short text in the chat box will expand into the full string before
@@ -49,9 +54,9 @@ func addShortcut(owner, short, full string) {
 			return txt
 		})
 	}
-	m[short] = full
-	shortcutMu.Unlock()
-	refreshShortcutsList()
+    m[short] = full
+    shortcutMu.Unlock()
+    refreshShortcutsList()
 }
 
 func pluginAddShortcut(owner, short, full string) {
@@ -100,24 +105,29 @@ func pluginRemoveShortcuts(owner string) {
 }
 
 func removeShortcut(owner, short string) {
-	short = strings.ToLower(short)
-	shortcutMu.Lock()
-	if m := shortcutMaps[owner]; m != nil {
-		delete(m, short)
-		if len(m) == 0 {
-			delete(shortcutMaps, owner)
-		}
-	}
-	shortcutMu.Unlock()
-	refreshShortcutsList()
+    short = strings.ToLower(short)
+    shortcutMu.Lock()
+    if m := shortcutMaps[owner]; m != nil {
+        delete(m, short)
+        if len(m) == 0 {
+            delete(shortcutMaps, owner)
+        }
+    }
+    shortcutMu.Unlock()
+    refreshShortcutsList()
+    if owner == "user" || owner == "global" {
+        saveShortcuts()
+    }
 }
 
 func addUserShortcut(short, full string) {
-	addShortcut("user", short, full)
+    addShortcut("user", short, full)
+    saveShortcuts()
 }
 
 func addGlobalShortcut(short, full string) {
-	addShortcut("global", short, full)
+    addShortcut("global", short, full)
+    saveShortcuts()
 }
 
 func removeUserShortcut(short string) {
@@ -125,5 +135,65 @@ func removeUserShortcut(short string) {
 }
 
 func removeGlobalShortcut(short string) {
-	removeShortcut("global", short)
+    removeShortcut("global", short)
+}
+
+// loadShortcuts loads persisted user and global shortcuts from disk.
+func loadShortcuts() {
+    type fileFmt struct {
+        User   map[string]string `json:"user,omitempty"`
+        Global map[string]string `json:"global,omitempty"`
+    }
+    path := filepath.Join(dataDirPath, shortcutsFile)
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return
+    }
+    var f fileFmt
+    if err := json.Unmarshal(data, &f); err != nil {
+        return
+    }
+    // Populate using addShortcut to ensure input handlers are registered.
+    for k, v := range f.User {
+        if k != "" && v != "" {
+            addShortcut("user", k, v)
+        }
+    }
+    for k, v := range f.Global {
+        if k != "" && v != "" {
+            addShortcut("global", k, v)
+        }
+    }
+}
+
+// saveShortcuts persists user and global shortcuts to disk.
+func saveShortcuts() {
+    type fileFmt struct {
+        User   map[string]string `json:"user,omitempty"`
+        Global map[string]string `json:"global,omitempty"`
+    }
+    shortcutMu.RLock()
+    // Copy only user/global maps to avoid persisting plugin-defined shortcuts.
+    out := fileFmt{}
+    if m := shortcutMaps["user"]; len(m) > 0 {
+        out.User = make(map[string]string, len(m))
+        for k, v := range m {
+            out.User[k] = v
+        }
+    }
+    if m := shortcutMaps["global"]; len(m) > 0 {
+        out.Global = make(map[string]string, len(m))
+        for k, v := range m {
+            out.Global[k] = v
+        }
+    }
+    shortcutMu.RUnlock()
+
+    data, err := json.MarshalIndent(out, "", "  ")
+    if err != nil {
+        return
+    }
+    _ = os.MkdirAll(dataDirPath, 0o755)
+    path := filepath.Join(dataDirPath, shortcutsFile)
+    _ = os.WriteFile(path, data, 0o644)
 }
