@@ -322,17 +322,40 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 	}
 	row1.AddItem(actionsBtn)
 
-	recordBtn, recordEvents := eui.NewButton()
-	recordBtn.Text = "Record"
-	recordBtn.SetTooltip("Start/stop recording (.clmov)")
-	recordBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
-	recordBtn.FontSize = toolFontSize
-	recordEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			toggleRecording()
-		}
-	}
-	row1.AddItem(recordBtn)
+    recordBtn, recordEvents := eui.NewButton()
+    recordBtn.Text = "Record"
+    recordBtn.SetTooltip("Start/stop recording (.clmov)")
+    recordBtn.Size = eui.Point{X: buttonWidth, Y: buttonHeight}
+    recordBtn.FontSize = toolFontSize
+    // Cache base theme for STOP/Record toggling.
+    if recordBtnBaseTheme == nil && recordBtn.Theme != nil {
+        base := *recordBtn.Theme
+        recordBtnBaseTheme = &base
+    }
+    recordEvents.Handle = func(ev eui.UIEvent) {
+        if ev.Type == eui.EventClick {
+            // STOP during playback
+            if playingMovie {
+                if movieWin != nil {
+                    movieWin.Close()
+                } else {
+                    playingMovie = false
+                    movieMode = false
+                }
+                updateRecordButton()
+                return
+            }
+            // Cancel arming when disconnected
+            if recorder == nil && recordWhenConnected && tcpConn == nil {
+                recordWhenConnected = false
+                consoleMessage("recording canceled; will not start on connect")
+                updateRecordButton()
+                return
+            }
+            toggleRecording()
+        }
+    }
+    row1.AddItem(recordBtn)
 
 	helpBtn, helpEvents := eui.NewButton()
 	helpBtn.Text = "Help"
@@ -404,12 +427,12 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	// Removed toolbar volume slider and mute button (use Mixer instead)
 
-	recordStatus, _ = eui.NewText()
-	recordStatus.Text = ""
-	recordStatus.Size = eui.Point{X: 80, Y: buttonHeight}
-	recordStatus.FontSize = toolFontSize
-	recordStatus.Color = eui.ColorRed
-	row2.AddItem(recordStatus)
+    recordStatus, _ = eui.NewText()
+    recordStatus.Text = ""
+    recordStatus.Size = eui.Point{X: 80, Y: buttonHeight}
+    recordStatus.FontSize = toolFontSize
+    recordStatus.Color = eui.ColorRed
+    row2.AddItem(recordStatus)
 
 	menu.AddItem(row1)
 	menu.AddItem(row2)
@@ -1127,6 +1150,8 @@ func makeToolbar() {
 	hudWin.AddItem(flow)
 	hudWin.AddWindow(false)
 	updateHandsWindow()
+	// Ensure record button reflects current state (playback/armed/recording)
+	updateRecordButton()
 
 	go func() {
 		for {
@@ -1266,21 +1291,13 @@ func startRecording() {
 		recordPath = ""
 		return
 	}
-	recorder = mr
-	loginGameState = nil
-	loginMobileData = nil
-	loginPictureTable = nil
-	wroteLoginBlocks = false
-	recordStatus.Text = "REC"
-	recordStatus.Dirty = true
-	if recordBtn != nil {
-		recordBtn.Text = "Stop"
-		recordBtn.Dirty = true
-	}
-	if hudWin != nil {
-		hudWin.Refresh()
-	}
-	consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
+    recorder = mr
+    loginGameState = nil
+    loginMobileData = nil
+    loginPictureTable = nil
+    wroteLoginBlocks = false
+    consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
+    updateRecordButton()
 }
 
 func stopRecording() {
@@ -1290,44 +1307,38 @@ func stopRecording() {
 	if err := recorder.Close(); err != nil {
 		logError("record movie: %v", err)
 	}
-	recorder = nil
-	loginGameState = nil
-	loginMobileData = nil
-	loginPictureTable = nil
-	wroteLoginBlocks = false
-	recordStatus.Text = ""
-	recordStatus.Dirty = true
-	if recordBtn != nil {
-		recordBtn.Text = "Record"
-		recordBtn.Dirty = true
-	}
-	if hudWin != nil {
-		hudWin.Refresh()
-	}
-	if recordPath != "" {
-		saved := recordPath
-		consoleMessage(fmt.Sprintf("saved movie: %s", filepath.Base(saved)))
-		if gs.PromptOnSaveRecording {
-			showRecordingSaveDialog(saved)
-		}
-		recordPath = ""
-	}
+    recorder = nil
+    loginGameState = nil
+    loginMobileData = nil
+    loginPictureTable = nil
+    wroteLoginBlocks = false
+    if recordPath != "" {
+        saved := recordPath
+        consoleMessage(fmt.Sprintf("saved movie: %s", filepath.Base(saved)))
+        if gs.PromptOnSaveRecording {
+            showRecordingSaveDialog(saved)
+        }
+        recordPath = ""
+    }
+    updateRecordButton()
 }
 
 func toggleRecording() {
-	if recorder != nil {
-		stopRecording()
-		return
-	}
-	if clmov != "" || playingMovie || pcapPath != "" || fake {
-		consoleMessage("cannot record during playback or replay")
-		return
-	}
-	if tcpConn == nil { // not connected yet
-		consoleMessage("not connected — start recording after you connect")
-		return
-	}
-	startRecording()
+    if recorder != nil {
+        stopRecording()
+        return
+    }
+    if clmov != "" || playingMovie || pcapPath != "" || fake {
+        consoleMessage("cannot record during playback or replay")
+        return
+    }
+    if tcpConn == nil { // not connected yet: arm and start on connect
+        recordWhenConnected = true
+        consoleMessage("recording will start on connect")
+        updateRecordButton()
+        return
+    }
+    startRecording()
 }
 
 var dlMutex sync.Mutex

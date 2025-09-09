@@ -24,7 +24,7 @@ func updateRecordButton() {
         recordBtnBaseTheme = &base
     }
     if recorder != nil || playingMovie || recordWhenConnected {
-        recordBtn.Text = "STOP"
+        recordBtn.Text = "stop"
         // Red theme when actively recording or armed to record.
         if recorder != nil || recordWhenConnected {
             if recordBtn.Theme != nil {
@@ -50,4 +50,3 @@ func updateRecordButton() {
         hudWin.Refresh()
     }
 }
-
