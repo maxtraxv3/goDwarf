@@ -214,8 +214,15 @@ func ClearFocus(it *ItemData) {
 // is activated. It exists so external tests can simulate an active
 // search without poking unexported symbols.
 func SetActiveSearchForTest(win *WindowData) {
-	activeSearch = win
-	if win != nil {
-		win.searchOpen = true
-	}
+    activeSearch = win
+    if win != nil {
+        win.searchOpen = true
+    }
+}
+
+// ScrollbarWidth returns the pixel width used when rendering scrollbars
+// so callers can reserve space and avoid overlap.
+func ScrollbarWidth() float32 {
+    // Matches the value used in draw routines.
+    return currentStyle.BorderPad.Slider * 2
 }

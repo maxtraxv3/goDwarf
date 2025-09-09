@@ -591,26 +591,26 @@ func (win *windowData) drawScrollbars(screen *ebiten.Image) {
 }
 
 func (win *windowData) drawItems(screen *ebiten.Image, base point, dropdowns *[]openDropdown) {
-	pad := (win.Padding + win.BorderPad) * win.scale()
-	winPos := point{X: pad, Y: win.GetTitleSize() + pad}
-	winPos = pointSub(winPos, win.Scroll)
+    pad := (win.Padding + win.BorderPad) * win.scale()
+    winPos := point{X: pad, Y: win.GetTitleSize() + pad}
+    winPos = pointSub(winPos, win.Scroll)
 	// In NoCache mode we draw to the main screen using absolute coordinates.
 	// Offset window-local positions by the window's screen position so items
 	// render at the correct place.
 	if win.NoCache {
 		winPos = pointAdd(winPos, win.getPosition())
 	}
-	clip := win.getMainRect()
+    clip := win.getMainRect()
 
 	for _, item := range win.Contents {
 		itemPos := pointAdd(winPos, item.getPosition(win))
 
-		if item.ItemType == ITEM_FLOW {
-			item.drawFlows(win, nil, itemPos, base, clip, screen, dropdowns)
-		} else {
-			item.drawItem(nil, itemPos, base, clip, screen, dropdowns)
-		}
-	}
+        if item.ItemType == ITEM_FLOW {
+            item.drawFlows(win, nil, itemPos, base, clip, screen, dropdowns)
+        } else {
+            item.drawItem(nil, itemPos, base, clip, screen, dropdowns)
+        }
+    }
 }
 
 func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point, base point, clip rect, screen *ebiten.Image, dropdowns *[]openDropdown) {
@@ -623,7 +623,7 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 		X1: offset.X + item.GetSize().X,
 		Y1: offset.Y + item.GetSize().Y,
 	}
-	drawRect := intersectRect(itemRect, clip)
+    drawRect := intersectRect(itemRect, clip)
 
 	if drawRect.X1 <= drawRect.X0 || drawRect.Y1 <= drawRect.Y0 {
 		item.DrawRect = rectAdd(drawRect, base)
@@ -656,8 +656,21 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 		}
 	}
 
-	var activeContents []*itemData
-	drawOffset := pointSub(offset, item.Scroll)
+    var activeContents []*itemData
+    drawOffset := pointSub(offset, item.Scroll)
+    // Children should not draw or accept input under this flow's scrollbar.
+    childClip := drawRect
+    if item.Scrollable {
+        req := item.contentBounds()
+        size := item.GetSize()
+        sbW := currentStyle.BorderPad.Slider * 2
+        if item.FlowType == FLOW_VERTICAL && req.Y > size.Y {
+            childClip.X1 -= sbW
+        }
+        if item.FlowType == FLOW_HORIZONTAL && req.X > size.X {
+            childClip.Y1 -= sbW
+        }
+    }
 
 	if len(item.Tabs) > 0 {
 		if item.ActiveTab >= len(item.Tabs) {
@@ -766,14 +779,14 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 				X1: itemPos.X + subItem.GetSize().X,
 				Y1: itemPos.Y + subItem.GetSize().Y,
 			}
-			inter := intersectRect(subRect, drawRect)
-			if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
-				subItem.DrawRect = rectAdd(inter, base)
-			} else {
-				subItem.drawFlows(win, item, itemPos, base, drawRect, screen, dropdowns)
-			}
-		} else {
-			flowOff := pointAdd(drawOffset, flowOffset)
+            inter := intersectRect(subRect, childClip)
+            if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
+                subItem.DrawRect = rectAdd(inter, base)
+            } else {
+                subItem.drawFlows(win, item, itemPos, base, childClip, screen, dropdowns)
+            }
+        } else {
+            flowOff := pointAdd(drawOffset, flowOffset)
 
 			if subItem.PinTo != PIN_TOP_LEFT {
 				pad := (win.Padding + win.BorderPad) * win.scale()
@@ -786,32 +799,32 @@ func (item *itemData) drawFlows(win *windowData, parent *itemData, offset point,
 					X1: objOff.X + subItem.GetSize().X,
 					Y1: objOff.Y + subItem.GetSize().Y,
 				}
-				inter := intersectRect(subRect, drawRect)
-				if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
-					subItem.DrawRect = rectAdd(inter, base)
-				} else {
-					clipWin := win.getMainRect()
-					subItem.drawItem(item, objOff, base, clipWin, screen, dropdowns)
-				}
-			} else {
-				objOff := flowOff
-				if parent != nil && parent.ItemType == ITEM_FLOW {
-					objOff = pointAdd(objOff, subItem.getPosition(win))
-				}
-				subRect := rect{
-					X0: objOff.X,
-					Y0: objOff.Y,
-					X1: objOff.X + subItem.GetSize().X,
-					Y1: objOff.Y + subItem.GetSize().Y,
-				}
-				inter := intersectRect(subRect, drawRect)
-				if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
-					subItem.DrawRect = rectAdd(inter, base)
-				} else {
-					subItem.drawItem(item, objOff, base, drawRect, screen, dropdowns)
-				}
-			}
-		}
+                inter := intersectRect(subRect, childClip)
+                if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
+                    subItem.DrawRect = rectAdd(inter, base)
+                } else {
+                    clipWin := win.getMainRect()
+                    subItem.drawItem(item, objOff, base, clipWin, screen, dropdowns)
+                }
+            } else {
+                objOff := flowOff
+                if parent != nil && parent.ItemType == ITEM_FLOW {
+                    objOff = pointAdd(objOff, subItem.getPosition(win))
+                }
+                subRect := rect{
+                    X0: objOff.X,
+                    Y0: objOff.Y,
+                    X1: objOff.X + subItem.GetSize().X,
+                    Y1: objOff.Y + subItem.GetSize().Y,
+                }
+                inter := intersectRect(subRect, childClip)
+                if inter.X1 <= inter.X0 || inter.Y1 <= inter.Y0 {
+                    subItem.DrawRect = rectAdd(inter, base)
+                } else {
+                    subItem.drawItem(item, objOff, base, childClip, screen, dropdowns)
+                }
+            }
+        }
 
 		if item.ItemType == ITEM_FLOW {
 			if item.FlowType == FLOW_HORIZONTAL {

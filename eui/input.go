@@ -661,9 +661,12 @@ func (win *windowData) clickWindowItems(mpos point, click bool) bool {
 	}
 	win.Hovered = true
 
-	for _, item := range win.Contents {
-		handled := false
-		if item.ItemType == ITEM_FLOW {
+    // Hit test in reverse draw order so later (visually-on-top) items
+    // receive input before earlier ones when their rects overlap.
+    for i := len(win.Contents) - 1; i >= 0; i-- {
+        item := win.Contents[i]
+        handled := false
+        if item.ItemType == ITEM_FLOW {
 			if part := item.getScrollbarPart(mpos); part != PART_NONE {
 				if click && dragPart == PART_NONE && downWin == win {
 					dragPart = part
@@ -676,11 +679,11 @@ func (win *windowData) clickWindowItems(mpos point, click bool) bool {
 		} else {
 			handled = item.clickItem(mpos, click)
 		}
-		if handled {
-			return true
-		}
-	}
-	return false
+        if handled {
+            return true
+        }
+    }
+    return false
 }
 
 func (item *itemData) clickFlows(mpos point, click bool) bool {
@@ -695,7 +698,7 @@ func (item *itemData) clickFlows(mpos point, click bool) bool {
 		}
 		return true
 	}
-	if len(item.Tabs) > 0 {
+    if len(item.Tabs) > 0 {
 		if item.ActiveTab >= len(item.Tabs) {
 			item.ActiveTab = 0
 		}
@@ -712,31 +715,33 @@ func (item *itemData) clickFlows(mpos point, click bool) bool {
 				return true
 			}
 		}
-		for _, subItem := range item.Tabs[item.ActiveTab].Contents {
-			if subItem.ItemType == ITEM_FLOW {
-				if subItem.clickFlows(mpos, click) {
-					return true
-				}
-			} else {
-				if subItem.clickItem(mpos, click) {
-					return true
-				}
-			}
-		}
-	} else {
-		for _, subItem := range item.Contents {
-			if subItem.ItemType == ITEM_FLOW {
-				if subItem.clickFlows(mpos, click) {
-					return true
-				}
-			} else {
-				if subItem.clickItem(mpos, click) {
-					return true
-				}
-			}
-		}
-	}
-	return item.DrawRect.containsPoint(mpos)
+        for i := len(item.Tabs[item.ActiveTab].Contents) - 1; i >= 0; i-- {
+            subItem := item.Tabs[item.ActiveTab].Contents[i]
+            if subItem.ItemType == ITEM_FLOW {
+                if subItem.clickFlows(mpos, click) {
+                    return true
+                }
+            } else {
+                if subItem.clickItem(mpos, click) {
+                    return true
+                }
+            }
+        }
+    } else {
+        for i := len(item.Contents) - 1; i >= 0; i-- {
+            subItem := item.Contents[i]
+            if subItem.ItemType == ITEM_FLOW {
+                if subItem.clickFlows(mpos, click) {
+                    return true
+                }
+            } else {
+                if subItem.clickItem(mpos, click) {
+                    return true
+                }
+            }
+        }
+    }
+    return item.DrawRect.containsPoint(mpos)
 }
 
 func (item *itemData) clickItem(mpos point, click bool) bool {
