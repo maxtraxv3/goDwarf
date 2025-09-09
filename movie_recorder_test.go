@@ -60,13 +60,16 @@ func TestRecordRoundTrip(t *testing.T) {
 	if err := mr.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
-	rec, err := os.ReadFile(tmp)
-	if err != nil {
-		t.Fatalf("ReadFile(tmp): %v", err)
-	}
-	if !bytes.Equal(orig, rec) {
-		t.Fatalf("recording mismatch: %d vs %d bytes", len(orig), len(rec))
-	}
+        rec, err := os.ReadFile(tmp)
+        if err != nil {
+                t.Fatalf("ReadFile(tmp): %v", err)
+        }
+        if !bytes.Equal(orig, rec) {
+                t.Fatalf("recording mismatch: %d vs %d bytes", len(orig), len(rec))
+        }
+        if _, err := parseMovie(tmp, 0); err != nil {
+                t.Fatalf("parseMovie(tmp): %v", err)
+        }
 }
 
 func TestGameStateBlock(t *testing.T) {
