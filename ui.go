@@ -1292,13 +1292,11 @@ func startRecording() {
         return
     }
     recorder = mr
-    // If we are starting mid-session and haven't cached any initial blocks,
-    // synthesize a full initial GameState from the current draw state.
-    if len(loginGameState) == 0 && tcpConn != nil {
-        loginGameState = synthesizeInitialGameState(uint16(clVersion))
-        // Prefer a single GameState block; clear other cached tables.
-        loginMobileData = nil
-        loginPictureTable = nil
+    // If starting mid-session and no cached blocks, synthesize initial mobile
+    // and picture tables separately to ensure the parser applies them.
+    if len(loginGameState) == 0 && len(loginMobileData) == 0 && len(loginPictureTable) == 0 && tcpConn != nil {
+        loginPictureTable = synthesizePictureTableFromState()
+        loginMobileData = synthesizeMobileDataFromState(uint16(clVersion))
     }
     wroteLoginBlocks = false
     consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
