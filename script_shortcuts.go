@@ -8,6 +8,7 @@ import (
     "path/filepath"
     "strings"
     "sync"
+    "unicode"
 )
 
 // This file implements helpers for chat shortcuts registered by scripts.
@@ -23,7 +24,10 @@ var (
     shortcutMaps = map[string]map[string]string{}
 )
 
-const shortcutsFile = "shortcuts.json"
+const (
+    shortcutsDir       = "shortcuts"
+    globalShortcutsFile = "global-shortcuts.json"
+)
 
 // pluginAddShortcut registers a single shortcut for the script identified by owner.
 // Typing short text in the chat box will expand into the full string before
@@ -140,60 +144,88 @@ func removeGlobalShortcut(short string) {
 
 // loadShortcuts loads persisted user and global shortcuts from disk.
 func loadShortcuts() {
-    type fileFmt struct {
-        User   map[string]string `json:"user,omitempty"`
-        Global map[string]string `json:"global,omitempty"`
-    }
-    path := filepath.Join(dataDirPath, shortcutsFile)
-    data, err := os.ReadFile(path)
-    if err != nil {
-        return
-    }
-    var f fileFmt
-    if err := json.Unmarshal(data, &f); err != nil {
-        return
-    }
-    // Populate using addShortcut to ensure input handlers are registered.
-    for k, v := range f.User {
-        if k != "" && v != "" {
-            addShortcut("user", k, v)
+    // Clear existing user/global maps so we replace previous character’s shortcuts.
+    shortcutMu.Lock()
+    delete(shortcutMaps, "user")
+    delete(shortcutMaps, "global")
+    shortcutMu.Unlock()
+
+    dir := filepath.Join(dataDirPath, shortcutsDir)
+    // Load global shortcuts
+    if data, err := os.ReadFile(filepath.Join(dir, globalShortcutsFile)); err == nil {
+        var m map[string]string
+        if json.Unmarshal(data, &m) == nil {
+            for k, v := range m {
+                if k != "" && v != "" {
+                    addShortcut("global", k, v)
+                }
+            }
         }
     }
-    for k, v := range f.Global {
-        if k != "" && v != "" {
-            addShortcut("global", k, v)
+    // Load user shortcuts for the effective character
+    eff := effectiveCharacterName()
+    if eff != "" {
+        name := sanitizeName(eff)
+        if name != "" {
+            if data, err := os.ReadFile(filepath.Join(dir, name+"-shortcuts.json")); err == nil {
+                var m map[string]string
+                if json.Unmarshal(data, &m) == nil {
+                    for k, v := range m {
+                        if k != "" && v != "" {
+                            addShortcut("user", k, v)
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 // saveShortcuts persists user and global shortcuts to disk.
 func saveShortcuts() {
-    type fileFmt struct {
-        User   map[string]string `json:"user,omitempty"`
-        Global map[string]string `json:"global,omitempty"`
-    }
+    _ = os.MkdirAll(filepath.Join(dataDirPath, shortcutsDir), 0o755)
+    dir := filepath.Join(dataDirPath, shortcutsDir)
     shortcutMu.RLock()
-    // Copy only user/global maps to avoid persisting plugin-defined shortcuts.
-    out := fileFmt{}
-    if m := shortcutMaps["user"]; len(m) > 0 {
-        out.User = make(map[string]string, len(m))
-        for k, v := range m {
-            out.User[k] = v
+    // Save global
+    if gm := shortcutMaps["global"]; gm != nil {
+        if data, err := json.MarshalIndent(gm, "", "  "); err == nil {
+            _ = os.WriteFile(filepath.Join(dir, globalShortcutsFile), data, 0o644)
         }
     }
-    if m := shortcutMaps["global"]; len(m) > 0 {
-        out.Global = make(map[string]string, len(m))
-        for k, v := range m {
-            out.Global[k] = v
+    // Save user for effective character
+    eff := effectiveCharacterName()
+    if eff != "" {
+        name := sanitizeName(eff)
+        if name != "" {
+            if um := shortcutMaps["user"]; um != nil {
+                if data, err := json.MarshalIndent(um, "", "  "); err == nil {
+                    _ = os.WriteFile(filepath.Join(dir, name+"-shortcuts.json"), data, 0o644)
+                }
+            }
         }
     }
     shortcutMu.RUnlock()
+}
 
-    data, err := json.MarshalIndent(out, "", "  ")
-    if err != nil {
-        return
+// effectiveCharacterName returns the current player name or last used character.
+func effectiveCharacterName() string {
+    if playerName != "" {
+        return playerName
     }
-    _ = os.MkdirAll(dataDirPath, 0o755)
-    path := filepath.Join(dataDirPath, shortcutsFile)
-    _ = os.WriteFile(path, data, 0o644)
+    return gs.LastCharacter
+}
+
+// sanitizeName keeps letters/digits and converts spaces to underscores.
+func sanitizeName(in string) string {
+    var b strings.Builder
+    for _, r := range in {
+        if r == ' ' {
+            b.WriteByte('_')
+            continue
+        }
+        if unicode.IsLetter(r) || unicode.IsDigit(r) {
+            b.WriteRune(r)
+        }
+    }
+    return b.String()
 }

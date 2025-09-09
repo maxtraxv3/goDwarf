@@ -203,15 +203,15 @@ func init() {
 }
 
 func initUI() {
-    var err error
-    status, err = checkDataFiles(clVersion)
-    if err != nil {
-        logError("check data files: %v", err)
-    }
+	var err error
+	status, err = checkDataFiles(clVersion)
+	if err != nil {
+		logError("check data files: %v", err)
+	}
 
-    loadHotkeys()
-    // Load persisted user/global shortcuts before showing UI or handling input
-    loadShortcuts()
+	loadHotkeys()
+	// Load persisted user/global shortcuts before showing UI or handling input
+	loadShortcuts()
 
 	eui.SetUIScale(float32(gs.UIScale))
 
@@ -219,7 +219,7 @@ func initUI() {
 	makeDownloadsWindow()
 	makeLoginWindow()
 	makeAddCharacterWindow()
-    makeChatWindow()
+	makeChatWindow()
 	makeConsoleWindow()
 	makeSettingsWindow()
 	makeQualityWindow()
@@ -503,12 +503,12 @@ func refreshPluginsWindow() {
 	pluginsList.Contents = pluginsList.Contents[:0]
 	legend := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 	charTxt, _ := eui.NewText()
-	charTxt.Text = "Character"
+	charTxt.Text = "Player"
 	charTxt.FontSize = 9
 	charTxt.Size = checkSize
 	legend.AddItem(charTxt)
 	allTxt, _ := eui.NewText()
-	allTxt.Text = "All"
+	allTxt.Text = "Global"
 	allTxt.FontSize = 9
 	allTxt.Size = checkSize
 	legend.AddItem(allTxt)

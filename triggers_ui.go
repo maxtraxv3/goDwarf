@@ -20,7 +20,7 @@ func makeTriggersWindow() {
 	}
 	triggersWin = eui.NewWindow()
 	triggersWin.Title = "Triggers"
-	triggersWin.Size = eui.Point{X: 300, Y: 200}
+	triggersWin.Size = eui.Point{X: 500, Y: 500}
 	triggersWin.Closable = true
 	triggersWin.Movable = true
 	triggersWin.Resizable = true

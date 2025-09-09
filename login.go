@@ -320,9 +320,11 @@ func login(ctx context.Context, clVersion int) error {
 			udpConn.Close()
 			return fmt.Errorf("character password required")
 		}
-		playerName = utfFold(name)
-		applyLocalLabels()
-		applyEnabledPlugins()
+        playerName = utfFold(name)
+        applyLocalLabels()
+        applyEnabledPlugins()
+        // Reload user-specific shortcuts for the selected character.
+        loadShortcuts()
 
 		var resp []byte
 		var result int16

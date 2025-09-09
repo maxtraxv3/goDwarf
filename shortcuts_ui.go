@@ -26,7 +26,7 @@ func makeShortcutsWindow() {
 	}
 	shortcutsWin = eui.NewWindow()
 	shortcutsWin.Title = "Shortcuts"
-	shortcutsWin.Size = eui.Point{X: 300, Y: 200}
+	shortcutsWin.Size = eui.Point{X: 500, Y: 500}
 	shortcutsWin.Closable = true
 	shortcutsWin.Movable = true
 	shortcutsWin.Resizable = true
@@ -38,8 +38,8 @@ func makeShortcutsWindow() {
 
 	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
 	addUserBtn, addUserEvents := eui.NewButton()
-	addUserBtn.Text = "Add User"
-	addUserBtn.Size = eui.Point{X: 90, Y: 24}
+	addUserBtn.Text = "Add for character"
+	addUserBtn.Size = eui.Point{X: 160, Y: 24}
 	addUserEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			openShortcutEditor("user")
@@ -47,8 +47,8 @@ func makeShortcutsWindow() {
 	}
 	btnRow.AddItem(addUserBtn)
 	addGlobalBtn, addGlobalEvents := eui.NewButton()
-	addGlobalBtn.Text = "Add Global"
-	addGlobalBtn.Size = eui.Point{X: 90, Y: 24}
+	addGlobalBtn.Text = "Add For All"
+	addGlobalBtn.Size = eui.Point{X: 160, Y: 24}
 	addGlobalEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			openShortcutEditor("global")
@@ -185,9 +185,9 @@ func refreshShortcutsList() {
 
 	// Determine row height from font metrics.
 	fontSize := gs.ConsoleFontSize
-    ui := eui.UIScale()
-    // Match EUI's render-time size (fontSize*ui + 2) so rows aren't under-sized.
-    facePx := float64(float32(fontSize)*ui) + 2
+	ui := eui.UIScale()
+	// Match EUI's render-time size (fontSize*ui + 2) so rows aren't under-sized.
+	facePx := float64(float32(fontSize)*ui) + 2
 	var goFace *text.GoTextFace
 	if src := eui.FontSource(); src != nil {
 		goFace = &text.GoTextFace{Source: src, Size: facePx}
@@ -219,44 +219,91 @@ func refreshShortcutsList() {
 	shortcutMu.RUnlock()
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].owner < plugins[j].owner })
 	for _, p := range plugins {
-		disp := pluginDisplayNames[p.owner]
-		if disp == "" {
-			disp = p.owner
-		}
-		ht, _ := eui.NewText()
-		ht.Text = disp + ":"
+    // Header label: for user, show the character name; for scripts, add (script)
+    var label string
+    if p.owner == "user" {
+        if name := effectiveCharacterName(); name != "" {
+            label = name
+        } else {
+            label = "user"
+        }
+    } else {
+        disp := pluginDisplayNames[p.owner]
+        if disp == "" {
+            disp = p.owner
+        }
+        label = disp
+        if p.owner != "global" {
+            label += " (script)"
+        }
+    }
+    ht, _ := eui.NewText()
+    ht.Text = label + ":"
 		ht.FontSize = float32(fontSize)
 		ht.Size = eui.Point{X: clientWAvail, Y: rowUnits}
 		shortcutsList.AddItem(ht)
-		sort.Slice(p.macros, func(i, j int) bool { return p.macros[i].short < p.macros[j].short })
-		for _, m := range p.macros {
-			row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
-			width := clientWAvail - rowUnits
-			if p.owner == "user" || p.owner == "global" {
-				width -= rowUnits
-			}
-			txt := fmt.Sprintf("  %s = %s", m.short, strings.TrimSpace(m.full))
-			t, _ := eui.NewText()
-			t.Text = txt
-			t.FontSize = float32(fontSize)
-			t.Size = eui.Point{X: width, Y: rowUnits}
-			row.AddItem(t)
-			if p.owner == "user" || p.owner == "global" {
-				delBtn, delEvents := eui.NewButton()
-				delBtn.Text = "X"
-				delBtn.Size = eui.Point{X: rowUnits, Y: rowUnits}
-				delBtn.FontSize = float32(fontSize)
-				owner := p.owner
-				short := m.short
-				delEvents.Handle = func(ev eui.UIEvent) {
-					if ev.Type == eui.EventClick {
-						removeShortcut(owner, short)
-					}
-				}
-				row.AddItem(delBtn)
-			}
-			shortcutsList.AddItem(row)
-		}
+    sort.Slice(p.macros, func(i, j int) bool { return p.macros[i].short < p.macros[j].short })
+    if p.owner == "user" || p.owner == "global" {
+        for _, m := range p.macros {
+            row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+            width := clientWAvail - rowUnits*1
+            if p.owner == "user" || p.owner == "global" {
+                width -= rowUnits
+            }
+            txt := fmt.Sprintf("  %s = %s", m.short, strings.TrimSpace(m.full))
+            t, _ := eui.NewText()
+            t.Text = txt
+            t.FontSize = float32(fontSize)
+            t.Size = eui.Point{X: width, Y: rowUnits}
+            row.AddItem(t)
+            delBtn, delEvents := eui.NewButton()
+            delBtn.Text = "X"
+            delBtn.Size = eui.Point{X: rowUnits, Y: rowUnits}
+            delBtn.FontSize = float32(fontSize)
+            owner := p.owner
+            short := m.short
+            delEvents.Handle = func(ev eui.UIEvent) {
+                if ev.Type == eui.EventClick {
+                    removeShortcut(owner, short)
+                }
+            }
+            row.AddItem(delBtn)
+            shortcutsList.AddItem(row)
+        }
+    } else {
+        // Script-provided shortcuts: show only a summary with a View button.
+        count := len(p.macros)
+        row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+        width := clientWAvail - (rowUnits * 4)
+        if width < rowUnits*4 {
+            width = clientWAvail
+        }
+        t, _ := eui.NewText()
+        if count == 1 {
+            t.Text = "  1 shortcut"
+        } else {
+            t.Text = fmt.Sprintf("  %d shortcuts", count)
+        }
+        t.FontSize = float32(fontSize)
+        t.Size = eui.Point{X: width, Y: rowUnits}
+        row.AddItem(t)
+        viewBtn, vh := eui.NewButton()
+        viewBtn.Text = "View"
+        viewBtn.Size = eui.Point{X: rowUnits * 3, Y: rowUnits}
+        viewBtn.FontSize = float32(fontSize)
+        owner := p.owner
+        vh.Handle = func(ev eui.UIEvent) {
+            if ev.Type == eui.EventClick {
+                makePluginsWindow()
+                selectPlugin(owner)
+                if pluginsWin != nil {
+                    pluginsWin.MarkOpen()
+                }
+            }
+        }
+        row.AddItem(viewBtn)
+        shortcutsList.AddItem(row)
+    }
 	}
 	if shortcutsWin != nil {
 		shortcutsWin.Refresh()
