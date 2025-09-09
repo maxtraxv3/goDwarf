@@ -185,8 +185,9 @@ func refreshShortcutsList() {
 
 	// Determine row height from font metrics.
 	fontSize := gs.ConsoleFontSize
-	ui := eui.UIScale()
-	facePx := float64(float32(fontSize) * ui)
+    ui := eui.UIScale()
+    // Match EUI's render-time size (fontSize*ui + 2) so rows aren't under-sized.
+    facePx := float64(float32(fontSize)*ui) + 2
 	var goFace *text.GoTextFace
 	if src := eui.FontSource(); src != nil {
 		goFace = &text.GoTextFace{Source: src, Size: facePx}
@@ -230,7 +231,7 @@ func refreshShortcutsList() {
 		sort.Slice(p.macros, func(i, j int) bool { return p.macros[i].short < p.macros[j].short })
 		for _, m := range p.macros {
 			row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
-			width := clientWAvail
+			width := clientWAvail - rowUnits
 			if p.owner == "user" || p.owner == "global" {
 				width -= rowUnits
 			}
@@ -244,7 +245,6 @@ func refreshShortcutsList() {
 				delBtn, delEvents := eui.NewButton()
 				delBtn.Text = "X"
 				delBtn.Size = eui.Point{X: rowUnits, Y: rowUnits}
-				delBtn.Position = eui.Point{X: -20, Y: 0}
 				delBtn.FontSize = float32(fontSize)
 				owner := p.owner
 				short := m.short
