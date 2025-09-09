@@ -2854,29 +2854,31 @@ loop:
 }
 
 func frameFlags(m []byte) uint16 {
-	flags := uint16(0)
-	if gPlayersListIsStale {
-		flags |= flagStale
-	}
-	// Determine tag; only draw-state messages (tag==2) can contain these blocks.
-	var tag uint16
-	if len(m) >= 2 {
-		tag = binary.BigEndian.Uint16(m[:2])
-		m = m[2:]
-	} else {
-		m = nil
-	}
-	if tag == 2 {
-		switch {
-		case looksLikeGameState(m):
-			flags |= flagGameState
-		case looksLikeMobileData(m):
-			flags |= flagMobileData
-		case looksLikePictureTable(m):
-			flags |= flagPictureTable
-		}
-	}
-	return flags
+    flags := uint16(0)
+    if gPlayersListIsStale {
+        flags |= flagStale
+    }
+    // Inspect the 2-byte message tag; only non-draw-state (tag != 2) messages
+    // contribute pre-frame block flags. For draw-state frames, the movie file
+    // flags should only reflect blocks we explicitly attach via AddBlock/WriteBlock.
+    var tag uint16
+    if len(m) >= 2 {
+        tag = binary.BigEndian.Uint16(m[:2])
+        m = m[2:]
+    } else {
+        m = nil
+    }
+    if tag != 2 {
+        switch {
+        case looksLikeGameState(m):
+            flags |= flagGameState
+        case looksLikeMobileData(m):
+            flags |= flagMobileData
+        case looksLikePictureTable(m):
+            flags |= flagPictureTable
+        }
+    }
+    return flags
 }
 
 func looksLikeGameState(m []byte) bool {

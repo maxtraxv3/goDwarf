@@ -55,6 +55,12 @@ var (
 )
 
 func main() {
+    // Ensure any active recording is finalized on exit.
+    defer func() {
+        if recorder != nil {
+            stopRecording()
+        }
+    }()
 	dumpTune := flag.String("dumpTune", "", "dump parsed note timings for the given tune string and exit")
 	dumpTempo := flag.Int("dumpTempo", 120, "tempo for -dumpTune (BPM)")
 	dumpInst := flag.Int("dumpInst", defaultInstrument, "instrument index for -dumpTune")
