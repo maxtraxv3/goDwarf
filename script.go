@@ -63,7 +63,7 @@ var basePluginExports = interp.Exports{
 	"gt/gt": {
 		"Console":          reflect.ValueOf(pluginConsole),
 		"ShowNotification": reflect.ValueOf(pluginShowNotification),
-		"ClientVersion":    reflect.ValueOf(&clientVersion).Elem(),
+		"clVersion":        reflect.ValueOf(&clVersion).Elem(),
 		"PlayerName":       reflect.ValueOf(pluginPlayerName),
 		"Players":          reflect.ValueOf(pluginPlayers),
 		"Inventory":        reflect.ValueOf(pluginInventory),

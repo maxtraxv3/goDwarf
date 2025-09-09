@@ -26,7 +26,7 @@ type movieFrame struct {
 	preData []byte
 }
 
-func parseMovie(path string, clientVersion int) ([]movieFrame, error) {
+func parseMovie(path string, clVersion int) ([]movieFrame, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

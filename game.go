@@ -2732,12 +2732,12 @@ func udpReadLoop(ctx context.Context, conn net.Conn) {
 				} else {
 					if flags&flagGameState != 0 {
 						payload := append([]byte(nil), m[2:]...)
-						parseGameState(payload, uint16(clientVersion), uint16(movieRevision))
+						parseGameState(payload, uint16(clVersion), uint16(movieRevision))
 						loginGameState = payload
 					}
 					if flags&flagMobileData != 0 {
 						payload := append([]byte(nil), m[2:]...)
-						parseMobileTable(payload, 0, uint16(clientVersion), uint16(movieRevision))
+						parseMobileTable(payload, 0, uint16(clVersion), uint16(movieRevision))
 						loginMobileData = payload
 					}
 					if flags&flagPictureTable != 0 {
@@ -2817,12 +2817,12 @@ loop:
 				} else {
 					if flags&flagGameState != 0 {
 						payload := append([]byte(nil), m[2:]...)
-						parseGameState(payload, uint16(clientVersion), uint16(movieRevision))
+						parseGameState(payload, uint16(clVersion), uint16(movieRevision))
 						loginGameState = payload
 					}
 					if flags&flagMobileData != 0 {
 						payload := append([]byte(nil), m[2:]...)
-						parseMobileTable(payload, 0, uint16(clientVersion), uint16(movieRevision))
+						parseMobileTable(payload, 0, uint16(clVersion), uint16(movieRevision))
 						loginMobileData = payload
 					}
 					if flags&flagPictureTable != 0 {
@@ -2858,13 +2858,23 @@ func frameFlags(m []byte) uint16 {
 	if gPlayersListIsStale {
 		flags |= flagStale
 	}
-	switch {
-	case looksLikeGameState(m):
-		flags |= flagGameState
-	case looksLikeMobileData(m):
-		flags |= flagMobileData
-	case looksLikePictureTable(m):
-		flags |= flagPictureTable
+	// Determine tag; only draw-state messages (tag==2) can contain these blocks.
+	var tag uint16
+	if len(m) >= 2 {
+		tag = binary.BigEndian.Uint16(m[:2])
+		m = m[2:]
+	} else {
+		m = nil
+	}
+	if tag == 2 {
+		switch {
+		case looksLikeGameState(m):
+			flags |= flagGameState
+		case looksLikeMobileData(m):
+			flags |= flagMobileData
+		case looksLikePictureTable(m):
+			flags |= flagPictureTable
+		}
 	}
 	return flags
 }

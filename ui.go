@@ -204,7 +204,7 @@ func init() {
 
 func initUI() {
 	var err error
-	status, err = checkDataFiles(clientVersion)
+	status, err = checkDataFiles(clVersion)
 	if err != nil {
 		logError("check data files: %v", err)
 	}
@@ -961,7 +961,7 @@ func makeMixerWindow() {
 				if ev.Checked {
 					gs.Music = true
 					musicMixSlider.Disabled = false
-					if s, err := checkDataFiles(clientVersion); err == nil {
+					if s, err := checkDataFiles(clVersion); err == nil {
 						status = s
 						if status.NeedSoundfont {
 							disableMusic()
@@ -999,7 +999,7 @@ func makeMixerWindow() {
 				if ev.Checked {
 					gs.ChatTTS = true
 					ttsMixSlider.Disabled = false
-					if s, err := checkDataFiles(clientVersion); err == nil {
+					if s, err := checkDataFiles(clVersion); err == nil {
 						status = s
 						if status.NeedPiper || status.NeedPiperFem || status.NeedPiperMale {
 							disableTTS()
@@ -1259,7 +1259,8 @@ func startRecording() {
 		base = "movie"
 	}
 	recordPath = filepath.Join(dir, fmt.Sprintf("%s__%s.clMov", base, ts))
-	mr, err := newMovieRecorder(recordPath, clientVersion, int(movieRevision))
+	// Use clVersion for the .clMov header version field as requested.
+	mr, err := newMovieRecorder(recordPath, clVersion, int(movieRevision))
 	if err != nil {
 		logError("record movie: %v", err)
 		recordPath = ""
@@ -1708,7 +1709,7 @@ func makeDownloadsWindow() {
 			dlMutex.Lock()
 			defer dlMutex.Unlock()
 
-			if err := downloadDataFiles(clientVersion, status, downloadSoundfont, downloadTTS, downloadTTS, downloadTTS); err != nil {
+			if err := downloadDataFiles(clVersion, status, downloadSoundfont, downloadTTS, downloadTTS, downloadTTS); err != nil {
 				logError("download data files: %v", err)
 				// Present inline Retry and Quit buttons
 				flow.Contents = []*eui.ItemData{statusText, pb}
@@ -1762,7 +1763,7 @@ func makeDownloadsWindow() {
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Sounds")
 				return
 			}
-			if s, err := checkDataFiles(clientVersion); err == nil {
+			if s, err := checkDataFiles(clVersion); err == nil {
 				status = s
 			}
 			if name == "" && loginWin != nil {
@@ -2163,15 +2164,15 @@ func startLogin() {
 		}(precacheWin)
 		return
 	}
-	if status.Version > 0 && clientVersion < status.Version {
-		msg := fmt.Sprintf("goThoom is only tested with version %d, it may still work with version %d.", clientVersion, status.Version)
+	if status.Version > 0 && clVersion < status.Version {
+		msg := fmt.Sprintf("goThoom is only tested with version %d, it may still work with version %d.", clVersion, status.Version)
 		showPopup(
 			"Untested Version",
 			msg,
 			[]popupButton{
 				{Text: "Cancel"},
 				{Text: "Proceed", Action: func() {
-					clientVersion = status.Version
+					clVersion = status.Version
 					startLogin()
 				}},
 			},
@@ -2185,7 +2186,7 @@ func startLogin() {
 		loginMu.Lock()
 		loginCancel = cancel
 		loginMu.Unlock()
-		if err := login(ctx, clientVersion); err != nil {
+		if err := login(ctx, clVersion); err != nil {
 			logError("login: %v", err)
 			pass = ""
 			// Bring login forward first so the popup stays on top
@@ -2257,7 +2258,7 @@ func makeLoginWindow() {
 	demoEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			go func() {
-				n, err := fetchRandomDemoCharacter(clientVersion)
+				n, err := fetchRandomDemoCharacter(clVersion)
 				if err != nil {
 					logError("demo: %v", err)
 					loginWin.MarkOpen()
@@ -2309,7 +2310,7 @@ func makeLoginWindow() {
 			loginWin.Close()
 			go func() {
 				drawStateEncrypted = false
-				frames, err := parseMovie(filename, clientVersion)
+				frames, err := parseMovie(filename, clVersion)
 				if err != nil {
 					logError("parse movie: %v", err)
 					clmov = ""
@@ -3493,7 +3494,7 @@ func makeSettingsWindow() {
 			SettingsLock.Lock()
 			defer SettingsLock.Unlock()
 
-			if s, err := checkDataFiles(clientVersion); err == nil {
+			if s, err := checkDataFiles(clVersion); err == nil {
 				status = s
 			}
 			if downloadWin != nil {

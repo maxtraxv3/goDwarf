@@ -60,7 +60,7 @@ const CL_ImagesFile = "CL_Images"
 const CL_SoundsFile = "CL_Sounds"
 
 // fetchRandomDemoCharacter retrieves the server's demo characters and returns one at random.
-func fetchRandomDemoCharacter(clientVersion int) (string, error) {
+func fetchRandomDemoCharacter(clVersion int) (string, error) {
 	imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
 	imagesMissing := false
 	if err != nil {
@@ -70,7 +70,7 @@ func fetchRandomDemoCharacter(clientVersion int) (string, error) {
 			imagesMissing = true
 		} else {
 			log.Printf("warning: %v", err)
-			imagesVersion = encodeFullVersion(clientVersion)
+			imagesVersion = encodeFullVersion(clVersion)
 		}
 	}
 
@@ -83,7 +83,7 @@ func fetchRandomDemoCharacter(clientVersion int) (string, error) {
 			soundsMissing = true
 		} else {
 			log.Printf("warning: %v", err)
-			soundsVersion = encodeFullVersion(clientVersion)
+			soundsVersion = encodeFullVersion(clVersion)
 		}
 	}
 
@@ -211,7 +211,7 @@ func fetchRandomDemoCharacter(clientVersion int) (string, error) {
 
 // login connects to the server and performs the login handshake.
 // It runs the network loops and blocks until the context is canceled.
-func login(ctx context.Context, clientVersion int) error {
+func login(ctx context.Context, clVersion int) error {
 	resetDrawState()
 	for {
 		imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
@@ -223,7 +223,7 @@ func login(ctx context.Context, clientVersion int) error {
 				imagesMissing = true
 			} else {
 				log.Printf("warning: %v", err)
-				imagesVersion = encodeFullVersion(clientVersion)
+				imagesVersion = encodeFullVersion(clVersion)
 			}
 		}
 
@@ -236,7 +236,7 @@ func login(ctx context.Context, clientVersion int) error {
 				soundsMissing = true
 			} else {
 				log.Printf("warning: %v", err)
-				soundsVersion = encodeFullVersion(clientVersion)
+				soundsVersion = encodeFullVersion(clVersion)
 			}
 		}
 

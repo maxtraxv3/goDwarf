@@ -38,25 +38,23 @@ var (
 	pass     string
 	passHash string
 
-	clmov         string
-	pcapPath      string
-	fake          bool
-	blockSound    bool
-	blockBubbles  bool
-	blockTTS      bool
-	blockMusic    bool
-	dumpMusic     bool
-	imgDump       bool
-	sndDump       bool
-	dumpBEPPTags  bool
-	musicDebug    bool
-	clientVersion int
-	experimental  bool
-	showUIScale   bool
+	clmov        string
+	pcapPath     string
+	fake         bool
+	blockSound   bool
+	blockBubbles bool
+	blockTTS     bool
+	blockMusic   bool
+	dumpMusic    bool
+	imgDump      bool
+	sndDump      bool
+	dumpBEPPTags bool
+	musicDebug   bool
+	experimental bool
+	showUIScale  bool
 )
 
 func main() {
-	clientVersion = clVersion
 	dumpTune := flag.String("dumpTune", "", "dump parsed note timings for the given tune string and exit")
 	dumpTempo := flag.Int("dumpTempo", 120, "tempo for -dumpTune (BPM)")
 	dumpInst := flag.Int("dumpInst", defaultInstrument, "instrument index for -dumpTune")
@@ -73,6 +71,7 @@ func main() {
 	flag.BoolVar(&experimental, "experimental", false, "enable experimental features like CL_Images/CL_Sounds patching")
 	flag.BoolVar(&showUIScale, "uiscale", false, "show UI scaling options")
 	genPGO := flag.Bool("pgo", false, "create default.pgo using test.clMov at 30 fps for 30s")
+	verifyPath := flag.String("verifyClmov", "", "verify a .clMov file by re-encoding and comparing")
 	flag.Parse()
 
 	// Classic timing and parser are always enabled; flags removed.
@@ -101,6 +100,14 @@ func main() {
 
 	if err := clipboard.Init(); err != nil {
 		log.Printf("clipboard init: %v", err)
+	}
+
+	if *verifyPath != "" {
+		if err := verifyClmov(*verifyPath, clVersion); err != nil {
+			log.Fatalf("verifyClmov: %v", err)
+		}
+		log.Printf("verifyClmov: OK")
+		return
 	}
 
 	if *genPGO {
@@ -183,7 +190,7 @@ func main() {
 	go func() {
 		if clmovPath != "" {
 			drawStateEncrypted = false
-			frames, err := parseMovie(clmovPath, clientVersion)
+			frames, err := parseMovie(clmovPath, clVersion)
 			if err != nil {
 				log.Fatalf("parse movie: %v", err)
 			}

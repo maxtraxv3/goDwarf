@@ -13,7 +13,7 @@ import (
 var tcpConn net.Conn
 
 // sendClientIdentifiers transmits the client, image and sound versions to the server.
-func sendClientIdentifiers(connection net.Conn, clientVersion, imagesVersion, soundsVersion uint32) error {
+func sendClientIdentifiers(connection net.Conn, clVersion, imagesVersion, soundsVersion uint32) error {
 	const kMsgIdentifiers = 19
 	uname := os.Getenv("USER")
 	if uname == "" {
@@ -43,12 +43,12 @@ func sendClientIdentifiers(connection net.Conn, clientVersion, imagesVersion, so
 	buf := make([]byte, 16+len(data))
 	binary.BigEndian.PutUint16(buf[0:2], kMsgIdentifiers)
 	binary.BigEndian.PutUint16(buf[2:4], 0)
-	binary.BigEndian.PutUint32(buf[4:8], clientVersion)
+	binary.BigEndian.PutUint32(buf[4:8], clVersion)
 	binary.BigEndian.PutUint32(buf[8:12], imagesVersion)
 	binary.BigEndian.PutUint32(buf[12:16], soundsVersion)
 	copy(buf[16:], data)
 	simpleEncrypt(buf[16:])
-	logDebug("identifiers client=%d images=%d sounds=%d", clientVersion, imagesVersion, soundsVersion)
+	logDebug("identifiers client=%d images=%d sounds=%d", clVersion, imagesVersion, soundsVersion)
 	return sendTCPMessage(connection, buf)
 }
 
