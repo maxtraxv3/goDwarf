@@ -1284,16 +1284,22 @@ func startRecording() {
 		base = "movie"
 	}
 	recordPath = filepath.Join(dir, fmt.Sprintf("%s__%s.clMov", base, ts))
-	// Use clVersion for the .clMov header version field as requested.
-	mr, err := newMovieRecorder(recordPath, clVersion, int(movieRevision))
-	if err != nil {
-		logError("record movie: %v", err)
-		recordPath = ""
-		return
-	}
+    // Use clVersion for the .clMov header version field as requested.
+    mr, err := newMovieRecorder(recordPath, clVersion, int(movieRevision))
+    if err != nil {
+        logError("record movie: %v", err)
+        recordPath = ""
+        return
+    }
     recorder = mr
-    // Preserve any captured initial-state blocks so they can be written
-    // ahead of the first recorded draw-state frame.
+    // If we are starting mid-session and haven't cached any initial blocks,
+    // synthesize a full initial GameState from the current draw state.
+    if len(loginGameState) == 0 && tcpConn != nil {
+        loginGameState = synthesizeInitialGameState(uint16(clVersion))
+        // Prefer a single GameState block; clear other cached tables.
+        loginMobileData = nil
+        loginPictureTable = nil
+    }
     wroteLoginBlocks = false
     consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
     updateRecordButton()
