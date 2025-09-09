@@ -12,8 +12,8 @@ import (
 const phases = 1024
 
 // Lanczos "a" parameter: 3 => 6 taps total (k=-2..+3)
-const a = 64
-const taps = 2 * a // 6
+const a = 128
+const taps = 2 * a
 
 // Low-pass cutoff as a fraction of source Nyquist
 // <1.0 trims near-Nyquist to reduce ringing on crusty 8 kHz assets
