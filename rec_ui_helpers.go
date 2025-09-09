@@ -23,27 +23,18 @@ func updateRecordButton() {
         base := *recordBtn.Theme
         recordBtnBaseTheme = &base
     }
+    // Always red to indicate recording control.
+    if recordBtn.Theme != nil {
+        th := *recordBtn.Theme
+        th.Button.Color = eui.ColorDarkRed
+        th.Button.HoverColor = eui.ColorRed
+        th.Button.ClickColor = eui.ColorLightRed
+        recordBtn.Theme = &th
+    }
     if recorder != nil || playingMovie || recordWhenConnected {
         recordBtn.Text = "STOP"
-        // Red theme when actively recording or armed to record.
-        if recorder != nil || recordWhenConnected {
-            if recordBtn.Theme != nil {
-                th := *recordBtn.Theme
-                th.Button.Color = eui.ColorDarkRed
-                th.Button.HoverColor = eui.ColorRed
-                th.Button.ClickColor = eui.ColorLightRed
-                recordBtn.Theme = &th
-            }
-        } else if recordBtnBaseTheme != nil {
-            base := *recordBtnBaseTheme
-            recordBtn.Theme = &base
-        }
     } else {
         recordBtn.Text = "Record"
-        if recordBtnBaseTheme != nil {
-            base := *recordBtnBaseTheme
-            recordBtn.Theme = &base
-        }
     }
     // Force re-render of the button and toolbar window
     recordBtn.Dirty = true

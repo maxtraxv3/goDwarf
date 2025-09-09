@@ -1292,9 +1292,8 @@ func startRecording() {
 		return
 	}
     recorder = mr
-    loginGameState = nil
-    loginMobileData = nil
-    loginPictureTable = nil
+    // Preserve any captured initial-state blocks so they can be written
+    // ahead of the first recorded draw-state frame.
     wroteLoginBlocks = false
     consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
     updateRecordButton()
@@ -1308,9 +1307,6 @@ func stopRecording() {
 		logError("record movie: %v", err)
 	}
     recorder = nil
-    loginGameState = nil
-    loginMobileData = nil
-    loginPictureTable = nil
     wroteLoginBlocks = false
     if recordPath != "" {
         saved := recordPath
