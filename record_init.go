@@ -69,24 +69,25 @@ func synthesizeInitialGameState(version uint16) []byte {
 	}
 
 	const descTableSize = 266
-	if len(indices) > 0 {
-		for _, iv := range indices {
-			idx := uint8(iv)
-			// Write index; include mobile if present by keeping idx < descTableSize
-			_ = binary.Write(&buf, binary.BigEndian, uint32(idx))
-			if m, ok := mobs[idx]; ok {
-				// state, H, V, Colors as uint32
-				_ = binary.Write(&buf, binary.BigEndian, uint32(m.State))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(uint16(m.H)))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(uint16(m.V)))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(m.Colors))
-			} else {
-				// No mobile: still write zeros for the 16-byte slot
-				_ = binary.Write(&buf, binary.BigEndian, uint32(0))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(0))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(0))
-				_ = binary.Write(&buf, binary.BigEndian, uint32(0))
-			}
+    if len(indices) > 0 {
+        for _, iv := range indices {
+            idx := uint8(iv)
+            // Write index: descriptor-only entries are encoded as idx+descTableSize
+            m, hasMob := mobs[idx]
+            encIdx := uint32(idx)
+            if !hasMob {
+                encIdx = uint32(int(idx) + descTableSize)
+            }
+            _ = binary.Write(&buf, binary.BigEndian, encIdx)
+            if hasMob {
+                // state, H, V, Colors as uint32
+                _ = binary.Write(&buf, binary.BigEndian, uint32(m.State))
+                _ = binary.Write(&buf, binary.BigEndian, uint32(uint16(m.H)))
+                _ = binary.Write(&buf, binary.BigEndian, uint32(uint16(m.V)))
+                _ = binary.Write(&buf, binary.BigEndian, uint32(m.Colors))
+            } else {
+                // No mobile: do not emit mobile slot bytes for descriptor-only entries
+            }
 
 			// Descriptor buffer
 			d, ok := descs[idx]
