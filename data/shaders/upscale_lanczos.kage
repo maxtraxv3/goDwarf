@@ -1,8 +1,9 @@
 package main
 
 var (
-	Scale float
-	Step  float
+	Scale  float
+	Step   float
+	Offset vec2
 )
 
 const (
@@ -27,7 +28,7 @@ func lanczos(x float) float {
 }
 
 func Fragment(pos vec4, texCoord vec2, color vec4) vec4 {
-	center := pos.xy * Step
+	center := (pos.xy - Offset) * Step
 	bx := floor(center.x)
 	by := floor(center.y)
 	var col vec4
