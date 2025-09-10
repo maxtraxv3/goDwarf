@@ -145,7 +145,7 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 			acc := int64(0)
 			j := 0
 			for k := -a + 1; k <= a; k++ {
-				s := int32(get(base + k))
+				s := int32(src[base+k+a])
 				acc += int64(wts[j]) * int64(s)
 				j++
 			}
