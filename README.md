@@ -37,7 +37,7 @@ Approximately 43,000 lines of Go code.
 - Animation frame blending for a far smoother and pleasant experience that helps the existing animations look their best
 - High quality adjustable game window resizing that retains sharpness with very little artifacts
 - High quality audio resampling that is very flattering to the original recordings and more pleasant to the ear
-* Resampling: (1024-Phase 128-Tap Lanczos Windowed-Sinc),
+* Resampling: (1024-Phase 8192-Tap Lanczos Windowed-Sinc),
 * Bit depth conversion: TPDF noise shaping with 257 scaling for the best 8-bit to 16-bit conversion possible
 - Much higher quality music synthisizer that is more flexible (currently uses a 309MB soundfont file) that is not tied to a dead dependency.
 - Built-in local AI text-to-speech with a large choice of voices available online
