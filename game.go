@@ -1367,14 +1367,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
 	if gs.LanczosUpscale && scaleDown > 1 {
-		step := 1 / scaleDown
 		geo := ebiten.GeoM{}
 		geo.Scale(sx, sy)
 		geo.Translate(tx, ty)
 		unis := map[string]any{
-			"Scale":  float32(scaleDown),
-			"Step":   float32(step),
-			"Offset": [2]float32{float32(tx), float32(ty)},
+			"SrcSize": [2]float32{float32(offW), float32(offH)},
 		}
 		sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
 		sop.Images[0] = worldView
