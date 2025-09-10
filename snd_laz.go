@@ -119,9 +119,16 @@ func putInt16Buf(buf []int16) {
 // to be retained beyond the immediate scope.
 // padDB: negative for attenuation (e.g. -3, -6). Non-negative is clamped to 0 dB.
 func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64) []int16 {
-	if len(src) == 0 || srcRate == dstRate {
+	if len(src) == 0 {
+		return nil
+	}
+
+	if srcRate == dstRate {
 		out := make([]int16, len(src))
 		copy(out, src)
+		if padDB != 0 {
+			return PadDB(out, padDB)
+		}
 		return out
 	}
 
