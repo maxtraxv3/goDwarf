@@ -2153,29 +2153,60 @@ func makePasswordWindow() {
 	passWin.AddWindow(false)
 }
 
-func startLogin() {
-	if (gs.precacheSounds || gs.precacheImages) && !assetsPrecached {
-		if precacheWin != nil {
-			return
-		}
-		var msg string
-		switch {
-		case gs.precacheImages && gs.precacheSounds:
-			msg = "Preloading images and sounds..."
-		case gs.precacheImages:
-			msg = "Preloading images..."
-		case gs.precacheSounds:
-			msg = "Preloading sounds..."
-		}
-		precacheWin = showPopup("Preloading", msg, nil)
-		go func(win *eui.WindowData) {
+func showPrecachePopup(onDone func()) {
+	if precacheWin != nil {
+		go func() {
 			for !assetsPrecached {
 				time.Sleep(100 * time.Millisecond)
 			}
-			win.Close()
-			precacheWin = nil
-			startLogin()
-		}(precacheWin)
+			onDone()
+		}()
+		return
+	}
+	var msg string
+	switch {
+	case gs.precacheImages && gs.precacheSounds:
+		msg = "Preloading images and sounds..."
+	case gs.precacheImages:
+		msg = "Preloading images..."
+	case gs.precacheSounds:
+		msg = "Preloading sounds..."
+	}
+	pb, _ := eui.NewProgressBar()
+	pb.Size = eui.Point{X: 300, Y: 14}
+	pb.MinValue = 0
+	pb.MaxValue = 1
+	pb.Value = 0
+	eui.SetProgressIndeterminate(pb, true)
+	precacheWin = showPopup("Preloading", msg, nil, pb)
+	precacheProgress = func(done, total int) {
+		if total > 0 {
+			eui.SetProgressIndeterminate(pb, false)
+			pb.MinValue = 0
+			pb.MaxValue = float32(total)
+			pb.Value = float32(done)
+		} else {
+			eui.SetProgressIndeterminate(pb, true)
+		}
+		pb.Dirty = true
+		if precacheWin != nil {
+			precacheWin.Refresh()
+		}
+	}
+	go func(win *eui.WindowData) {
+		for !assetsPrecached {
+			time.Sleep(100 * time.Millisecond)
+		}
+		win.Close()
+		precacheWin = nil
+		precacheProgress = nil
+		onDone()
+	}(precacheWin)
+}
+
+func startLogin() {
+	if (gs.precacheSounds || gs.precacheImages) && !assetsPrecached {
+		showPrecachePopup(startLogin)
 		return
 	}
 	if status.Version > 0 && clVersion < status.Version {
@@ -2337,12 +2368,12 @@ func makeLoginWindow() {
 				ctx, cancel := context.WithCancel(gameCtx)
 				mp := newMoviePlayer(frames, clMovFPS, cancel)
 				mp.makePlaybackWindow()
+				run := func() { go mp.run(ctx) }
 				if (gs.precacheSounds || gs.precacheImages) && !assetsPrecached {
-					for !assetsPrecached {
-						time.Sleep(100 * time.Millisecond)
-					}
+					showPrecachePopup(run)
+				} else {
+					run()
 				}
-				go mp.run(ctx)
 			}()
 		}
 	}
