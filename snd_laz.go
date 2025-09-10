@@ -234,7 +234,7 @@ func PadDB(samples []int16, padDB float64) []int16 {
 		return out
 	}
 
-	scale := math.Pow(10, -padDB/20.0)
+	scale := math.Pow(10, padDB/20.0)
 	out := make([]int16, len(samples))
 
 	for i, s := range samples {
