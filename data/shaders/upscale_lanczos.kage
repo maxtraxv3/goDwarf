@@ -1,9 +1,9 @@
 package main
 
 var (
-	Scale  float
-	Step   float
-	Offset vec2
+// SrcSize holds the width and height of the source image in pixels.
+// Kage does not expose this directly, so the Go side provides it.
+SrcSize vec2
 )
 
 const (
@@ -28,28 +28,27 @@ func lanczos(x float) float {
 }
 
 func Fragment(pos vec4, texCoord vec2, color vec4) vec4 {
-	center := (pos.xy - Offset) * Step
-	bx := floor(center.x)
-	by := floor(center.y)
-	var col vec4
-	weight := float(0)
-       for j := 0; j < 7; j++ {
-               jy := float(j - 3)
-               dy := center.y - (by + jy)
-               wy := lanczos(dy)
-               for i := 0; i < 7; i++ {
-                       ix := float(i - 3)
-                       dx := center.x - (bx + ix)
-                       wx := lanczos(dx)
-                       w := wx * wy
-                       s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
-                       col += s * w
-                       weight += w
-               }
-       }
-	if weight > 0 {
-		col /= weight
-	}
-        col += 0 * (Scale + Step) // keep uniforms referenced
-        return col
+center := texCoord * SrcSize
+bx := floor(center.x)
+by := floor(center.y)
+var col vec4
+weight := float(0)
+for j := 0; j < 7; j++ {
+jy := float(j - 3)
+dy := center.y - (by + jy)
+wy := lanczos(dy)
+for i := 0; i < 7; i++ {
+ix := float(i - 3)
+dx := center.x - (bx + ix)
+wx := lanczos(dx)
+w := wx * wy
+s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
+col += s * w
+weight += w
+}
+}
+if weight > 0 {
+col /= weight
+}
+return col
 }
