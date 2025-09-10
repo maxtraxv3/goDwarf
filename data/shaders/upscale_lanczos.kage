@@ -32,20 +32,20 @@ func Fragment(pos vec4, texCoord vec2, color vec4) vec4 {
 	by := floor(center.y)
 	var col vec4
 	weight := float(0)
-	for j := 0; j < 5; j++ {
-		jy := float(j - 2)
-		dy := center.y - (by + jy)
-		wy := lanczos(dy)
-		for i := 0; i < 5; i++ {
-			ix := float(i - 2)
-			dx := center.x - (bx + ix)
-			wx := lanczos(dx)
-			w := wx * wy
-			s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
-			col += s * w
-			weight += w
-		}
-	}
+       for j := 0; j < 7; j++ {
+               jy := float(j - 3)
+               dy := center.y - (by + jy)
+               wy := lanczos(dy)
+               for i := 0; i < 7; i++ {
+                       ix := float(i - 3)
+                       dx := center.x - (bx + ix)
+                       wx := lanczos(dx)
+                       w := wx * wy
+                       s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
+                       col += s * w
+                       weight += w
+               }
+       }
 	if weight > 0 {
 		col /= weight
 	}
