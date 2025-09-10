@@ -1366,11 +1366,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-	if gs.LanczosUpscale && scaleDown > 1 {
+	if gs.LanczosUpscale && gs.GameScale > 1 {
 		geo := ebiten.GeoM{}
 		geo.Scale(sx, sy)
 		geo.Translate(tx, ty)
-		nnScale := float32(offIntScale)
+		nnScale := float32(gs.GameScale)
 		unis := map[string]any{
 			"SrcSize":    [2]float32{float32(offW) / nnScale, float32(offH) / nnScale},
 			"SampleStep": [2]float32{nnScale / float32(offW), nnScale / float32(offH)},
