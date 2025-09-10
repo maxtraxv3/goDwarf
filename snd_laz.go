@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/bits"
 	"runtime"
 	"sync"
 )
@@ -23,13 +24,20 @@ const cutoff = 0.95
 
 // Precomputed table: [phase][tap] in Q15
 var (
+	fracBits     int
 	lzW          [phases][taps]int16
 	int16BufPool = sync.Pool{
 		New: func() any { return make([]int16, 0, 48000) },
 	}
 )
 
-func init() { initLanczosTable() }
+func init() {
+	fracBits = bits.TrailingZeros(uint(phases))
+	if 1<<fracBits != phases {
+		panic("phases must be power of two")
+	}
+	initLanczosTable()
+}
 
 // sincπ(x) = sin(πx)/(πx), with sincπ(0)=1
 func sincpi(x float64) float64 {
@@ -151,7 +159,7 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 	process := func(start, end int, phase uint64) {
 		for i := start; i < end; i++ {
 			base := int(phase >> 32)
-			fracIdx := int((phase >> (32 - 10)) & (phases - 1))
+			fracIdx := int((phase >> (32 - fracBits)) & uint64(phases-1))
 			wts := lzW[fracIdx]
 
 			acc := int64(0)
@@ -193,7 +201,7 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 			defer wg.Done()
 			for i := start; i < end; i++ {
 				base := int(phase >> 32)
-				fracIdx := int((phase >> (32 - 10)) & (phases - 1))
+				fracIdx := int((phase >> (32 - fracBits)) & uint64(phases-1))
 				wts := lzW[fracIdx]
 
 				acc := int64(0)
