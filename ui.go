@@ -4572,6 +4572,18 @@ func makeDebugWindow() {
 	}
 	debugFlow.AddItem(pluginOutCB)
 
+	lanczosCB, lanczosEvents := eui.NewCheckbox()
+	lanczosCB.Text = "Lanczos Upscale Filter (experimental)"
+	lanczosCB.Size = eui.Point{X: width, Y: 24}
+	lanczosCB.Checked = gs.LanczosUpscale
+	lanczosEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.LanczosUpscale = ev.Checked
+			settingsDirty = true
+		}
+	}
+	debugFlow.AddItem(lanczosCB)
+
 	// Add a small "Reload" button beside the shader checkbox for hot-reload.
 	reloadBtn, reloadEv := eui.NewButton()
 	reloadBtn.Text = "Reload Shaders"

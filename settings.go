@@ -120,6 +120,7 @@ var gsdef settings = settings{
 	JoystickCursorDeadzone: 0.1,
 	ThrottleSounds:         true,
 	ShaderLighting:         true,
+	LanczosUpscale:         false,
 	NightEffect:            true,
 
 	GameWindow:      WindowState{Open: true},
@@ -259,6 +260,7 @@ type settings struct {
 	vsync             bool
 	NightEffect       bool
 	ShaderLighting    bool
+	LanczosUpscale    bool
 	precacheSounds    bool
 	precacheImages    bool
 	smoothMoving      bool

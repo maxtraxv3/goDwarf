@@ -1,0 +1,52 @@
+package main
+
+var (
+    Src   image
+    Scale float
+    Step  float
+)
+
+const radius = 3.0
+
+func sinc(x float) float {
+    x = abs(x)
+    if x < 1e-5 {
+        return 1
+    }
+    x *= pi
+    return sin(x) / x
+}
+
+func lanczos(x float) float {
+    if x <= -radius || x >= radius {
+        return 0
+    }
+    return sinc(x) * sinc(x/radius)
+}
+
+func Fragment(pos vec4, texCoord vec2, color vec4) vec4 {
+    center := pos.xy * Step
+    bx := floor(center.x)
+    by := floor(center.y)
+    var col vec4
+    weight := float(0)
+    for j := 0; j < 5; j++ {
+        jy := float(j-2)
+        dy := center.y - (by + jy)
+        wy := lanczos(dy)
+        for i := 0; i < 5; i++ {
+            ix := float(i-2)
+            dx := center.x - (bx + ix)
+            wx := lanczos(dx)
+            w := wx * wy
+            s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
+            col += s * w
+            weight += w
+        }
+    }
+    if weight > 0 {
+        col /= weight
+    }
+    col *= Scale * Step // keep uniforms referenced
+    return col
+}
