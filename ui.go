@@ -1164,8 +1164,8 @@ func makeToolbar() {
 }
 
 var (
-	overlayHandOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-	overlayItemOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	overlayHandOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+	overlayItemOpts = &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
 )
 
 func overlayItemOnHand(hand, item *ebiten.Image) *ebiten.Image {

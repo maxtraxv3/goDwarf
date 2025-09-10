@@ -52,7 +52,6 @@ func initAboutUI() {
 	header.Text = "Patreon Supporters"
 	header.FontSize = 15
 	header.Fixed = true
-	header.Size.Y = 20
 	patreonList = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Scrollable: true, Fixed: true}
 	patreonList.Size.Y = 60
 	patreonBox.AddItem(header)

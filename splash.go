@@ -68,7 +68,7 @@ func drawSplash(screen *ebiten.Image, ox, oy int) {
 	}
 	scaledW := float64(iw) * s
 	scaledH := float64(ih) * s
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
 	op.GeoM.Scale(s, s)
 	tx := float64(ox) + (float64(sw)-scaledW)/2
 	ty := float64(oy) + (float64(sh)-scaledH)/2
@@ -91,7 +91,7 @@ func drawBackground(screen *ebiten.Image) {
 	}
 	scaledW := float64(iw) * s
 	scaledH := float64(ih) * s
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
 	op.GeoM.Scale(s, s)
 	tx := (float64(sw) - scaledW) / 2
 	ty := (float64(sh) - scaledH) / 2
