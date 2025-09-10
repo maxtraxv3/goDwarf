@@ -2,6 +2,7 @@ package main
 
 import (
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -34,6 +35,7 @@ func clearCaches() {
 }
 
 var assetsPrecached = false
+var precacheProgress func(done, total int)
 
 func precacheAssets() {
 
@@ -58,12 +60,28 @@ func precacheAssets() {
 		consoleMessage(preloadMsg)
 	}
 
+	var total int
+	if gs.precacheImages && clImages != nil {
+		total += len(clImages.IDs())
+	}
+	if gs.precacheSounds && clSounds != nil {
+		total += len(clSounds.IDs())
+	}
+	if precacheProgress != nil {
+		precacheProgress(0, total)
+	}
+
+	var done int32
 	wg := sizedwaitgroup.New(runtime.NumCPU())
 	if gs.precacheImages && clImages != nil {
 		for _, id := range clImages.IDs() {
 			wg.Add()
 			go func(id uint32) {
 				loadSheet(uint16(id), nil, false)
+				if precacheProgress != nil {
+					n := int(atomic.AddInt32(&done, 1))
+					precacheProgress(n, total)
+				}
 				wg.Done()
 			}(id)
 		}
@@ -74,11 +92,18 @@ func precacheAssets() {
 			wg.Add()
 			go func(id uint32) {
 				loadSound(uint16(id))
+				if precacheProgress != nil {
+					n := int(atomic.AddInt32(&done, 1))
+					precacheProgress(n, total)
+				}
 				wg.Done()
 			}(id)
 		}
 	}
 	wg.Wait()
+	if precacheProgress != nil {
+		precacheProgress(total, total)
+	}
 	assetsPrecached = true
 
 	var doneMsg string
