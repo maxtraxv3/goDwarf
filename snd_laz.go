@@ -84,8 +84,10 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 		return out
 	}
 
+	origLen := len(src)
+
 	// Output length (safe; includes last contributing center sample).
-	n := int((int64(len(src)-1)*int64(dstRate))/int64(srcRate)) + 1
+	n := int((int64(origLen-1)*int64(dstRate))/int64(srcRate)) + 1
 	if n <= 0 {
 		return nil
 	}
@@ -104,16 +106,14 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 	}
 	scaleQ15 := int64(math.Round(scale * 32768.0))
 
-	// Clamp accessor (hold endpoints) to avoid boundary clicks.
-	get := func(i int) int16 {
-		if i < 0 {
-			return src[0]
-		}
-		if i >= len(src) {
-			return src[len(src)-1]
-		}
-		return src[i]
+	// Pre-pad src with a copies of first and last samples.
+	padded := make([]int16, origLen+2*a)
+	for i := 0; i < a; i++ {
+		padded[i] = src[0]
+		padded[origLen+a+i] = src[origLen-1]
 	}
+	copy(padded[a:], src)
+	src = padded
 
 	workers := runtime.NumCPU()
 	if workers > n {
@@ -133,11 +133,9 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 				wts := lzW[fracIdx]
 
 				acc := int64(0)
-				j := 0
-				for k := -a + 1; k <= a; k++ {
-					s := int32(get(base + k))
-					acc += int64(wts[j]) * int64(s)
-					j++
+				s := src[base+1 : base+1+taps]
+				for j, wt := range wts {
+					acc += int64(wt) * int64(s[j])
 				}
 
 				y := int32((acc*scaleQ15 + (1 << 29)) >> 30)
