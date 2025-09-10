@@ -49,6 +49,6 @@ func Fragment(pos vec4, texCoord vec2, color vec4) vec4 {
 	if weight > 0 {
 		col /= weight
 	}
-	col *= Scale * Step // keep uniforms referenced
-	return col
+        col += 0 * (Scale + Step) // keep uniforms referenced
+        return col
 }
