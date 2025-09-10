@@ -75,6 +75,9 @@ Piper voices are stored in `data/piper/voices`. The client and `build-scripts/do
 ### Downloading TTS files and soundfonts
 Use the **Download Files** window to fetch optional resources. The TTS option downloads the Piper binary and English voices for chat speech, while the soundfont enables higher quality music playback. Both boxes are checked by default and can be unchecked to skip their downloads.
 
+### Low-end hardware
+Enable **Potato GPU (low VRAM)** in Settings → Graphics if your system or driver only supports textures up to 4096×4096 pixels (for example, Raspberry Pi or very old GPUs). This mode uses smaller textures to avoid driver issues.
+
 ## Using the UI
 
 - Windows: Click the `Windows` toolbar button to toggle common panels: Players, Inventory, Chat, Console, Help, Hotkeys, Shortcuts, Mixer, Settings, and more. Window layout and open/closed state persist between runs.

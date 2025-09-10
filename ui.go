@@ -80,6 +80,8 @@ var windowsHelpCB *eui.ItemData
 var hudWin *eui.WindowData
 var rightHandImg *eui.ItemData
 var leftHandImg *eui.ItemData
+var shaderWarnWin *eui.WindowData
+var shaderWarnDontShowCB *eui.ItemData
 
 var (
 	sheetCacheLabel  *eui.ItemData
@@ -3778,6 +3780,77 @@ func confirmQuit() {
 			}},
 		},
 	)
+}
+
+// showShaderDisablePrompt suggests turning off shaders when performance is poor.
+func showShaderDisablePrompt() {
+	if shaderWarnWin != nil {
+		return
+	}
+	shaderWarnWin = eui.NewWindow()
+	shaderWarnWin.Title = "Low FPS Detected"
+	shaderWarnWin.Closable = false
+	shaderWarnWin.Resizable = false
+	shaderWarnWin.AutoSize = true
+	shaderWarnWin.Movable = true
+	shaderWarnWin.NoScroll = true
+	shaderWarnWin.SetZone(eui.HZoneRight, eui.VZoneTop)
+
+	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+
+	msg, _ := eui.NewText()
+	msg.Text = "FPS has been under 50 for a while. Disabling shaders may help."
+	msg.FontSize = 12
+	msg.Size = eui.Point{X: 280, Y: 36}
+	flow.AddItem(msg)
+
+	shaderWarnDontShowCB, _ = eui.NewCheckbox()
+	shaderWarnDontShowCB.Text = "Don't show again"
+	shaderWarnDontShowCB.Size = eui.Point{X: 280, Y: 24}
+	flow.AddItem(shaderWarnDontShowCB)
+
+	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true, Alignment: eui.ALIGN_RIGHT}
+	btnRow.Size = eui.Point{X: 280, Y: 28}
+
+	cancelBtn, cancelEv := eui.NewButton()
+	cancelBtn.Text = "Cancel"
+	cancelBtn.Size = eui.Point{X: 80, Y: 24}
+	cancelEv.Handle = func(ev eui.UIEvent) {
+		if ev.Type != eui.EventClick {
+			return
+		}
+		if shaderWarnDontShowCB != nil && shaderWarnDontShowCB.Checked {
+			gs.PromptDisableShaders = false
+			settingsDirty = true
+			saveSettings()
+		}
+		shaderWarnWin.Close()
+	}
+	btnRow.AddItem(cancelBtn)
+
+	disableBtn, disableEv := eui.NewButton()
+	disableBtn.Text = "Disable Shaders"
+	disableBtn.Size = eui.Point{X: 120, Y: 24}
+	disableEv.Handle = func(ev eui.UIEvent) {
+		if ev.Type != eui.EventClick {
+			return
+		}
+		if shaderWarnDontShowCB != nil && shaderWarnDontShowCB.Checked {
+			gs.PromptDisableShaders = false
+		}
+		gs.ShaderLighting = false
+		settingsDirty = true
+		applySettings()
+		saveSettings()
+		shaderWarnWin.Close()
+	}
+	btnRow.AddItem(disableBtn)
+
+	flow.AddItem(btnRow)
+
+	shaderWarnWin.AddItem(flow)
+	shaderWarnWin.AddWindow(true)
+	shaderWarnWin.MarkOpen()
 }
 
 // confirmRemoveCharacter prompts before deleting a saved character.

@@ -263,16 +263,18 @@ var gameStarted = make(chan struct{})
 const framems = 200
 
 var (
-	frameCh       = make(chan struct{}, 1)
-	lastFrameTime time.Time
-	frameInterval = framems * time.Millisecond
-	intervalHist  = map[int]int{}
-	frameMu       sync.Mutex
-	serverFPS     float64
-	netLatency    time.Duration
-	netJitter     time.Duration
-	lastInputSent time.Time
-	latencyMu     sync.Mutex
+	frameCh         = make(chan struct{}, 1)
+	lastFrameTime   time.Time
+	frameInterval   = framems * time.Millisecond
+	intervalHist    = map[int]int{}
+	frameMu         sync.Mutex
+	serverFPS       float64
+	netLatency      time.Duration
+	netJitter       time.Duration
+	lastInputSent   time.Time
+	latencyMu       sync.Mutex
+	lowFPSSince     time.Time
+	shaderWarnShown bool
 )
 
 var (
@@ -1116,6 +1118,20 @@ func (g *Game) Update() error {
 	}
 
 	queueInput(inputState{mouseX: x, mouseY: y, mouseDown: walk})
+
+	// Warn about poor performance and suggest disabling shaders.
+	if tcpConn != nil && gs.ShaderLighting && gs.PromptDisableShaders && !shaderWarnShown {
+		if ebiten.ActualFPS() < 50 {
+			if lowFPSSince.IsZero() {
+				lowFPSSince = now
+			} else if now.Sub(lowFPSSince) >= 30*time.Second {
+				shaderWarnShown = true
+				showShaderDisablePrompt()
+			}
+		} else {
+			lowFPSSince = time.Time{}
+		}
+	}
 
 	updateHotkeyRecording()
 	checkHotkeys()
