@@ -4,6 +4,8 @@ var (
 // SrcSize holds the width and height of the source image in pixels.
 // Kage does not expose this directly, so the Go side provides it.
 SrcSize vec2
+// SampleStep is the pixel distance between original texels in the source image.
+SampleStep float
 )
 
 const (
@@ -42,7 +44,8 @@ ix := float(i - 3)
 dx := center.x - (bx + ix)
 wx := lanczos(dx)
 w := wx * wy
-s := imageSrc0UnsafeAt(vec2(bx+ix, by+jy))
+src := vec2((bx+ix)*SampleStep, (by+jy)*SampleStep)
+s := imageSrc0UnsafeAt(src)
 col += s * w
 weight += w
 }
