@@ -502,6 +502,7 @@ func loadSound(id uint16) []byte {
 	} else {
 		samples = PadDB(samples, dbPad)
 	}
+	defer putInt16Buf(samples) // return pooled buffer
 
 	applyFadeInOut(samples, dstRate)
 
