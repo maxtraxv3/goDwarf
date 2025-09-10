@@ -11,8 +11,10 @@ import (
 // Polyphase resolution: 1024 fractional steps
 const phases = 1024
 
-// Lanczos "a" parameter: 3 => 6 taps total (k=-2..+3)
-const a = 128
+// Lanczos "a" parameter
+const a = 4
+
+// Taps per phase
 const taps = 2 * a
 
 // Low-pass cutoff as a fraction of source Nyquist
