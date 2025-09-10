@@ -70,12 +70,24 @@ func initLanczosTable() {
 		inv := 1.0 / sum
 		total := 0
 		for i := 0; i < taps; i++ {
-			lzW[p][i] = int16(math.Round(wf[i] * inv * 32768.0))
+			val := math.Round(wf[i] * inv * 32767.0)
+			if val > 32767 {
+				val = 32767
+			} else if val < -32768 {
+				val = -32768
+			}
+			lzW[p][i] = int16(val)
 			total += int(lzW[p][i])
 		}
 		// Nudge the central-ish tap (k=0 -> index a-1) to force exact sum=32768
 		diff := 32768 - total
-		lzW[p][a-1] += int16(diff)
+		v := int(lzW[p][a-1]) + diff
+		if v > 32767 {
+			v = 32767
+		} else if v < -32768 {
+			v = -32768
+		}
+		lzW[p][a-1] = int16(v)
 	}
 }
 
