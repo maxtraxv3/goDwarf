@@ -115,6 +115,37 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 		return src[i]
 	}
 
+	process := func(start, end int, phase uint64) {
+		for i := start; i < end; i++ {
+			base := int(phase >> 32)
+			fracIdx := int((phase >> (32 - 10)) & (phases - 1))
+			wts := lzW[fracIdx]
+
+			acc := int64(0)
+			j := 0
+			for k := -a + 1; k <= a; k++ {
+				s := int32(get(base + k))
+				acc += int64(wts[j]) * int64(s)
+				j++
+			}
+
+			y := int32((acc*scaleQ15 + (1 << 29)) >> 30)
+			if y > 32767 {
+				y = 32767
+			} else if y < -32768 {
+				y = -32768
+			}
+			dst[i] = int16(y)
+			phase += step
+		}
+	}
+
+	const threshold = 2048
+	if n < threshold {
+		process(0, n, 0)
+		return dst
+	}
+
 	workers := runtime.NumCPU()
 	if workers > n {
 		workers = n
@@ -127,28 +158,7 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 		wg.Add(1)
 		go func(start, end int, phase uint64) {
 			defer wg.Done()
-			for i := start; i < end; i++ {
-				base := int(phase >> 32)
-				fracIdx := int((phase >> (32 - 10)) & (phases - 1))
-				wts := lzW[fracIdx]
-
-				acc := int64(0)
-				j := 0
-				for k := -a + 1; k <= a; k++ {
-					s := int32(get(base + k))
-					acc += int64(wts[j]) * int64(s)
-					j++
-				}
-
-				y := int32((acc*scaleQ15 + (1 << 29)) >> 30)
-				if y > 32767 {
-					y = 32767
-				} else if y < -32768 {
-					y = -32768
-				}
-				dst[i] = int16(y)
-				phase += step
-			}
+			process(start, end, phase)
 		}(start, end, phase)
 	}
 	wg.Wait()
