@@ -22,7 +22,12 @@ const taps = 2 * a
 const cutoff = 0.95
 
 // Precomputed table: [phase][tap] in Q15
-var lzW [phases][taps]int16
+var (
+	lzW          [phases][taps]int16
+	int16BufPool = sync.Pool{
+		New: func() any { return make([]int16, 0, 48000) },
+	}
+)
 
 func init() { initLanczosTable() }
 
@@ -74,8 +79,24 @@ func initLanczosTable() {
 	}
 }
 
+func getInt16Buf(n int) []int16 {
+	buf := int16BufPool.Get().([]int16)
+	if cap(buf) < n {
+		buf = make([]int16, n)
+	}
+	return buf[:n]
+}
+
+func putInt16Buf(buf []int16) {
+	int16BufPool.Put(buf[:0])
+}
+
 // ResampleLanczosInt16PadDB resamples mono int16 from srcRate→dstRate using
 // Lanczos-3 (band-limited) with a *built-in dB pad* applied BEFORE int16 quantization.
+//
+// The returned slice is taken from an internal sync.Pool. Callers must treat it as
+// temporary and return it with putInt16Buf once finished. Copy the data if it needs
+// to be retained beyond the immediate scope.
 // padDB: negative for attenuation (e.g. -3, -6). Non-negative is clamped to 0 dB.
 func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64) []int16 {
 	if len(src) == 0 || srcRate == dstRate {
@@ -91,7 +112,7 @@ func ResampleLanczosInt16PadDB(src []int16, srcRate, dstRate int, padDB float64)
 	if n <= 0 {
 		return nil
 	}
-	dst := make([]int16, n)
+	dst := getInt16Buf(n)
 
 	// Q32.32 phase step
 	step := (uint64(srcRate) << 32) / uint64(dstRate)
