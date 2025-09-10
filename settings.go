@@ -108,6 +108,7 @@ var gsdef settings = settings{
 	NotificationDuration:   6,
 	PluginSpamKill:         true,
 	PromptOnSaveRecording:  true,
+	PromptDisableShaders:   true,
 	TimestampFormat:        "3:04PM",
 	LastUpdateCheck:        time.Time{},
 	NotifiedVersion:        0,
@@ -213,6 +214,7 @@ type settings struct {
 	NotificationDuration  float64
 	PluginSpamKill        bool
 	PromptOnSaveRecording bool
+	PromptDisableShaders  bool
 	ChatTimestamps        bool
 	ConsoleTimestamps     bool
 	TimestampFormat       string

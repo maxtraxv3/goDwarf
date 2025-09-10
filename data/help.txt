@@ -52,3 +52,7 @@ Extras
 - Custom background: place `background.png` in the `data/` directory.
 - Custom splash image (pre-login): place `splash.png` in `data/`.
 - Music test: `/play <instrument-number> <notes>` (e.g., `/play 10 cdefg`).
+
+Low-end Hardware
+----------------
+If your device or driver only supports textures up to 4096x4096 pixels (such as a Raspberry Pi), enable "Potato GPU (low VRAM)" under Settings → Graphics to use smaller textures.

@@ -320,11 +320,11 @@ func login(ctx context.Context, clVersion int) error {
 			udpConn.Close()
 			return fmt.Errorf("character password required")
 		}
-        playerName = utfFold(name)
-        applyLocalLabels()
-        applyEnabledPlugins()
-        // Reload user-specific shortcuts for the selected character.
-        loadShortcuts()
+		playerName = utfFold(name)
+		applyLocalLabels()
+		applyEnabledPlugins()
+		// Reload user-specific shortcuts for the selected character.
+		loadShortcuts()
 
 		var resp []byte
 		var result int16
@@ -409,6 +409,11 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		logDebug("login succeeded, reading messages (Ctrl-C to quit)...")
+
+		// Reset low FPS warning state for the new session.
+		shaderWarnShown = false
+		lowFPSSince = time.Time{}
+		shaderWarnWin = nil
 
 		inputMu.Lock()
 		s := latestInput
