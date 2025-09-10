@@ -1372,8 +1372,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		geo.Scale(sx, sy)
 		geo.Translate(tx, ty)
 		unis := map[string]any{
-			"Scale": float32(scaleDown),
-			"Step":  float32(step),
+			"Scale":  float32(scaleDown),
+			"Step":   float32(step),
+			"Offset": [2]float32{float32(tx), float32(ty)},
 		}
 		sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
 		sop.Images[0] = worldView
