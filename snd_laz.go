@@ -112,7 +112,7 @@ func putInt16Buf(buf []int16) {
 }
 
 // ResampleLanczosInt16PadDB resamples mono int16 from srcRate→dstRate using
-// Lanczos-3 (band-limited) with a *built-in dB pad* applied BEFORE int16 quantization.
+// Lanczos-4 (band-limited) with a *built-in dB pad* applied BEFORE int16 quantization.
 //
 // The returned slice is taken from an internal sync.Pool. Callers must treat it as
 // temporary and return it with putInt16Buf once finished. Copy the data if it needs
