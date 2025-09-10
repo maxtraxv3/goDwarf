@@ -1366,18 +1366,33 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-	op := acquireDrawOpts()
-	op.Filter = ebiten.FilterLinear
-	op.DisableMipmaps = true
-	if isExactInt {
-		op.Filter = ebiten.FilterNearest
+	if gs.LanczosUpscale && scaleDown > 1 {
+		step := 1 / scaleDown
+		geo := ebiten.GeoM{}
+		geo.Scale(sx, sy)
+		geo.Translate(tx, ty)
+		unis := map[string]any{
+			"Scale": float32(scaleDown),
+			"Step":  float32(step),
+		}
+		sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
+		sop.Images[0] = worldView
+		sop.GeoM = geo
+		gameImage.DrawRectShader(offW, offH, upscaleShader, &sop)
+	} else {
+		op := acquireDrawOpts()
+		op.Filter = ebiten.FilterLinear
+		op.DisableMipmaps = true
+		if isExactInt {
+			op.Filter = ebiten.FilterNearest
+		}
+		// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
+		op.Blend = ebiten.BlendCopy
+		op.GeoM.Scale(sx, sy)
+		op.GeoM.Translate(tx, ty)
+		gameImage.DrawImage(worldView, op)
+		releaseDrawOpts(op)
 	}
-	// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
-	op.Blend = ebiten.BlendCopy
-	op.GeoM.Scale(sx, sy)
-	op.GeoM.Translate(tx, ty)
-	gameImage.DrawImage(worldView, op)
-	releaseDrawOpts(op)
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
