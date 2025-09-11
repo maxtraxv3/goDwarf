@@ -142,46 +142,7 @@ func updateGameImageSize() {
 	gameImageItem.Position = eui.Point{X: 2 / s, Y: 2 / s}
 }
 
-// scaleForFiltering returns adjusted scale values for width and height to reduce
-// filtering seams. If either dimension is zero, the original scale is returned
-// unchanged to avoid division by zero on the half-texel offset.
-func scaleForFiltering(scale float64, w, h int) (float64, float64) {
-	if w == 0 || h == 0 {
-		// Zero-sized image: keep the original scale.
-		return scale, scale
-	}
-
-	ps, exact := exactScale(scale, 8, 1e-6) // denom ≤ 8, ε = 1e-6
-
-	if exact {
-		// Exact integer or exact small rational: no offset needed.
-		return ps, ps
-	}
-
-	// Not exact → keep requested scale but nudge by half-texel to reduce seams.
-	return scale + 0.5/float64(w), scale + 0.5/float64(h)
-}
-
-func exactScale(scale float64, maxDenom int, eps float64) (float64, bool) {
-	// Exact integer?
-	r := math.Round(scale)
-	if math.Abs(scale-r) <= eps {
-		return r, true
-	}
-
-	// Exact small rational num/den?
-	// We look for a den <= maxDenom where num/den ≈ scale within eps.
-	best := scale
-	for den := 2; den <= maxDenom; den++ {
-		num := math.Round(scale * float64(den))
-		ideal := num / float64(den)
-		if math.Abs(scale-ideal) <= eps {
-			best = ideal
-			return best, true
-		}
-	}
-	return best, false
-}
+// In-world rendering uses integer scaling (nearest) only.
 
 // acquireDrawOpts returns a DrawImageOptions from the shared pool initialized
 // with nearest filtering and mipmaps disabled. Call releaseDrawOpts when done.
@@ -1355,43 +1316,39 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		haveSnap = true
 	}
 
-	// Composite worldRT into the gameImage buffer: scale/center
-	scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
-	// Prefer nearest-neighbor when the composite scale is an exact integer to reduce cost
-	// and keep pixels crisp; otherwise apply a half-texel nudge to minimize seams.
-	sx, sy := scaleForFiltering(scaleDown, offW, offH)
-	// If scaleDown is an exact integer, switch to nearest filtering
-	_, isExactInt := exactScale(scaleDown, 1, 1e-6)
+    // Composite worldRT into the gameImage buffer: scale/center
+    // Keep this simple: the offscreen world is rendered at integer scale
+    // (nearest) and the final composite to the resizable window uses linear.
+    scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
+    sx, sy := scaleDown, scaleDown
 	drawW := float64(offW) * sx
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-	if gs.lanczosUpscale && gs.GameScale > 1 {
-		geo := ebiten.GeoM{}
-		geo.Scale(sx, sy)
-		geo.Translate(tx, ty)
-		unis := map[string]any{
-			"SrcSize":    [2]float32{float32(offW), float32(offH)},
-			"SampleStep": [2]float32{1 / float32(offW), 1 / float32(offH)},
-		}
-		sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
-		sop.Images[0] = worldView
-		sop.GeoM = geo
-		gameImage.DrawRectShader(offW, offH, upscaleShader, &sop)
-	} else {
-		op := acquireDrawOpts()
-		op.Filter = ebiten.FilterLinear
-		op.DisableMipmaps = true
-		if isExactInt {
-			op.Filter = ebiten.FilterNearest
-		}
-		// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
-		op.Blend = ebiten.BlendCopy
-		op.GeoM.Scale(sx, sy)
-		op.GeoM.Translate(tx, ty)
-		gameImage.DrawImage(worldView, op)
-		releaseDrawOpts(op)
-	}
+    if gs.lanczosUpscale && gs.GameScale > 1 {
+        geo := ebiten.GeoM{}
+        geo.Scale(sx, sy)
+        geo.Translate(tx, ty)
+        unis := map[string]any{
+            "SrcSize":    [2]float32{float32(offW), float32(offH)},
+            "SampleStep": [2]float32{1 / float32(offW), 1 / float32(offH)},
+        }
+        sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
+        sop.Images[0] = worldView
+        sop.GeoM = geo
+        gameImage.DrawRectShader(offW, offH, upscaleShader, &sop)
+    } else {
+        op := acquireDrawOpts()
+        // Always use linear filtering for the final window composite.
+        op.Filter = ebiten.FilterLinear
+        op.DisableMipmaps = true
+        // worldView was cleared and fully redrawn; a copy avoids extra blending cost.
+        op.Blend = ebiten.BlendCopy
+        op.GeoM.Scale(sx, sy)
+        op.GeoM.Translate(tx, ty)
+        gameImage.DrawImage(worldView, op)
+        releaseDrawOpts(op)
+    }
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
@@ -1916,11 +1873,12 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 		if src != nil {
 			drawW, drawH = src.Bounds().Dx(), src.Bounds().Dy()
 		}
-		sx, sy := scaleForFiltering(gs.GameScale, drawW, drawH)
-		scaledW := float64(roundToInt(float64(drawW) * sx))
-		scaledH := float64(roundToInt(float64(drawH) * sy))
-		sx = scaledW / float64(drawW)
-		sy = scaledH / float64(drawH)
+        // Integer-only scaling for in-world sprites
+        sx, sy := gs.GameScale, gs.GameScale
+        scaledW := float64(roundToInt(float64(drawW) * sx))
+        scaledH := float64(roundToInt(float64(drawH) * sy))
+        sx = scaledW / float64(drawW)
+        sy = scaledH / float64(drawH)
 		op := acquireDrawOpts()
 		op.Filter = ebiten.FilterNearest
 		op.DisableMipmaps = true
