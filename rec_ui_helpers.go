@@ -7,6 +7,9 @@ var recordingMovie bool
 // updateRecordButton updates the toolbar record button label and theme based on
 // whether we're recording, armed to record, or playing back a movie.
 func updateRecordButton() {
+	if recordBtn == nil {
+		return
+	}
 	if playingMovie || recordingMovie {
 		recordBtn.Text = "STOP"
 	} else {
