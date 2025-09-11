@@ -214,6 +214,9 @@ func fetchRandomDemoCharacter(clVersion int) (string, error) {
 // It runs the network loops and blocks until the context is canceled.
 func login(ctx context.Context, clVersion int) error {
 	resetDrawState()
+	if gs.AutoRecord {
+		recordingMovie = true
+	}
 	for {
 		imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
 		imagesMissing := false

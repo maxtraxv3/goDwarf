@@ -1,10 +1,13 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 )
 
 const (
@@ -27,9 +30,44 @@ type movieFrame struct {
 }
 
 func parseMovie(path string, clVersion int) ([]movieFrame, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+	var (
+		data []byte
+		err  error
+	)
+	if strings.HasSuffix(strings.ToLower(path), ".zip") {
+		zr, err := zip.OpenReader(path)
+		if err != nil {
+			return nil, err
+		}
+		defer zr.Close()
+		var f *zip.File
+		for _, zf := range zr.File {
+			if strings.HasSuffix(strings.ToLower(zf.Name), ".clmov") {
+				f = zf
+				break
+			}
+		}
+		if f == nil {
+			if len(zr.File) > 0 {
+				f = zr.File[0]
+			} else {
+				return nil, fmt.Errorf("no files in archive")
+			}
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer rc.Close()
+		data, err = io.ReadAll(rc)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		data, err = os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(data) < 8 {
 		return nil, fmt.Errorf("short file")
@@ -77,51 +115,51 @@ func parseMovie(path string, clVersion int) ([]movieFrame, error) {
 		flags := binary.BigEndian.Uint16(data[pos+10 : pos+12])
 		pos += 12
 		preStart := pos
-        if flags&flagGameState != 0 {
-            if pos+24 <= len(data) {
-                maxSize := int(binary.BigEndian.Uint32(data[pos+12 : pos+16]))
-                start := pos + 24
-                end := start + maxSize
-                // Sanity check: maxSize must fit and be reasonable.
-                if maxSize >= 0 && end <= len(data) {
-                    parseGameState(data[start:end], version, uint16(revision))
-                    pos = end
-                }
-            }
-        }
-        if flags&flagMobileData != 0 {
-            // Only attempt mobile table parse if a sentinel exists ahead.
-            if bytes.Contains(data[pos:], []byte{0xff, 0xff, 0xff, 0xff}) {
-                pos = parseMobileTable(data, pos, version, uint16(revision))
-            }
-        }
-        if flags&flagPictureTable != 0 {
-            if pos+2 <= len(data) {
-                count := int(binary.BigEndian.Uint16(data[pos : pos+2]))
-                size := 2 + 6*count + 4
-                if count >= 0 && size >= 0 && pos+size <= len(data) && count <= 8192 {
-                    pos += 2
-                    pics := make([]framePicture, 0, count)
-                    for i := 0; i < count && pos+6 <= len(data); i++ {
-                        id := binary.BigEndian.Uint16(data[pos : pos+2])
-                        h := int16(binary.BigEndian.Uint16(data[pos+2 : pos+4]))
-                        v := int16(binary.BigEndian.Uint16(data[pos+4 : pos+6]))
-                        plane := 0
-                        if clImages != nil {
-                            plane = clImages.Plane(uint32(id))
-                        }
-                        pos += 6
-                        pics = append(pics, framePicture{PictID: id, H: h, V: v, Plane: plane})
-                    }
-                    if pos+4 <= len(data) {
-                        pos += 4
-                    }
-                    stateMu.Lock()
-                    state.pictures = pics
-                    stateMu.Unlock()
-                }
-            }
-        }
+		if flags&flagGameState != 0 {
+			if pos+24 <= len(data) {
+				maxSize := int(binary.BigEndian.Uint32(data[pos+12 : pos+16]))
+				start := pos + 24
+				end := start + maxSize
+				// Sanity check: maxSize must fit and be reasonable.
+				if maxSize >= 0 && end <= len(data) {
+					parseGameState(data[start:end], version, uint16(revision))
+					pos = end
+				}
+			}
+		}
+		if flags&flagMobileData != 0 {
+			// Only attempt mobile table parse if a sentinel exists ahead.
+			if bytes.Contains(data[pos:], []byte{0xff, 0xff, 0xff, 0xff}) {
+				pos = parseMobileTable(data, pos, version, uint16(revision))
+			}
+		}
+		if flags&flagPictureTable != 0 {
+			if pos+2 <= len(data) {
+				count := int(binary.BigEndian.Uint16(data[pos : pos+2]))
+				size := 2 + 6*count + 4
+				if count >= 0 && size >= 0 && pos+size <= len(data) && count <= 8192 {
+					pos += 2
+					pics := make([]framePicture, 0, count)
+					for i := 0; i < count && pos+6 <= len(data); i++ {
+						id := binary.BigEndian.Uint16(data[pos : pos+2])
+						h := int16(binary.BigEndian.Uint16(data[pos+2 : pos+4]))
+						v := int16(binary.BigEndian.Uint16(data[pos+4 : pos+6]))
+						plane := 0
+						if clImages != nil {
+							plane = clImages.Plane(uint32(id))
+						}
+						pos += 6
+						pics = append(pics, framePicture{PictID: id, H: h, V: v, Plane: plane})
+					}
+					if pos+4 <= len(data) {
+						pos += 4
+					}
+					stateMu.Lock()
+					state.pictures = pics
+					stateMu.Unlock()
+				}
+			}
+		}
 		preData := append([]byte(nil), data[preStart:pos]...)
 		if size > 0 {
 			if pos+size > len(data) {
