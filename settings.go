@@ -14,7 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const SETTINGS_VERSION = 11
+const SETTINGS_VERSION = 1
 
 type BarPlacement int
 
@@ -38,6 +38,10 @@ var windowsRestored bool
 var gsdef settings = settings{
 	Version: SETTINGS_VERSION,
 
+	LastCharacter:           "",
+	ClickToToggle:           false,
+	MiddleClickMoveWindow:   false,
+	InputBarAlwaysOpen:      false,
 	KBWalkSpeed:             0.25,
 	MainFontSize:            8,
 	BubbleFontSize:          6,
@@ -45,13 +49,13 @@ var gsdef settings = settings{
 	ChatFontSize:            14,
 	InventoryFontSize:       18,
 	PlayersFontSize:         18,
-	BubbleOpacity:           0.7,
-	BubbleBaseLife:          2.0,
-	BubbleLifePerWord:       1.0,
-	NameBgOpacity:           0.7,
+	BubbleOpacity:           0.8,
+	BubbleBaseLife:          2,
+	BubbleLifePerWord:       1,
+	NameBgOpacity:           0.8,
 	NameTagLabelColors:      true,
-	BarOpacity:              0.5,
-	ObscuringPictureOpacity: 0.5,
+	BarOpacity:              0.66,
+	ObscuringPictureOpacity: 0.66,
 	FadeObscuringPictures:   false,
 	SpeechBubbles:           true,
 	BubbleNormal:            true,
@@ -68,71 +72,95 @@ var gsdef settings = settings{
 	BubbleMonsters:          true,
 	BubbleNarration:         true,
 
-	MotionSmoothing:        true,
-	DenoiseImages:          true,  // High preset default
-	BlendMobiles:           false, // High preset default
-	BlendPicts:             true,  // High preset default
-	ObjectPinning:          true,
-	BlendAmount:            1.0,
-	MobileBlendAmount:      0.33,
-	MobileBlendFrames:      10,
-	PictBlendFrames:        10,
-	DenoiseSharpness:       4.0,
-	DenoiseAmount:          0.33,
-	ShowFPS:                true,
-	UIScale:                1.0,
-	MasterVolume:           1.0,
-	GameVolume:             0.6,
-	MusicVolume:            0.8,
-	Music:                  true,
-	GameSound:              true,
-	GameScale:              2,
-	BarPlacement:           BarPlacementBottom,
-	ShaderLightStrength:    1.0,
-	ShaderGlowStrength:     1.0,
-	MaxNightLevel:          100,
-	ForceNightLevel:        -1,
-	ChatTTS:                false,
-	ChatTTSVolume:          1.0,
-	ChatTTSSpeed:           1.5,
-	ChatTTSVoice:           "en_US-hfc_female-medium",
-	ChatTTSBlocklist:       []string{"koppi", "crius"},
-	Notifications:          true,
-	NotifyFallen:           true,
-	NotifyNotFallen:        true,
-	NotifyShares:           true,
-	NotifyFriendOnline:     true,
-	NotifyCopyText:         true,
-	NotificationVolume:     0.6,
-	NotificationBeep:       false,
-	NotificationDuration:   6,
-	PluginSpamKill:         true,
-	PromptOnSaveRecording:  true,
-	PromptDisableShaders:   true,
-	TimestampFormat:        "3:04PM",
-	LastUpdateCheck:        time.Time{},
-	NotifiedVersion:        0,
-	JoystickBindings:       map[string]ebiten.GamepadButton{},
+	MotionSmoothing:       true,
+	ObjectPinning:         true,
+	BlendMobiles:          false,
+	BlendPicts:            true,
+	BlendAmount:           1.0,
+	MobileBlendAmount:     0.25,
+	MobileBlendFrames:     10,
+	PictBlendFrames:       10,
+	DenoiseImages:         true,
+	DenoiseSharpness:      4,
+	DenoiseAmount:         0.33,
+	ShowFPS:               true,
+	UIScale:               1.0,
+	Fullscreen:            false,
+	AlwaysOnTop:           false,
+	MasterVolume:          0.5,
+	GameVolume:            0.66,
+	MusicVolume:           0.8,
+	Music:                 true,
+	GameSound:             true,
+	Mute:                  false,
+	GameScale:             2.0,
+	BarPlacement:          BarPlacementBottom,
+	MaxNightLevel:         100,
+	MessagesToConsole:     false,
+	ChatTTS:               false,
+	ChatTTSVolume:         1.0,
+	ChatTTSSpeed:          1.25,
+	ChatTTSVoice:          "en_US-hfc_female-medium",
+	Notifications:         true,
+	NotifyFallen:          true,
+	NotifyNotFallen:       true,
+	NotifyShares:          true,
+	NotifyFriendOnline:    true,
+	NotifyCopyText:        true,
+	NotificationVolume:    0.6,
+	NotificationBeep:      true,
+	NotificationDuration:  6,
+	PluginSpamKill:        true,
+	PromptOnSaveRecording: true,
+	PromptDisableShaders:  true,
+	ChatTimestamps:        false,
+	ConsoleTimestamps:     false,
+	TimestampFormat:       "3:04PM",
+	LastUpdateCheck:       time.Time{},
+	NotifiedVersion:       0,
+	WindowTiling:          false,
+	WindowSnapping:        false,
+	ShowPinToLocations:    false,
+
 	JoystickEnabled:        false,
 	JoystickWalkStick:      0,
 	JoystickCursorStick:    1,
 	JoystickWalkDeadzone:   0.1,
 	JoystickCursorDeadzone: 0.1,
-	ThrottleSounds:         true,
-	ShaderLighting:         true,
-	LanczosUpscale:         false,
-	NightEffect:            true,
 
 	GameWindow:      WindowState{Open: true},
 	InventoryWindow: WindowState{Open: true},
 	PlayersWindow:   WindowState{Open: true},
 	MessagesWindow:  WindowState{Open: true},
 	ChatWindow:      WindowState{Open: true},
-	EnabledPlugins:  map[string]any{},
+	WindowZones:     *new(map[string]eui.WindowZoneState),
 
-	vsync:          true,
-	precacheSounds: true,
-	altNetDelay:    150,
+	ShaderLightStrength: 1.0,
+	ShaderGlowStrength:  1.0,
+
+	PotatoGPU:       false,
+	BarColorByValue: false,
+	ThrottleSounds:  true,
+
+	NightEffect:    true,
+	ShaderLighting: true,
+
+	//Unexported
+	vsync:             true,
+	lanczosUpscale:    false,
+	precacheSounds:    false,
+	precacheImages:    false,
+	smoothMoving:      false,
+	recordAssetStats:  false,
+	altNetMode:        true,
+	altNetDelay:       100,
+	hideMobiles:       false,
+	imgPlanesDebug:    false,
+	smoothingDebug:    false,
+	pictAgainDebug:    false,
+	pictIDDebug:       false,
+	pluginOutputDebug: false,
+	forceNightLevel:   -1,
 }
 
 type settings struct {
@@ -196,7 +224,7 @@ type settings struct {
 	GameScale             float64
 	BarPlacement          BarPlacement
 	MaxNightLevel         int
-	ForceNightLevel       int
+	forceNightLevel       int
 	Theme                 string
 	Style                 string
 	MessagesToConsole     bool
@@ -263,7 +291,7 @@ type settings struct {
 	vsync             bool
 	NightEffect       bool
 	ShaderLighting    bool
-	LanczosUpscale    bool
+	lanczosUpscale    bool
 	precacheSounds    bool
 	precacheImages    bool
 	smoothMoving      bool

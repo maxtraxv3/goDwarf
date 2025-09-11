@@ -131,8 +131,8 @@ func currentNightLevel() int {
 	if flags&kLightForce100Pct != 0 {
 		limit = 100
 	}
-	if gs.ForceNightLevel >= 0 {
-		lvl = gs.ForceNightLevel
+	if gs.forceNightLevel >= 0 {
+		lvl = gs.forceNightLevel
 	}
 	if lvl > limit {
 		lvl = limit
@@ -212,8 +212,8 @@ func drawNightOverlay(screen *ebiten.Image, ox, oy int) {
 	if flags&kLightForce100Pct != 0 {
 		limit = 100
 	}
-	if gs.ForceNightLevel >= 0 {
-		lvl = gs.ForceNightLevel
+	if gs.forceNightLevel >= 0 {
+		lvl = gs.forceNightLevel
 	}
 	if lvl > limit {
 		lvl = limit

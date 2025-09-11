@@ -1366,7 +1366,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-	if gs.LanczosUpscale && gs.GameScale > 1 {
+	if gs.lanczosUpscale && gs.GameScale > 1 {
 		geo := ebiten.GeoM{}
 		geo.Scale(sx, sy)
 		geo.Translate(tx, ty)

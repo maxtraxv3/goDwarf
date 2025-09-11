@@ -4602,10 +4602,10 @@ func makeDebugWindow() {
 	lanczosCB, lanczosEvents := eui.NewCheckbox()
 	lanczosCB.Text = "Lanczos Upscale Filter (experimental)"
 	lanczosCB.Size = eui.Point{X: width, Y: 24}
-	lanczosCB.Checked = gs.LanczosUpscale
+	lanczosCB.Checked = gs.lanczosUpscale
 	lanczosEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.LanczosUpscale = ev.Checked
+			gs.lanczosUpscale = ev.Checked
 			settingsDirty = true
 		}
 	}
@@ -4635,7 +4635,7 @@ func makeDebugWindow() {
 	forceNightDD.Label = "Force Night"
 	forceNightDD.Options = []string{"Auto", "Day (0%)", "25%", "50%", "75%", "Night (100%)"}
 	// Map gs.ForceNightLevel to option index
-	switch gs.ForceNightLevel {
+	switch gs.forceNightLevel {
 	case -1:
 		forceNightDD.Selected = 0
 	case 0:
@@ -4656,17 +4656,17 @@ func makeDebugWindow() {
 		if ev.Type == eui.EventDropdownSelected {
 			switch ev.Index {
 			case 0:
-				gs.ForceNightLevel = -1
+				gs.forceNightLevel = -1
 			case 1:
-				gs.ForceNightLevel = 0
+				gs.forceNightLevel = 0
 			case 2:
-				gs.ForceNightLevel = 25
+				gs.forceNightLevel = 25
 			case 3:
-				gs.ForceNightLevel = 50
+				gs.forceNightLevel = 50
 			case 4:
-				gs.ForceNightLevel = 75
+				gs.forceNightLevel = 75
 			case 5:
-				gs.ForceNightLevel = 100
+				gs.forceNightLevel = 100
 			}
 			settingsDirty = true
 		}
