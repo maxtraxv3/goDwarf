@@ -11,14 +11,17 @@ type beepSpec struct {
 }
 
 var (
-	beepMu    sync.Mutex
+    beepMu    sync.Mutex
 	beepCache = make(map[beepSpec][]byte)
 )
+
+// focusMuted gates audio when window is unfocused and user enabled it.
+var focusMuted bool
 
 // playBeep renders and plays a short note using the given program and key.
 // The note is cached after the first render.
 func playBeep(program, key int) {
-	if gs.Mute || !gs.GameSound || audioContext == nil {
+    if gs.Mute || focusMuted || !gs.GameSound || audioContext == nil {
 		return
 	}
 
@@ -40,7 +43,7 @@ func playBeep(program, key int) {
 
 	p := audioContext.NewPlayerFromBytes(pcm)
 	vol := gs.MasterVolume * gs.NotificationVolume
-	if gs.Mute {
+    if gs.Mute || focusMuted {
 		vol = 0
 	}
 	p.SetVolume(vol)
@@ -71,7 +74,7 @@ func playBeep(program, key int) {
 // playHarpNotes renders and plays a short harp sequence using the provided
 // MIDI key values. Notes are spaced evenly.
 func playHarpNotes(keys ...int) {
-	if gs.Mute || !gs.GameSound || audioContext == nil {
+    if gs.Mute || focusMuted || !gs.GameSound || audioContext == nil {
 		return
 	}
 	if len(keys) == 0 {
@@ -90,7 +93,7 @@ func playHarpNotes(keys ...int) {
 	pcm := mixPCM(left, right)
 	p := audioContext.NewPlayerFromBytes(pcm)
 	vol := gs.MasterVolume * gs.NotificationVolume
-	if gs.Mute {
+    if gs.Mute || focusMuted {
 		vol = 0
 	}
 	p.SetVolume(vol)

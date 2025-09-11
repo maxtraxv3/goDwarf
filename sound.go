@@ -65,11 +65,11 @@ func stopAllAudioPlayers() {
 // Each ID is loaded, mixed with simple clipping and then played at the current
 // global volume. The function returns immediately after scheduling playback.
 func playSound(ids []uint16) {
-	if len(ids) == 0 || gs.Mute || !gs.GameSound {
+	if len(ids) == 0 || gs.Mute || focusMuted || !gs.GameSound {
 		return
 	}
 	go func(ids []uint16) {
-		if gs.Mute || !gs.GameSound {
+		if gs.Mute || focusMuted || !gs.GameSound {
 			return
 		}
 		//logDebug("playSound %v called", ids)
@@ -198,7 +198,7 @@ func playSound(ids []uint16) {
 
 		p := audioContext.NewPlayerFromBytes(out)
 		vol := gs.MasterVolume * gs.GameVolume
-		if gs.Mute {
+		if gs.Mute || focusMuted {
 			vol = 0
 		}
 		p.SetVolume(vol)
@@ -248,7 +248,7 @@ func updateSoundVolume() {
 	if !gs.NotificationBeep {
 		notifVol = 0
 	}
-	if gs.Mute {
+	if gs.Mute || focusMuted {
 		gameVol = 0
 		ttsVol = 0
 		musicVol = 0

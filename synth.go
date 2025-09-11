@@ -304,7 +304,7 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 		return errors.New("nil audio context")
 	}
 
-	if gs.Mute || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
+	if gs.Mute || focusMuted || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
 		return errors.New("music muted")
 	}
 
@@ -320,7 +320,7 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 	player := ctx.NewPlayerFromBytes(pcm)
 
 	vol := gs.MasterVolume * gs.MusicVolume
-	if gs.Mute {
+	if gs.Mute || focusMuted {
 		vol = 0
 	}
 	player.SetVolume(vol)

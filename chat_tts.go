@@ -133,7 +133,7 @@ func ensurePiper() bool {
 }
 
 func playChatTTS(ctx context.Context, text string) {
-	if audioContext == nil || blockTTS || gs.Mute || !gs.ChatTTS {
+    if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
 		return
 	}
 	select {
@@ -191,7 +191,7 @@ func playChatTTS(ctx context.Context, text string) {
 	ttsPlayersMu.Unlock()
 
 	vol := gs.MasterVolume * gs.ChatTTSVolume
-	if gs.Mute {
+    if gs.Mute || focusMuted {
 		vol = 0
 	}
 	p.SetVolume(vol)
@@ -216,14 +216,14 @@ func playChatTTS(ctx context.Context, text string) {
 }
 
 func speakChatMessage(msg string) {
-	if audioContext == nil || blockTTS || gs.Mute || !gs.ChatTTS {
+    if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
 		if audioContext == nil {
 			logError("chat tts: audio context is nil")
 		}
 		if blockTTS {
 			logDebug("chat tts: tts blocked")
 		}
-		if gs.Mute {
+        if gs.Mute || focusMuted {
 			logDebug("chat tts: client muted")
 		}
 		if !gs.ChatTTS {

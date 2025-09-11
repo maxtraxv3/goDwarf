@@ -581,8 +581,23 @@ type Game struct{}
 var once sync.Once
 var lastBackpace time.Time
 var lastPlayersRefreshTick time.Time
+var lastFocused bool
 
 func (g *Game) Update() error {
+	// Background behaviors: mute and slow render when unfocused
+	focused := ebiten.IsFocused()
+    if focused != lastFocused {
+        if !focused {
+            if gs.MuteWhenUnfocused {
+                focusMuted = true
+            }
+        } else {
+            focusMuted = false
+        }
+        // Immediately propagate effective master volume change to active players.
+        updateSoundVolume()
+        lastFocused = focused
+    }
 	// Cache the current time once per frame and reuse everywhere.
 	now := time.Now()
 	select {
@@ -915,7 +930,7 @@ func (g *Game) Update() error {
 		showSpellSuggestions(inputFlow.Contents[0])
 	}
 
-	focused := ebiten.IsFocused()
+	focused = ebiten.IsFocused()
 
 	/* WASD / ARROWS */
 
@@ -1374,6 +1389,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
+
+	// If running in background, lightly sleep to reduce CPU.
+	if !lastFocused {
+		time.Sleep(66 * time.Millisecond)
+	}
 
 	//if gs.ShowFPS {
 	//	drawServerFPS(screen, screen.Bounds().Dx()-40, 4, serverFPS)
@@ -2232,10 +2252,10 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 		y := roundToInt((vpos + float64(fieldCenterY)) * gs.GameScale)
 		if !b.Far {
 			if d, ok := descMap[b.Index]; ok {
-                if size := mobileSize(d.PictID); size > 0 {
-                    tailHeight := int(math.Round(10 * gs.BubbleScale))
-                    y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
-                }
+				if size := mobileSize(d.PictID); size > 0 {
+					tailHeight := int(math.Round(10 * gs.BubbleScale))
+					y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
+				}
 			}
 		}
 		borderCol, bgCol, textCol := bubbleColors(b.Type)

@@ -103,6 +103,8 @@ var gsdef settings = settings{
 	ChatTTSSpeed:          1.25,
 	ChatTTSVoice:          "en_US-hfc_female-medium",
 	Notifications:         true,
+	NotifyWhenBackground:  false,
+	MuteWhenUnfocused:     false,
 	NotifyFallen:          true,
 	NotifyNotFallen:       true,
 	NotifyShares:          true,
@@ -238,6 +240,8 @@ type settings struct {
 	ChatTTSVoice          string
 	ChatTTSBlocklist      []string
 	Notifications         bool
+	NotifyWhenBackground  bool
+	MuteWhenUnfocused     bool
 	NotifyFallen          bool
 	NotifyNotFallen       bool
 	NotifyShares          bool

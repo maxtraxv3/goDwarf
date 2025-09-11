@@ -1,11 +1,12 @@
 package main
 
 import (
-	"time"
+    "time"
 
-	"gothoom/eui"
+    "gothoom/eui"
 
-	text "github.com/hajimehoshi/ebiten/v2/text/v2"
+    "github.com/hajimehoshi/ebiten/v2"
+    text "github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 type notification struct {
@@ -19,9 +20,9 @@ var notifications []*notification
 // enabled. Messages disappear after a timeout or when clicked.
 // Optional note keys can be provided to customize the notification sound.
 func showNotification(msg string, keys ...int) {
-	if !gs.Notifications || gameWin == nil {
-		return
-	}
+    if !gs.Notifications || gameWin == nil {
+        return
+    }
 	if gs.NotificationBeep {
 		if len(keys) == 0 {
 			// middle C harp beep
@@ -30,7 +31,13 @@ func showNotification(msg string, keys ...int) {
 			playHarpNotes(keys...)
 		}
 	}
-	btn, events := eui.NewButton()
+    // If app is unfocused and user enabled background desktop notifications,
+    // mirror this in-game notification to the OS.
+    if gs.NotifyWhenBackground && !ebiten.IsFocused() {
+        notifyDesktop("goThoom", msg)
+    }
+
+    btn, events := eui.NewButton()
 	btn.Text = msg
 	btn.FontSize = float32(gs.ChatFontSize)
 	btn.Filled = true

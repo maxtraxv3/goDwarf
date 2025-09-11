@@ -1074,7 +1074,8 @@ func makeMixerWindow() {
 	if gs.Mute {
 		mixMuteBtn.Text = "Unmute"
 	}
-	mixMuteBtn.Size = eui.Point{X: 64, Y: 24}
+    // Make the mute button wider to accommodate label and adjacent checkbox context
+    mixMuteBtn.Size = eui.Point{X: 192, Y: 24}
 	mixMuteEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			gs.Mute = !gs.Mute
@@ -1115,7 +1116,32 @@ func makeMixerWindow() {
 			updateSoundVolume()
 		}
 	}
-	flow.AddItem(mixMuteBtn)
+    // Place mute-unfocused checkbox directly under Mute button in its own column
+    muteUnfocusCB, muteUnfocusEvents := eui.NewCheckbox()
+    muteUnfocusCB.Text = "Mute when unfocused"
+    // Match mute button width so the text fits comfortably
+    muteUnfocusCB.Size = eui.Point{X: 192, Y: 24}
+    muteUnfocusCB.Checked = gs.MuteWhenUnfocused
+    muteUnfocusCB.SetTooltip("Temporarily mute audio when window is not focused")
+    muteUnfocusEvents.Handle = func(ev eui.UIEvent) {
+        if ev.Type == eui.EventCheckboxChanged {
+            gs.MuteWhenUnfocused = ev.Checked
+            if ev.Checked {
+                if !ebiten.IsFocused() {
+                    focusMuted = true
+                }
+            } else {
+                focusMuted = false
+            }
+            settingsDirty = true
+            updateSoundVolume()
+        }
+    }
+    // Make the column 3x standard width so the mixer window grows accordingly
+    muteCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Size: eui.Point{X: 192, Y: 60}}
+    muteCol.AddItem(mixMuteBtn)
+    muteCol.AddItem(muteUnfocusCB)
+    flow.AddItem(muteCol)
 
 	mixerWin.AddItem(flow)
 }
@@ -4184,6 +4210,8 @@ func makeQualityWindow() {
 	}
 	left.AddItem(vsyncCB)
 
+    // (moved) Background behavior options are placed under Audio/Notifications
+
 	label, _ = eui.NewText()
 	label.Text = "\nImage denoising:"
 	label.FontSize = 15
@@ -4432,7 +4460,10 @@ func makeNotificationsWindow() {
 		flow.AddItem(cb)
 	}
 
-	addCB("Fallen", &gs.NotifyFallen)
+    // Background notifications while unfocused
+    addCB("Notify when in background", &gs.NotifyWhenBackground)
+
+    addCB("Fallen", &gs.NotifyFallen)
 	addCB("Not fallen", &gs.NotifyNotFallen)
 	addCB("Shares", &gs.NotifyShares)
 	addCB("Friend online", &gs.NotifyFriendOnline)
@@ -4452,6 +4483,17 @@ func makeNotificationsWindow() {
 		}
 	}
 	flow.AddItem(durSlider)
+
+	// Test desktop notification button
+	testBtn, testEv := eui.NewButton()
+	testBtn.Text = "Send Test Notification"
+	testBtn.Size = eui.Point{X: width, Y: 24}
+	testEv.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			notifyDesktop("goThoom", "Background notifications test")
+		}
+	}
+	flow.AddItem(testBtn)
 
 	notificationsWin.AddItem(flow)
 	notificationsWin.AddWindow(false)

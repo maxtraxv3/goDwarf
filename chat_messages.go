@@ -1,8 +1,9 @@
 package main
 
 import (
-	"strings"
-	"sync"
+    "strings"
+    "sync"
+    "github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -37,9 +38,13 @@ func chatMessage(msg string) {
 
 	updateChatWindow()
 
-	if tagged && !isSelfChatMessage(msg) {
-		playMentionSound()
-	}
+    if tagged && !isSelfChatMessage(msg) {
+        playMentionSound()
+        // Notify on mentions only when unfocused (respect setting)
+        if gs.NotifyWhenBackground && !ebiten.IsFocused() {
+            notifyDesktop("Mention", msg)
+        }
+    }
 
 	if gs.ChatTTS && !blockTTS && !isSelfChatMessage(msg) {
 		if speaker == "" || !isTTSBlocked(speaker) {

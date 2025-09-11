@@ -144,9 +144,9 @@ func playClanLordTune(tune string) error {
 	if blockMusic {
 		return fmt.Errorf("music blocked")
 	}
-	if gs.Mute || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
-		return fmt.Errorf("music muted")
-	}
+    if gs.Mute || focusMuted || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
+        return fmt.Errorf("music muted")
+    }
 
 	// Determine instrument prefix ("<inst> <notes>")
 	inst := defaultInstrument
@@ -239,9 +239,9 @@ func handleMusicParams(mp MusicParams) {
 	}
 	// Ignore play requests while muted, matching classic behavior when sound
 	// is off. Still handled /stop above regardless of mute state.
-	if gs.Mute || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
-		return
-	}
+    if gs.Mute || focusMuted || !gs.Music || gs.MasterVolume <= 0 || gs.MusicVolume <= 0 {
+        return
+    }
 	// Validate basics
 	if mp.Inst < 0 || mp.Inst >= len(instruments) {
 		mp.Inst = defaultInstrument

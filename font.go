@@ -71,8 +71,8 @@ func initFont() {
 		Source: bold,
 		Size:   gs.BubbleFontSize,
 	}
-	bubbleFontRegular = &text.GoTextFace{
-		Source: regular,
-		Size:   gs.MainFontSize,
-	}
+    bubbleFontRegular = &text.GoTextFace{
+        Source: regular,
+        Size:   gs.BubbleFontSize,
+    }
 }
