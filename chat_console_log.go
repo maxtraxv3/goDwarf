@@ -26,6 +26,10 @@ func appendTextLog(msg string) {
 		return
 	}
 
+	if playingMovie {
+		return
+	}
+
 	ensureTextLog()
 	if textLogPath == "" {
 		return
