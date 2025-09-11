@@ -132,6 +132,7 @@ var gsdef settings = settings{
 
 	vsync:          true,
 	precacheSounds: true,
+	altNetDelay:    150,
 }
 
 type settings struct {
@@ -255,6 +256,8 @@ type settings struct {
 	pictAgainDebug    bool
 	pictIDDebug       bool
 	pluginOutputDebug bool
+	altNetMode        bool
+	altNetDelay       int
 	hideMoving        bool
 	hideMobiles       bool
 	vsync             bool
