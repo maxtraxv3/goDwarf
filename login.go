@@ -214,6 +214,7 @@ func fetchRandomDemoCharacter(clVersion int) (string, error) {
 // It runs the network loops and blocks until the context is canceled.
 func login(ctx context.Context, clVersion int) error {
 	resetDrawState()
+	go setupSynthOnce.Do(setupSynth)
 	for {
 		imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
 		imagesMissing := false
