@@ -226,7 +226,7 @@ func playSound(ids []uint16) {
 
 // initSoundContext initializes the global audio context.
 func initSoundContext() {
-	rate := 44100
+	rate := sampleRate
 	audioContext = audio.NewContext(rate)
 }
 

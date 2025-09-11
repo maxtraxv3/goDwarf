@@ -27,7 +27,7 @@ var (
 	fracBits     int
 	lzW          [phases][taps]int16
 	int16BufPool = sync.Pool{
-		New: func() any { return make([]int16, 0, 48000) },
+		New: func() any { return make([]int16, 0, sampleRate) },
 	}
 )
 

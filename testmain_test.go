@@ -12,7 +12,7 @@ import (
 func TestMain(m *testing.M) {
 	// Only create the context once per process. Ebiten panics on duplicates.
 	if audioContext == nil {
-		audioContext = audio.NewContext(44100)
+		audioContext = audio.NewContext(sampleRate)
 	}
 	// Point dataDirPath at the repo's ./data so tests can find assets like soundfont.sf2
 	if wd, err := os.Getwd(); err == nil {
