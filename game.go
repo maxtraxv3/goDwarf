@@ -2700,18 +2700,42 @@ func noteFrame() {
 	}
 }
 
+// altNetDelay calculates the current artificial network delay.
+// It stays at 0 for the first two frames after login and then ramps
+// linearly to the target over three seconds.
+func altNetDelay(frame int, start time.Time, now time.Time, target time.Duration) (time.Duration, time.Time) {
+	if frame <= 2 || target <= 0 {
+		return 0, start
+	}
+	if start.IsZero() {
+		start = now
+	}
+	elapsed := now.Sub(start)
+	if elapsed >= 3*time.Second {
+		return target, start
+	}
+	return time.Duration(float64(target) * elapsed.Seconds() / 3.0), start
+}
+
 func sendInputLoop(ctx context.Context, udpConn, tcpConn net.Conn) {
 	// nextReliable determines when to send the next keep-alive packet via
 	// the reliable channel to preserve NAT mappings.
 	var nextReliable time.Time
+	var rampStart time.Time
+	var frameCount int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-frameCh:
 		}
+		frameCount++
 		if gs.altNetMode {
-			time.Sleep(time.Duration(gs.altNetDelay) * time.Millisecond)
+			delay, rs := altNetDelay(frameCount, rampStart, time.Now(), time.Duration(gs.altNetDelay)*time.Millisecond)
+			rampStart = rs
+			if delay > 0 {
+				time.Sleep(delay)
+			}
 		}
 		frameMu.Lock()
 		last := lastFrameTime
