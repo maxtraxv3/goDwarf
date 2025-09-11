@@ -60,16 +60,16 @@ func TestRecordRoundTrip(t *testing.T) {
 	if err := mr.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
-        rec, err := os.ReadFile(tmp)
-        if err != nil {
-                t.Fatalf("ReadFile(tmp): %v", err)
-        }
-        if !bytes.Equal(orig, rec) {
-                t.Fatalf("recording mismatch: %d vs %d bytes", len(orig), len(rec))
-        }
-        if _, err := parseMovie(tmp, 0); err != nil {
-                t.Fatalf("parseMovie(tmp): %v", err)
-        }
+	rec, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Fatalf("ReadFile(tmp): %v", err)
+	}
+	if !bytes.Equal(orig, rec) {
+		t.Fatalf("recording mismatch: %d vs %d bytes", len(orig), len(rec))
+	}
+	if _, err := parseMovie(tmp, 0); err != nil {
+		t.Fatalf("parseMovie(tmp): %v", err)
+	}
 }
 
 func TestGameStateBlock(t *testing.T) {
@@ -169,5 +169,18 @@ func TestAddBlockWriteFrame(t *testing.T) {
 	pos += len(f2)
 	if pos != len(data) {
 		t.Fatalf("extra %d", len(data)-pos)
+	}
+}
+
+func TestParseMovieZip(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	moviePath := filepath.Join(filepath.Dir(file), "clmovFiles", "test.clMov")
+	dir := t.TempDir()
+	zipPath := filepath.Join(dir, "test.clMov.zip")
+	if err := compressZip(moviePath, zipPath); err != nil {
+		t.Fatalf("compressZip: %v", err)
+	}
+	if _, err := parseMovie(zipPath, 0); err != nil {
+		t.Fatalf("parseMovie zip: %v", err)
 	}
 }

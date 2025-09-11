@@ -1316,7 +1316,18 @@ func stopRecording() {
 	if recordPath != "" {
 		saved := recordPath
 		consoleMessage(fmt.Sprintf("saved movie: %s", filepath.Base(saved)))
-		if gs.PromptOnSaveRecording {
+		if gs.AutoRecord {
+			go func(src string) {
+				outName := filepath.Base(src) + ".zip"
+				dst := filepath.Join(filepath.Dir(src), outName)
+				if err := compressZip(src, dst); err != nil {
+					logError("zip compress: %v", err)
+					consoleMessage("compress failed: " + err.Error())
+				} else {
+					consoleMessage("compressed: " + outName)
+				}
+			}(saved)
+		} else if gs.PromptOnSaveRecording {
 			showRecordingSaveDialog(saved)
 		}
 		recordPath = ""
@@ -2341,7 +2352,7 @@ func makeLoginWindow() {
 	openBtn.Size = eui.Point{X: charWinWidth, Y: 24}
 	openEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
-			filename, err := dialog.File().Filter("clMov files", "clMov", "clmov").Load()
+			filename, err := dialog.File().Filter("clMov files", "clMov", "clmov", "zip", "ZIP").Load()
 			if err != nil {
 				if err != dialog.Cancelled {
 					logError("open clMov: %v", err)
@@ -3518,6 +3529,20 @@ func makeSettingsWindow() {
 	}
 
 	right.AddItem(pluginKillCB)
+
+	autoRecCB, autoRecEvents := eui.NewCheckbox()
+	autoRecCB.Text = "Auto-record sessions"
+	autoRecCB.Size = eui.Point{X: panelWidth, Y: 24}
+	autoRecCB.Checked = gs.AutoRecord
+	autoRecCB.SetTooltip("Start recording on login and stop on logout")
+	autoRecEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.AutoRecord = ev.Checked
+			settingsDirty = true
+		}
+	}
+
+	right.AddItem(autoRecCB)
 
 	debugBtn, debugEvents := eui.NewButton()
 	debugBtn.Text = "Debug Settings"
