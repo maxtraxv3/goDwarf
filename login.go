@@ -217,6 +217,7 @@ func login(ctx context.Context, clVersion int) error {
 	if gs.AutoRecord {
 		recordingMovie = true
 	}
+	go setupSynthOnce.Do(setupSynth)
 	for {
 		imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
 		imagesMissing := false
