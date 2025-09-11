@@ -1,0 +1,9 @@
+clMov recording added!
+Fixed negative button relative positions corrupting the click/hover area. This fixes in-game notifications click-to-close among other things.
+Improved word-wrap so text is no longer sometimes cut off on the right side, and space is reserved for the scroll-bar. 
+Added ability to add and remove shortcuts in the shortcuts window. User or All. (for this character or all). Shortcuts are saved in data/shortcuts. 
+Optimized and adjusted audio resampling for even better performance and quality. 
+clMov playback no longer creates or write text logs
+The synthesizer is now initialized on login to prevent the small pause when music or a notification sound is played for the first time.
+Added a replacement network adjustment option, currently on by default but fairly conservative value set (100ms) 
+Music playback now has better performance and starts playing more quickly.
