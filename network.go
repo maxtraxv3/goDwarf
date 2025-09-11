@@ -177,6 +177,22 @@ func sendPlayerInput(connection net.Conn, mouseX, mouseY int16, mouseDown bool, 
 	return sendUDPMessage(connection, packet)
 }
 
+// pingServer establishes a new TCP connection to the server and returns the
+// time taken to connect. If the connection fails, it returns 0.
+func pingServer() time.Duration {
+	if tcpConn == nil {
+		return 0
+	}
+	addr := tcpConn.RemoteAddr().String()
+	start := time.Now()
+	c, err := net.DialTimeout("tcp", addr, time.Second)
+	if err != nil {
+		return 0
+	}
+	c.Close()
+	return time.Since(start)
+}
+
 // readTCPMessage reads a single length-prefixed message from the TCP connection.
 func readTCPMessage(connection net.Conn) ([]byte, error) {
 	var sizeBuf [2]byte
