@@ -22,7 +22,7 @@ var notoSansItalic []byte
 //go:embed data/font/NotoSans-BoldItalic.ttf
 var notoSansBoldItalic []byte
 
-var mainFont, mainFontBold, mainFontItalic, mainFontBoldItalic, bubbleFont text.Face
+var mainFont, mainFontBold, mainFontItalic, mainFontBoldItalic, bubbleFont, bubbleFontRegular text.Face
 var monoFaceSource *text.GoTextFaceSource
 var fontGen uint32
 
@@ -69,6 +69,10 @@ func initFont() {
 	//Bubble
 	bubbleFont = &text.GoTextFace{
 		Source: bold,
-		Size:   gs.BubbleFontSize * gs.GameScale,
+		Size:   gs.BubbleFontSize,
+	}
+	bubbleFontRegular = &text.GoTextFace{
+		Source: regular,
+		Size:   gs.MainFontSize,
 	}
 }

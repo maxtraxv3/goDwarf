@@ -1316,39 +1316,39 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		haveSnap = true
 	}
 
-    // Composite worldRT into the gameImage buffer: scale/center
-    // Keep this simple: the offscreen world is rendered at integer scale
-    // (nearest) and the final composite to the resizable window uses linear.
-    scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
-    sx, sy := scaleDown, scaleDown
+	// Composite worldRT into the gameImage buffer: scale/center
+	// Keep this simple: the offscreen world is rendered at integer scale
+	// (nearest) and the final composite to the resizable window uses linear.
+	scaleDown := math.Min(float64(bufW)/float64(offW), float64(bufH)/float64(offH))
+	sx, sy := scaleDown, scaleDown
 	drawW := float64(offW) * sx
 	drawH := float64(offH) * sy
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
-    if gs.lanczosUpscale && gs.GameScale > 1 {
-        geo := ebiten.GeoM{}
-        geo.Scale(sx, sy)
-        geo.Translate(tx, ty)
-        unis := map[string]any{
-            "SrcSize":    [2]float32{float32(offW), float32(offH)},
-            "SampleStep": [2]float32{1 / float32(offW), 1 / float32(offH)},
-        }
-        sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
-        sop.Images[0] = worldView
-        sop.GeoM = geo
-        gameImage.DrawRectShader(offW, offH, upscaleShader, &sop)
-    } else {
-        op := acquireDrawOpts()
-        // Always use linear filtering for the final window composite.
-        op.Filter = ebiten.FilterLinear
-        op.DisableMipmaps = true
-        // worldView was cleared and fully redrawn; a copy avoids extra blending cost.
-        op.Blend = ebiten.BlendCopy
-        op.GeoM.Scale(sx, sy)
-        op.GeoM.Translate(tx, ty)
-        gameImage.DrawImage(worldView, op)
-        releaseDrawOpts(op)
-    }
+	if gs.lanczosUpscale && gs.GameScale > 1 {
+		geo := ebiten.GeoM{}
+		geo.Scale(sx, sy)
+		geo.Translate(tx, ty)
+		unis := map[string]any{
+			"SrcSize":    [2]float32{float32(offW), float32(offH)},
+			"SampleStep": [2]float32{1 / float32(offW), 1 / float32(offH)},
+		}
+		sop := ebiten.DrawRectShaderOptions{Uniforms: unis, Blend: ebiten.BlendCopy}
+		sop.Images[0] = worldView
+		sop.GeoM = geo
+		gameImage.DrawRectShader(offW, offH, upscaleShader, &sop)
+	} else {
+		op := acquireDrawOpts()
+		// Always use linear filtering for the final window composite.
+		op.Filter = ebiten.FilterLinear
+		op.DisableMipmaps = true
+		// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
+		op.Blend = ebiten.BlendCopy
+		op.GeoM.Scale(sx, sy)
+		op.GeoM.Translate(tx, ty)
+		gameImage.DrawImage(worldView, op)
+		releaseDrawOpts(op)
+	}
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
@@ -1873,12 +1873,12 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 		if src != nil {
 			drawW, drawH = src.Bounds().Dx(), src.Bounds().Dy()
 		}
-        // Integer-only scaling for in-world sprites
-        sx, sy := gs.GameScale, gs.GameScale
-        scaledW := float64(roundToInt(float64(drawW) * sx))
-        scaledH := float64(roundToInt(float64(drawH) * sy))
-        sx = scaledW / float64(drawW)
-        sy = scaledH / float64(drawH)
+		// Integer-only scaling for in-world sprites
+		sx, sy := gs.GameScale, gs.GameScale
+		scaledW := float64(roundToInt(float64(drawW) * sx))
+		scaledH := float64(roundToInt(float64(drawH) * sy))
+		sx = scaledW / float64(drawW)
+		sy = scaledH / float64(drawH)
 		op := acquireDrawOpts()
 		op.Filter = ebiten.FilterNearest
 		op.DisableMipmaps = true
@@ -2233,7 +2233,7 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 		if !b.Far {
 			if d, ok := descMap[b.Index]; ok {
 				if size := mobileSize(d.PictID); size > 0 {
-					tailHeight := int(10 * gs.GameScale)
+					tailHeight := 10
 					y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
 				}
 			}
