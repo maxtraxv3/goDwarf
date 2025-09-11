@@ -43,8 +43,8 @@ var gsdef settings = settings{
 	MiddleClickMoveWindow:   false,
 	InputBarAlwaysOpen:      false,
 	KBWalkSpeed:             0.25,
-	MainFontSize:            7,
-	BubbleFontSize:          14,
+	MainFontSize:            8,
+	BubbleFontSize:          6,
 	ConsoleFontSize:         12,
 	ChatFontSize:            14,
 	InventoryFontSize:       18,
@@ -52,6 +52,7 @@ var gsdef settings = settings{
 	BubbleOpacity:           0.8,
 	BubbleBaseLife:          2,
 	BubbleLifePerWord:       1,
+	BubbleScale:             2.0,
 	NameBgOpacity:           0.8,
 	NameTagLabelColors:      true,
 	BarOpacity:              0.66,
@@ -165,7 +166,7 @@ var gsdef settings = settings{
 }
 
 type settings struct {
-	Version int
+    Version int
 
 	LastCharacter           string
 	ClickToToggle           bool
@@ -180,7 +181,9 @@ type settings struct {
 	PlayersFontSize         float64
 	BubbleOpacity           float64
 	BubbleBaseLife          float64
-	BubbleLifePerWord       float64
+    BubbleLifePerWord       float64
+    // BubbleScale scales bubble visuals (not font). Range 1.0–8.0.
+    BubbleScale            float64
 	NameBgOpacity           float64
 	NameTagLabelColors      bool
 	BarOpacity              float64
@@ -409,6 +412,11 @@ func loadSettings() bool {
 	}
 	if gs.ShaderGlowStrength < 0 || gs.ShaderGlowStrength > 2 {
 		gs.ShaderGlowStrength = gsdef.ShaderGlowStrength
+	}
+
+	// Clamp BubbleScale to 1.0–8.0
+	if gs.BubbleScale < 1.0 || gs.BubbleScale > 8.0 {
+		gs.BubbleScale = gsdef.BubbleScale
 	}
 
 	if gs.WindowWidth > 0 && gs.WindowHeight > 0 {

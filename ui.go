@@ -3196,6 +3196,21 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(bubblePerWordSlider)
 
+	// Bubble visual scale (not font size)
+	bubbleScaleSlider, bubbleScaleEvents := eui.NewSlider()
+	bubbleScaleSlider.Label = "Bubble Scale"
+	bubbleScaleSlider.MinValue = 1.0
+	bubbleScaleSlider.MaxValue = 8.0
+	bubbleScaleSlider.Value = float32(gs.BubbleScale)
+	bubbleScaleSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
+	bubbleScaleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.BubbleScale = float64(ev.Value)
+			settingsDirty = true
+		}
+	}
+	right.AddItem(bubbleScaleSlider)
+
 	fadePicsCB, fadePicsEvents := eui.NewCheckbox()
 	fadePicsCB.Text = "Fade objects obscuring mobiles"
 	fadePicsCB.Size = eui.Point{X: panelWidth - 10, Y: 24}

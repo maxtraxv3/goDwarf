@@ -29,8 +29,9 @@ var (
 )
 
 var (
-	ShiftPressed          bool
-	CapsLockToggleHandler func()
+    ShiftPressed          bool
+    CtrlPressed           bool
+    CapsLockToggleHandler func()
 )
 
 // Update processes input and updates window state.
@@ -38,9 +39,10 @@ var (
 func Update() error {
 	checkThemeStyleMods()
 
-	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
-	ShiftPressed = shiftPressed
-	ctrlPressed := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
+    shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) || ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
+    ShiftPressed = shiftPressed
+    ctrlPressed := ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
+    CtrlPressed = ctrlPressed
 	altPressed := ebiten.IsKeyPressed(ebiten.KeyAlt) || ebiten.IsKeyPressed(ebiten.KeyAltLeft) || ebiten.IsKeyPressed(ebiten.KeyAltRight)
 	metaPressed := ebiten.IsKeyPressed(ebiten.KeyMeta) || ebiten.IsKeyPressed(ebiten.KeyMetaLeft) || ebiten.IsKeyPressed(ebiten.KeyMetaRight)
 	if inpututil.IsKeyJustPressed(ebiten.KeyCapsLock) {
@@ -761,12 +763,18 @@ func (item *itemData) clickItem(mpos point, click bool) bool {
 		}
 	}
 
-	if click {
-		activeItem = item
-		item.Clicked = time.Now()
-		if item.ItemType == ITEM_BUTTON && item.Handler != nil {
-			item.Handler.Emit(UIEvent{Item: item, Type: EventClick})
-		}
+    if click {
+        activeItem = item
+        item.Clicked = time.Now()
+        if item.ItemType == ITEM_SLIDER {
+            // Record drag start state for precision-drag (Ctrl) behavior
+            item.dragStart = mpos
+            item.dragStartValue = item.Value
+            item.dragStartInit = true
+        }
+        if item.ItemType == ITEM_BUTTON && item.Handler != nil {
+            item.Handler.Emit(UIEvent{Item: item, Type: EventClick})
+        }
 		item.markDirty()
 		if item.ItemType == ITEM_COLORWHEEL {
 			if col, ok := item.colorAt(mpos); ok {
@@ -878,13 +886,18 @@ func (item *itemData) clickItem(mpos point, click bool) bool {
 				}
 			}
 		}
-		if item.ItemType == ITEM_SLIDER && pointerPressed() && downWin == item.ParentWindow {
-			item.setSliderValue(mpos)
-			item.markDirty()
-			if item.Action != nil {
-				item.Action()
-			}
-		}
+        if item.ItemType == ITEM_SLIDER && pointerPressed() && downWin == item.ParentWindow {
+            // Modifiers: Shift snaps to integer; Ctrl = fine adjust (1/8th).
+            moveScale := float32(1)
+            if CtrlPressed {
+                moveScale = 1.0 / 8.0
+            }
+            item.setSliderValueWithModifiers(mpos, ShiftPressed, moveScale)
+            item.markDirty()
+            if item.Action != nil {
+                item.Action()
+            }
+        }
 	}
 	return true
 }
@@ -971,33 +984,68 @@ func clearExpiredClicks(list []*itemData) {
 	}
 }
 
+// setSliderValue computes the slider value from the pointer position.
+// This is the base setter without modifier behavior.
 func (item *itemData) setSliderValue(mpos point) {
-	if item.Vertical {
-		knobH := item.AuxSize.Y * uiScale
-		height := item.DrawRect.Y1 - item.DrawRect.Y0 - knobH
-		if height <= 0 {
-			return
-		}
-		start := item.DrawRect.Y0 + knobH/2
-		end := start + height
-		val := end - mpos.Y
-		if val < 0 {
-			val = 0
-		}
-		if val > height {
-			val = height
-		}
-		ratio := val / height
-		item.Value = item.MinValue + ratio*(item.MaxValue-item.MinValue)
-		if item.IntOnly {
-			item.Value = float32(int(item.Value + 0.5))
-		}
-		item.markDirty()
-		if item.Handler != nil {
-			item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
-		}
-		return
-	}
+    if item.Vertical {
+        knobH := item.AuxSize.Y * uiScale
+        height := item.DrawRect.Y1 - item.DrawRect.Y0 - knobH
+        if height <= 0 {
+            return
+        }
+        start := item.DrawRect.Y0 + knobH/2
+        end := start + height
+
+        // Compute absolute value from position
+        absVal := func(py float32) float32 {
+            v := end - py
+            if v < 0 {
+                v = 0
+            }
+            if v > height {
+                v = height
+            }
+            ratio := v / height
+            return item.MinValue + ratio*(item.MaxValue-item.MinValue)
+        }
+
+        var nv float32
+        if CtrlPressed && item.dragStartInit {
+            // Scale movement by 1/4 relative to drag start
+            vStart := end - item.dragStart.Y
+            if vStart < 0 {
+                vStart = 0
+            }
+            if vStart > height {
+                vStart = height
+            }
+            vNow := end - mpos.Y
+            if vNow < 0 {
+                vNow = 0
+            }
+            if vNow > height {
+                vNow = height
+            }
+            vAdj := vStart + (vNow-vStart)*0.25
+            ratio := vAdj / height
+            nv = item.MinValue + ratio*(item.MaxValue-item.MinValue)
+        } else {
+            nv = absVal(mpos.Y)
+        }
+
+        // Shift temporarily locks to integer
+        if item.IntOnly || ShiftPressed {
+            nv = float32(int(nv + 0.5))
+        }
+        if nv != item.Value {
+            item.Value = nv
+            item.markDirty()
+            if item.Handler != nil {
+                item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
+            }
+        }
+        return
+    }
 
 	// Determine the width of the slider track accounting for the
 	// displayed value text to the right of the knob.
@@ -1020,23 +1068,114 @@ func (item *itemData) setSliderValue(mpos point) {
 	if width <= 0 {
 		return
 	}
-	start := item.DrawRect.X0 + knobW/2
-	val := (mpos.X - start)
-	if val < 0 {
-		val = 0
-	}
-	if val > width {
-		val = width
-	}
-	ratio := val / width
-	item.Value = item.MinValue + ratio*(item.MaxValue-item.MinValue)
-	if item.IntOnly {
-		item.Value = float32(int(item.Value + 0.5))
-	}
-	item.markDirty()
-	if item.Handler != nil {
-		item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
-	}
+    start := item.DrawRect.X0 + knobW/2
+    // Absolute mapping helper
+    absVal := func(px float32) float32 {
+        v := (px - start)
+        if v < 0 {
+            v = 0
+        }
+        if v > width {
+            v = width
+        }
+        ratio := v / width
+        return item.MinValue + ratio*(item.MaxValue-item.MinValue)
+    }
+
+    var nv float32
+    if CtrlPressed && item.dragStartInit {
+        vStart := item.dragStart.X - start
+        if vStart < 0 {
+            vStart = 0
+        }
+        if vStart > width {
+            vStart = width
+        }
+        vNow := mpos.X - start
+        if vNow < 0 {
+            vNow = 0
+        }
+        if vNow > width {
+            vNow = width
+        }
+        vAdj := vStart + (vNow-vStart)*0.25
+        ratio := vAdj / width
+        nv = item.MinValue + ratio*(item.MaxValue-item.MinValue)
+    } else {
+        nv = absVal(mpos.X)
+    }
+
+    if item.IntOnly || ShiftPressed {
+        nv = float32(int(nv + 0.5))
+    }
+    if nv != item.Value {
+        item.Value = nv
+        item.markDirty()
+        if item.Handler != nil {
+            item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
+        }
+    }
+}
+
+// setSliderValueWithModifiers adjusts slider value honoring Shift/Ctrl behavior.
+// shiftSnap: when true, snap to nearest integer.
+// moveScale: scales movement toward the pointer target (e.g., 1/8 for fine adjust).
+func (item *itemData) setSliderValueWithModifiers(mpos point, shiftSnap bool, moveScale float32) {
+    // Compute target from pointer using the base maths.
+    old := item.Value
+    // Copy of setSliderValue but capturing the computed target without emitting events first.
+    if item.Vertical {
+        knobH := item.AuxSize.Y * uiScale
+        height := item.DrawRect.Y1 - item.DrawRect.Y0 - knobH
+        if height <= 0 { return }
+        start := item.DrawRect.Y0 + knobH/2
+        end := start + height
+        val := end - mpos.Y
+        if val < 0 { val = 0 }
+        if val > height { val = height }
+        ratio := val / height
+        target := item.MinValue + ratio*(item.MaxValue-item.MinValue)
+        // Fine adjust by moving fraction toward target
+        if moveScale != 1 { target = old + (target-old)*moveScale }
+        if shiftSnap { target = float32(int(target + 0.5)) } else if item.IntOnly { target = float32(int(target + 0.5)) }
+        if target != item.Value {
+            item.Value = target
+            item.markDirty()
+            if item.Handler != nil {
+                item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
+            }
+        }
+        return
+    }
+
+    // Horizontal
+    maxLabel := sliderMaxLabel
+    textSize := (item.FontSize * uiScale) + 2
+    face := textFace(textSize)
+    maxW, _ := text.Measure(maxLabel, face, 0)
+    knobW := item.AuxSize.X * uiScale
+    gap := currentStyle.SliderValueGap
+    width := item.DrawRect.X1 - item.DrawRect.X0 - knobW - gap - float32(maxW)
+    if width < knobW {
+        width = item.DrawRect.X1 - item.DrawRect.X0 - knobW
+        if width < 0 { width = 0 }
+    }
+    if width <= 0 { return }
+    start := item.DrawRect.X0 + knobW/2
+    val := (mpos.X - start)
+    if val < 0 { val = 0 }
+    if val > width { val = width }
+    ratio := val / width
+    target := item.MinValue + ratio*(item.MaxValue-item.MinValue)
+    if moveScale != 1 { target = old + (target-old)*moveScale }
+    if shiftSnap { target = float32(int(target + 0.5)) } else if item.IntOnly { target = float32(int(target + 0.5)) }
+    if target != item.Value {
+        item.Value = target
+        item.markDirty()
+        if item.Handler != nil {
+            item.Handler.Emit(UIEvent{Item: item, Type: EventSliderChanged, Value: item.Value})
+        }
+    }
 }
 
 func (item *itemData) colorAt(mpos point) (Color, bool) {

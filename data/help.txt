@@ -17,6 +17,7 @@ UI Navigation
 - Click the "Actions" button on the toolbar for hotkeys, shortcuts, or scripts.
 - Mouse wheel scrolls lists and text windows.
 - Window positions, sizes, and open/closed state persist between runs.
+- Sliders: hold Shift to snap to integers; hold Ctrl for fine adjustment at 1/8 speed.
 
 Chat & Console
 --------------

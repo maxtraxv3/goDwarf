@@ -206,7 +206,12 @@ type itemData struct {
 
 	// Indeterminate indicates that the widget should render an animated
 	// barber-pole style progress when exact value is unknown.
-	Indeterminate bool
+    Indeterminate bool
+
+    // Slider drag tracking
+    dragStart     point
+    dragStartInit bool
+    dragStartValue float32
 }
 
 type roundRect struct {

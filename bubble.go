@@ -124,12 +124,15 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if tailX < 0 || tailX >= sw || tailY < 0 || tailY >= sh {
 		noArrow = true
 	}
-	pad := 6
-	tailHeight := 10
-	tailHalf := 6
+    // Visual scale for bubbles independent of font size
+    s := float64(gs.BubbleScale)
+    pad := int(math.Round(6 * s))
+    tailHeight := int(math.Round(10 * s))
+    tailHalf := int(math.Round(6 * s))
 	bubbleType := typ & kBubbleTypeMask
 
-	maxLineWidth := gameAreaSizeX/4 - 2*pad
+    // Allow wider bubbles with larger scale; preserve font size
+    maxLineWidth := int(float64(gameAreaSizeX)/4*s) - 2*pad
 	font := bubbleFont
 	if bubbleType == kBubbleWhisper {
 		font = bubbleFontRegular
@@ -146,10 +149,10 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	bgR, bgG, bgB, bgA := bgCol.RGBA()
 	bdR, bdG, bdB, bdA := borderCol.RGBA()
 
-	radius := float32(4)
-	if bubbleType == kBubblePonder {
-		radius = float32(8)
-	}
+    radius := float32(4 * s)
+    if bubbleType == kBubblePonder {
+        radius = float32(8 * s)
+    }
 
 	var body vector.Path
 	body.MoveTo(float32(left)+radius, float32(top))
@@ -255,7 +258,9 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		outline.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 		outline.Close()
 
-		vs, is = outline.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{Width: 1})
+        // Thicken outline a bit with scale
+        strokeW := float32(math.Max(1, s))
+        vs, is = outline.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{Width: strokeW})
 		op := &ebiten.DrawTrianglesOptions{ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha, AntiAlias: true}
 		for i := range vs {
 			vs[i].SrcX = 0
@@ -270,25 +275,25 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		drawPonderWaves(screen, left, top, right, bottom, bgCol)
 	}
 
-	if bubbleType == kBubbleYell {
-		gapStart, gapEnd := float32(0), float32(0)
-		if !far && !noArrow {
-			gapStart = float32(baseX - tailHalf)
-			gapEnd = float32(baseX + tailHalf)
-		} else {
-			gapStart, gapEnd = -1, -1
-		}
-		drawSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 3, borderCol, gapStart, gapEnd)
-	} else if bubbleType == kBubbleMonster {
-		gapStart, gapEnd := float32(0), float32(0)
-		if !far && !noArrow {
-			gapStart = float32(baseX - tailHalf)
-			gapEnd = float32(baseX + tailHalf)
-		} else {
-			gapStart, gapEnd = -1, -1
-		}
-		drawMonsterSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 4, borderCol, gapStart, gapEnd)
-	}
+    if bubbleType == kBubbleYell {
+        gapStart, gapEnd := float32(0), float32(0)
+        if !far && !noArrow {
+            gapStart = float32(baseX - tailHalf)
+            gapEnd = float32(baseX + tailHalf)
+        } else {
+            gapStart, gapEnd = -1, -1
+        }
+        drawSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 3*float32(s), borderCol, gapStart, gapEnd)
+    } else if bubbleType == kBubbleMonster {
+        gapStart, gapEnd := float32(0), float32(0)
+        if !far && !noArrow {
+            gapStart = float32(baseX - tailHalf)
+            gapEnd = float32(baseX + tailHalf)
+        } else {
+            gapStart, gapEnd = -1, -1
+        }
+        drawMonsterSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 4*float32(s), borderCol, gapStart, gapEnd)
+    }
 
 	textTop := top + pad
 	textLeft := left + pad
@@ -633,8 +638,9 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 // border made of small circles. Drawing both here ensures consistent
 // compositing and color/alpha handling.
 func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
-	cr, cg, cb, ca := col.RGBA()
-	radius := float32(8)
+    cr, cg, cb, ca := col.RGBA()
+    s := float32(gs.BubbleScale)
+    radius := float32(8) * s
 	var body vector.Path
 	body.MoveTo(float32(left)+radius, float32(top))
 	body.LineTo(float32(right)-radius, float32(top))
@@ -663,10 +669,10 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 	}
 	screen.DrawTriangles(vs, is, whiteImage, op)
 
-	r := float32(6)
-	step := r * 1.2
-	phase := float64(time.Now().UnixNano()) / float64(time.Second)
-	corner := float32(10)
+    r := float32(6) * s
+    step := r * 1.2
+    phase := float64(time.Now().UnixNano()) / float64(time.Second)
+    corner := float32(10) * s
 	angleStep := float64(step / corner)
 
 	draw := func(cx, cy float32) {

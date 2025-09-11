@@ -2232,10 +2232,10 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 		y := roundToInt((vpos + float64(fieldCenterY)) * gs.GameScale)
 		if !b.Far {
 			if d, ok := descMap[b.Index]; ok {
-				if size := mobileSize(d.PictID); size > 0 {
-					tailHeight := 10
-					y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
-				}
+                if size := mobileSize(d.PictID); size > 0 {
+                    tailHeight := int(math.Round(10 * gs.BubbleScale))
+                    y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
+                }
 			}
 		}
 		borderCol, bgCol, textCol := bubbleColors(b.Type)
