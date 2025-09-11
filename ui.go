@@ -4572,6 +4572,33 @@ func makeDebugWindow() {
 	}
 	debugFlow.AddItem(pluginOutCB)
 
+	altNetCB, altNetEvents := eui.NewCheckbox()
+	altNetCB.Text = "Alt Networking"
+	altNetCB.Size = eui.Point{X: width, Y: 24}
+	altNetCB.Checked = gs.altNetMode
+	altNetCB.SetTooltip("Send input after a delay following server packets")
+	altNetEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.altNetMode = ev.Checked
+			settingsDirty = true
+		}
+	}
+	debugFlow.AddItem(altNetCB)
+
+	netDelaySlider, netDelayEvents := eui.NewSlider()
+	netDelaySlider.Label = "Net Delay (ms)"
+	netDelaySlider.MinValue = 0
+	netDelaySlider.MaxValue = 190
+	netDelaySlider.Value = float32(gs.altNetDelay)
+	netDelaySlider.Size = eui.Point{X: width - 10, Y: 24}
+	netDelayEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.altNetDelay = int(ev.Value)
+			settingsDirty = true
+		}
+	}
+	debugFlow.AddItem(netDelaySlider)
+
 	lanczosCB, lanczosEvents := eui.NewCheckbox()
 	lanczosCB.Text = "Lanczos Upscale Filter (experimental)"
 	lanczosCB.Size = eui.Point{X: width, Y: 24}

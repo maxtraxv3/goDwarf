@@ -2710,6 +2710,9 @@ func sendInputLoop(ctx context.Context, udpConn, tcpConn net.Conn) {
 			return
 		case <-frameCh:
 		}
+		if gs.altNetMode {
+			time.Sleep(time.Duration(gs.altNetDelay) * time.Millisecond)
+		}
 		frameMu.Lock()
 		last := lastFrameTime
 		frameMu.Unlock()
