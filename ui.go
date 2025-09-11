@@ -91,6 +91,7 @@ var (
 	mobileBlendLabel *eui.ItemData
 	pictBlendLabel   *eui.ItemData
 	totalCacheLabel  *eui.ItemData
+	pingLabel        *eui.ItemData
 
 	recordBtn         *eui.ItemData
 	recordStatus      *eui.ItemData
@@ -4623,6 +4624,39 @@ func makeDebugWindow() {
 		}
 	}
 	debugFlow.AddItem(netDelaySlider)
+
+	pingLabel, _ = eui.NewText()
+	pingLabel.Text = ""
+	pingLabel.Size = eui.Point{X: width, Y: 24}
+	pingLabel.FontSize = 10
+	debugFlow.AddItem(pingLabel)
+
+	pingBtn, pingEvents := eui.NewButton()
+	pingBtn.Text = "Ping Server"
+	pingBtn.Size = eui.Point{X: width, Y: 24}
+	pingEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			pingLabel.Text = "Pinging..."
+			pingLabel.Dirty = true
+			debugWin.Refresh()
+			go func() {
+				worst := time.Duration(0)
+				for i := 0; i < 5; i++ {
+					rtt := pingServer()
+					if rtt > worst {
+						worst = rtt
+					}
+					if i < 4 {
+						time.Sleep(200 * time.Millisecond)
+					}
+				}
+				pingLabel.Text = fmt.Sprintf("Ping: %d ms", worst.Milliseconds())
+				pingLabel.Dirty = true
+				debugWin.Refresh()
+			}()
+		}
+	}
+	debugFlow.AddItem(pingBtn)
 
 	lanczosCB, lanczosEvents := eui.NewCheckbox()
 	lanczosCB.Text = "Lanczos Upscale Filter (experimental)"
