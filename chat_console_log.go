@@ -72,6 +72,12 @@ func ensureTextLog() {
 	textLogMu.Lock()
 	defer textLogMu.Unlock()
 
+	if playingMovie {
+		textLogPath = ""
+		textLogChar = ""
+		return
+	}
+
 	// Determine the preferred character name for logging.
 	desired := strings.TrimSpace(playerName)
 	if desired == "" {
