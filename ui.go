@@ -62,16 +62,17 @@ var changelogWin *eui.WindowData
 // applyBoldFace sets a bold text face for the given item based on its current
 // FontSize and the active UI scale, so it renders as a bold section label.
 func applyBoldFace(it *eui.ItemData) {
-    if it == nil {
-        return
-    }
-    sz := float64(it.FontSize*eui.UIScale() + 2)
-    if src := eui.BoldFontSource(); src != nil {
-        it.Face = &text.GoTextFace{Source: src, Size: sz}
-    } else {
-        it.Face = &text.GoTextFace{Size: sz}
-    }
+	if it == nil {
+		return
+	}
+	sz := float64(it.FontSize*eui.UIScale() + 2)
+	if src := eui.BoldFontSource(); src != nil {
+		it.Face = &text.GoTextFace{Source: src, Size: sz}
+	} else {
+		it.Face = &text.GoTextFace{Size: sz}
+	}
 }
+
 var changelogList *eui.ItemData
 var changelogPrevBtn *eui.ItemData
 var changelogNextBtn *eui.ItemData
@@ -1671,12 +1672,12 @@ func makeDownloadsWindow() {
 		}
 	}
 
-    t, _ := eui.NewText()
-    t.Text = "Files we must download:"
-    t.FontSize = 15
-    t.Size = eui.Point{X: 320, Y: 25}
-    applyBoldFace(t)
-    flow.AddItem(t)
+	t, _ := eui.NewText()
+	t.Text = "Files we must download:"
+	t.FontSize = 15
+	t.Size = eui.Point{X: 320, Y: 25}
+	applyBoldFace(t)
+	flow.AddItem(t)
 
 	for _, f := range status.Files {
 		t, _ := eui.NewText()
@@ -1691,12 +1692,12 @@ func makeDownloadsWindow() {
 	}
 
 	if status.NeedSoundfont || status.NeedPiper || status.NeedPiperFem || status.NeedPiperMale {
-        opt, _ := eui.NewText()
-        opt.Text = "Optional downloads:"
-        opt.FontSize = 15
-        opt.Size = eui.Point{X: 320, Y: 25}
-        applyBoldFace(opt)
-        flow.AddItem(opt)
+		opt, _ := eui.NewText()
+		opt.Text = "Optional downloads:"
+		opt.FontSize = 15
+		opt.Size = eui.Point{X: 320, Y: 25}
+		applyBoldFace(opt)
+		flow.AddItem(opt)
 
 		info, _ := eui.NewText()
 		info.Text = "Download TTS voices and the music soundfont."
@@ -2668,12 +2669,12 @@ func makeSettingsWindow() {
 
 	// (Reset button added at the bottom-right later)
 
-    label, _ := eui.NewText()
-    label.Text = "\nWindow Behavior:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ := eui.NewText()
+	label.Text = "\nWindow Behavior:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	// Show classic Clan Lord splash image (from CL_Images id 4)
 	splashCB, splashEvents := eui.NewCheckbox()
@@ -2895,12 +2896,12 @@ func makeSettingsWindow() {
 	left.AddItem(accLabel)
 	left.AddItem(accentWheel)
 
-    label, _ = eui.NewText()
-    label.Text = "\nControls:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nControls:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	toggle, toggleEvents := eui.NewCheckbox()
 	toggle.Text = "Click-to-toggle movement"
@@ -2995,12 +2996,12 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(joystickBtn)
 
-    label, _ = eui.NewText()
-    label.Text = "\nQuality Options:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nQuality Options:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	qualityPresetDD, qpEvents := eui.NewDropdown()
 	qualityPresetDD.Options = []string{"Potato", "Low", "Standard", "High", "Custom"}
@@ -3038,12 +3039,12 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(qualityBtn)
 
-    label, _ = eui.NewText()
-    label.Text = "\nChat:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nChat:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	bubbleMsgCB, bubbleMsgEvents := eui.NewCheckbox()
 	bubbleMsgCB.Text = "Combine chat + console"
@@ -3161,12 +3162,12 @@ func makeSettingsWindow() {
 
 	// (Gamepad button moved above under Controls section)
 
-    label, _ = eui.NewText()
-    label.Text = "\nStatus Bar Options:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    right.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nStatus Bar Options:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	right.AddItem(label)
 
 	placements := []struct {
 		name  string
@@ -3208,12 +3209,12 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(barColorCB)
 
-    label, _ = eui.NewText()
-    label.Text = "\nOpacity Settings:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    right.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nOpacity Settings:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	right.AddItem(label)
 
 	maxNightSlider, maxNightEvents := eui.NewSlider()
 	maxNightSlider.Label = "Max Night Level"
@@ -3384,12 +3385,12 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(barOpacitySlider)
 
-    label, _ = eui.NewText()
-    label.Text = "\nText Sizes:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    center.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nText Sizes:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	center.AddItem(label)
 
 	labelFontSlider, labelFontEvents := eui.NewSlider()
 	labelFontSlider.Label = "Name Font Size"
@@ -3517,12 +3518,12 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(chatFontSlider)
 
-    label, _ = eui.NewText()
-    label.Text = "\nAudio:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    center.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nAudio:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	center.AddItem(label)
 
 	// Move Throttle Sounds to Chat & Audio area
 	throttleCB, throttleEvents := eui.NewCheckbox()
@@ -3658,12 +3659,12 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(ttsEditBtn)
 
-    label, _ = eui.NewText()
-    label.Text = "\nAdvanced:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: panelWidth, Y: 50}
-    applyBoldFace(label)
-    center.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nAdvanced:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: panelWidth, Y: 50}
+	applyBoldFace(label)
+	center.AddItem(label)
 
 	// Power-save options (Advanced)
 	psBGCB, psBGEvents := eui.NewCheckbox()
@@ -3729,14 +3730,14 @@ func makeSettingsWindow() {
 	center.AddItem(psFPSSlider)
 
 	pluginKillCB, pluginKillEvents := eui.NewCheckbox()
-	pluginKillCB.Text = "Auto-kill spammy plugins"
+	pluginKillCB.Text = "Auto-kill spammy scripts"
 	pluginKillCB.Size = eui.Point{X: panelWidth, Y: 24}
-	pluginKillCB.Checked = gs.PluginSpamKill
-	pluginKillCB.SetTooltip("Stop plugins that send too many lines")
+	pluginKillCB.Checked = gs.ScriptSpamKill
+	pluginKillCB.SetTooltip("Stop scripts that send too many lines")
 	pluginKillEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
-			gs.PluginSpamKill = ev.Checked
+			gs.ScriptSpamKill = ev.Checked
 			SettingsLock.Unlock()
 			settingsDirty = true
 		}
@@ -4165,12 +4166,12 @@ func makeQualityWindow() {
 	center := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
 	center.Size = eui.Point{X: panelWidth, Y: 10}
 
-    label, _ := eui.NewText()
-    label.Text = "\nGPU Options:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: width, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ := eui.NewText()
+	label.Text = "\nGPU Options:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: width, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	renderScale, renderScaleEvents := eui.NewSlider()
 	renderScale.Label = "Upscale game amount (sharpness)"
@@ -4385,12 +4386,12 @@ func makeQualityWindow() {
 
 	// (moved) Background behavior options are placed under Audio/Notifications
 
-    label, _ = eui.NewText()
-    label.Text = "\nImage denoising:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: width, Y: 50}
-    applyBoldFace(label)
-    left.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nImage denoising:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: width, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
 
 	dCB, denoiseEvents := eui.NewCheckbox()
 	denoiseCB = dCB
@@ -4448,12 +4449,12 @@ func makeQualityWindow() {
 	}
 	left.AddItem(denoiseAmtSlider)
 
-    label, _ = eui.NewText()
-    label.Text = "\nMotion Smoothing Options:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: width, Y: 50}
-    applyBoldFace(label)
-    center.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nMotion Smoothing Options:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: width, Y: 50}
+	applyBoldFace(label)
+	center.AddItem(label)
 
 	mCB, motionEvents := eui.NewCheckbox()
 	motionCB = mCB
@@ -4499,12 +4500,12 @@ func makeQualityWindow() {
 		center.AddItem(noSmoothCB)
 	*/
 
-    label, _ = eui.NewText()
-    label.Text = "\nAnimation Blending Options:"
-    label.FontSize = 15
-    label.Size = eui.Point{X: width, Y: 50}
-    applyBoldFace(label)
-    center.AddItem(label)
+	label, _ = eui.NewText()
+	label.Text = "\nAnimation Blending Options:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: width, Y: 50}
+	applyBoldFace(label)
+	center.AddItem(label)
 
 	aCB, animEvents := eui.NewCheckbox()
 	animCB = aCB

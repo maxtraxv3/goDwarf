@@ -14,7 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const SETTINGS_VERSION = 1
+const SETTINGS_VERSION = 2
 
 type BarPlacement int
 
@@ -118,7 +118,7 @@ var gsdef settings = settings{
 	NotificationVolume:    0.6,
 	NotificationBeep:      true,
 	NotificationDuration:  6,
-	PluginSpamKill:        true,
+	ScriptSpamKill:        true,
 	PromptOnSaveRecording: true,
 	AutoRecord:            false,
 	PromptDisableShaders:  true,
@@ -152,10 +152,10 @@ var gsdef settings = settings{
 	ThrottleSounds:  true,
 
 	NightEffect:    true,
-    ShaderLighting: true,
+	ShaderLighting: true,
 
-    // Window behavior
-    ShowClanLordSplashImage: true,
+	// Window behavior
+	ShowClanLordSplashImage: true,
 
 	//Unexported
 	vsync:             true,
@@ -193,9 +193,9 @@ type settings struct {
 	BubbleBaseLife        float64
 	BubbleLifePerWord     float64
 	// BubbleScale scales bubble visuals (not font). Range 1.0–8.0.
-	BubbleScale             float64
-	NameBgOpacity           float64
-	NameTagLabelColors      bool
+	BubbleScale        float64
+	NameBgOpacity      float64
+	NameTagLabelColors bool
 	// NameTagsOnHoverOnly hides name-tags unless the cursor is over a mobile.
 	NameTagsOnHoverOnly     bool
 	BarOpacity              float64
@@ -266,7 +266,7 @@ type settings struct {
 	NotificationVolume    float64
 	NotificationBeep      bool
 	NotificationDuration  float64
-	PluginSpamKill        bool
+	ScriptSpamKill        bool
 	PromptOnSaveRecording bool
 	AutoRecord            bool
 	PromptDisableShaders  bool
@@ -315,15 +315,15 @@ type settings struct {
 	hideMobiles       bool
 	vsync             bool
 	NightEffect       bool
-    ShaderLighting    bool
+	ShaderLighting    bool
 
-    // Window behavior
-    ShowClanLordSplashImage bool
-	lanczosUpscale    bool
-	precacheSounds    bool
-	precacheImages    bool
-	smoothMoving      bool
-	recordAssetStats  bool
+	// Window behavior
+	ShowClanLordSplashImage bool
+	lanczosUpscale          bool
+	precacheSounds          bool
+	precacheImages          bool
+	smoothMoving            bool
+	recordAssetStats        bool
 }
 
 var (

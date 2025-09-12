@@ -913,7 +913,7 @@ func enablePlugin(owner string) {
 }
 
 func recordPluginSend(owner string) bool {
-	if !gs.PluginSpamKill {
+	if !gs.ScriptSpamKill {
 		return false
 	}
 	now := time.Now()
