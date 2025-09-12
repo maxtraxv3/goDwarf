@@ -52,16 +52,21 @@ type moviePlayer struct {
 }
 
 func newMoviePlayer(frames []movieFrame, fps int, cancel context.CancelFunc) *moviePlayer {
-	setInterpFPS(fps)
-	serverFPS = float64(fps)
-	frameInterval = time.Second / time.Duration(fps)
-	playingMovie = true
-	movieMode = true
-	return &moviePlayer{
-		frames:      frames,
-		fps:         fps,
-		baseFPS:     fps,
-		playing:     true,
+    setInterpFPS(fps)
+    serverFPS = float64(fps)
+    frameInterval = time.Second / time.Duration(fps)
+    playingMovie = true
+    movieMode = true
+    // Do not interpolate the very first frame of playback.
+    // Ensure prevTime == curTime and clear prior history so sprites
+    // don't lerp from zeroed positions on start.
+    resetInterpolation()
+    suppressInterpOnce = true
+    return &moviePlayer{
+        frames:      frames,
+        fps:         fps,
+        baseFPS:     fps,
+        playing:     true,
 		ticker:      time.NewTicker(time.Second / time.Duration(fps)),
 		cancel:      cancel,
 		checkpoints: []movieCheckpoint{{idx: 0, state: cloneDrawState(initialState)}},
@@ -456,8 +461,8 @@ func (p *moviePlayer) skipForwardMilli(milli int) {
 }
 
 func (p *moviePlayer) seek(idx int) {
-	seekingMov = true
-	defer func() { seekingMov = false }()
+    seekingMov = true
+    defer func() { seekingMov = false }()
 
 	// Stop any currently playing sounds so scrubbing is silent.
 	stopAllSounds()
@@ -528,11 +533,13 @@ func (p *moviePlayer) seek(idx int) {
 		stateMu.Unlock()
 		p.checkpoints = append(p.checkpoints, snap)
 	}
-	p.cur = idx
-	resetInterpolation()
-	setInterpFPS(p.fps)
-	p.updateUI()
-	p.playing = wasPlaying
+    p.cur = idx
+    resetInterpolation()
+    // Avoid interpolation artifacts on the first frame after a seek.
+    suppressInterpOnce = true
+    setInterpFPS(p.fps)
+    p.updateUI()
+    p.playing = wasPlaying
 }
 
 // maybeDecodeMessage applies a simple heuristic to determine whether a frame

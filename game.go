@@ -526,9 +526,14 @@ func cloneDrawState(src drawState) drawState {
 // computeInterpolation returns the blend factors for frame interpolation and onion skinning.
 // It returns separate fade values for mobiles and pictures based on their respective rates.
 func computeInterpolation(now, prevTime, curTime time.Time, mobileRate, pictRate float64) (alpha float64, mobileFade, pictFade float32) {
-	alpha = 1.0
-	mobileFade = 1.0
-	pictFade = 1.0
+    if suppressInterpOnce {
+        // Skip interpolation for a single frame (e.g., after start/seek).
+        suppressInterpOnce = false
+        return 1.0, 1.0, 1.0
+    }
+    alpha = 1.0
+    mobileFade = 1.0
+    pictFade = 1.0
 	if (gs.MotionSmoothing || gs.BlendMobiles || gs.BlendPicts) && !curTime.IsZero() && curTime.After(prevTime) {
 		// Use cached frame time to avoid repeated runtime.Now calls
 		elapsed := now.Sub(prevTime)
@@ -576,6 +581,8 @@ var once sync.Once
 var lastBackpace time.Time
 var lastPlayersRefreshTick time.Time
 var lastFocused bool
+// suppressInterpOnce skips interpolation for the next draw frame.
+var suppressInterpOnce bool
 
 func (g *Game) Update() error {
 	// Background behaviors: mute and slow render when unfocused
