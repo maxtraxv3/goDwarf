@@ -45,8 +45,8 @@ var loginWin *eui.WindowData
 var downloadWin *eui.WindowData
 var precacheWin *eui.WindowData
 var charactersList *eui.ItemData
-// loginConnectBtn holds the Connect button so we can enable/disable it
-// based on whether a character is selected.
+
+// loginConnectBtn holds the Connect button for potential future tweaks.
 var loginConnectBtn *eui.ItemData
 var addCharWin *eui.WindowData
 var addCharName string
@@ -58,6 +58,20 @@ var passWarn *eui.ItemData
 var passPrev string
 
 var changelogWin *eui.WindowData
+
+// applyBoldFace sets a bold text face for the given item based on its current
+// FontSize and the active UI scale, so it renders as a bold section label.
+func applyBoldFace(it *eui.ItemData) {
+    if it == nil {
+        return
+    }
+    sz := float64(it.FontSize*eui.UIScale() + 2)
+    if src := eui.BoldFontSource(); src != nil {
+        it.Face = &text.GoTextFace{Source: src, Size: sz}
+    } else {
+        it.Face = &text.GoTextFace{Size: sz}
+    }
+}
 var changelogList *eui.ItemData
 var changelogPrevBtn *eui.ItemData
 var changelogNextBtn *eui.ItemData
@@ -1657,11 +1671,12 @@ func makeDownloadsWindow() {
 		}
 	}
 
-	t, _ := eui.NewText()
-	t.Text = "Files we must download:"
-	t.FontSize = 15
-	t.Size = eui.Point{X: 320, Y: 25}
-	flow.AddItem(t)
+    t, _ := eui.NewText()
+    t.Text = "Files we must download:"
+    t.FontSize = 15
+    t.Size = eui.Point{X: 320, Y: 25}
+    applyBoldFace(t)
+    flow.AddItem(t)
 
 	for _, f := range status.Files {
 		t, _ := eui.NewText()
@@ -1676,11 +1691,12 @@ func makeDownloadsWindow() {
 	}
 
 	if status.NeedSoundfont || status.NeedPiper || status.NeedPiperFem || status.NeedPiperMale {
-		opt, _ := eui.NewText()
-		opt.Text = "Optional downloads:"
-		opt.FontSize = 15
-		opt.Size = eui.Point{X: 320, Y: 25}
-		flow.AddItem(opt)
+        opt, _ := eui.NewText()
+        opt.Text = "Optional downloads:"
+        opt.FontSize = 15
+        opt.Size = eui.Point{X: 320, Y: 25}
+        applyBoldFace(opt)
+        flow.AddItem(opt)
 
 		info, _ := eui.NewText()
 		info.Text = "Download TTS voices and the music soundfont."
@@ -1889,14 +1905,14 @@ func makeDownloadsWindow() {
 const charWinWidth = 500
 
 func updateCharacterButtons() {
-    if loginWin == nil || !loginWin.IsOpen() {
-        return
-    }
-    if charactersList == nil {
-        return
-    }
-    // Preserve current scroll position while rebuilding the list
-    prevScroll := charactersList.Scroll
+	if loginWin == nil || !loginWin.IsOpen() {
+		return
+	}
+	if charactersList == nil {
+		return
+	}
+	// Preserve current scroll position while rebuilding the list
+	prevScroll := charactersList.Scroll
 	if name == "" {
 		if gs.LastCharacter != "" {
 			for _, c := range characters {
@@ -1914,10 +1930,10 @@ func updateCharacterButtons() {
 			pass = ""
 		}
 	}
-    for i := range charactersList.Contents {
-        charactersList.Contents[i] = nil
-    }
-    charactersList.Contents = charactersList.Contents[:0]
+	for i := range charactersList.Contents {
+		charactersList.Contents[i] = nil
+	}
+	charactersList.Contents = charactersList.Contents[:0]
 
 	if len(characters) == 0 {
 		empty, _ := eui.NewText()
@@ -2012,17 +2028,13 @@ func updateCharacterButtons() {
 			}
 			row.AddItem(trash)
 			charactersList.AddItem(row)
-        }
-    }
-    // Preserve window position while contents change size
-    // Restore prior scroll position to keep the user's place.
-    charactersList.Scroll = prevScroll
-    // Disable Connect when no character is selected; enable otherwise.
-    if loginConnectBtn != nil {
-        loginConnectBtn.Disabled = name == ""
-        loginConnectBtn.Dirty = true
-    }
-    loginWin.Refresh()
+		}
+	}
+	// Preserve window position while contents change size
+	// Restore prior scroll position to keep the user's place.
+	charactersList.Scroll = prevScroll
+	// Keep UI fresh after potential content changes.
+	loginWin.Refresh()
 }
 
 func makeAddCharacterWindow() {
@@ -2350,13 +2362,11 @@ func makeLoginWindow() {
 	loginWin.DefaultButton = connBtn
 	// Keep a handle so we can enable/disable it dynamically.
 	loginConnectBtn = connBtn
-	// Default to disabled when no character is selected; updateCharacterButtons
-	// will keep this in sync as selection changes.
-	connBtn.Disabled = name == ""
 	connEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			if name == "" {
-				makeErrorWindow("Error: Login: login is empty")
+				// No character selected: instruct the user to pick one first.
+				makeErrorWindow("Please select a character to connect with first.")
 				return
 			}
 			if passHash == "" && pass == "" {
@@ -2658,11 +2668,12 @@ func makeSettingsWindow() {
 
 	// (Reset button added at the bottom-right later)
 
-	label, _ := eui.NewText()
-	label.Text = "\nWindow Behavior:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	left.AddItem(label)
+    label, _ := eui.NewText()
+    label.Text = "\nWindow Behavior:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	// Show classic Clan Lord splash image (from CL_Images id 4)
 	splashCB, splashEvents := eui.NewCheckbox()
@@ -2778,68 +2789,7 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(alwaysTopCB)
 
-	// Power-save options
-	psBGCB, psBGEvents := eui.NewCheckbox()
-	psBGCB.Text = "Power save in background"
-	psBGCB.Size = eui.Point{X: panelWidth, Y: 24}
-	psBGCB.Checked = gs.PowerSaveBackground
-	psBGCB.SetTooltip("Reduce FPS when window is unfocused")
-	psBGEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.PowerSaveBackground = ev.Checked
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-	left.AddItem(psBGCB)
-
-	psAlwaysCB, psAlwaysEvents := eui.NewCheckbox()
-	psAlwaysCB.Text = "Always power save"
-	psAlwaysCB.Size = eui.Point{X: panelWidth, Y: 24}
-	psAlwaysCB.Checked = gs.PowerSaveAlways
-	psAlwaysCB.SetTooltip("Limit FPS even when focused (useful on laptops)")
-	psAlwaysEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.PowerSaveAlways = ev.Checked
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-	left.AddItem(psAlwaysCB)
-
-	psFPSSlider, psFPSEvents := eui.NewSlider()
-	psFPSSlider.Label = "Power-save FPS"
-	psFPSSlider.MinValue = 1
-	psFPSSlider.MaxValue = 60
-	psFPSSlider.IntOnly = true
-	if gs.PowerSaveFPS < 1 {
-		gs.PowerSaveFPS = 1
-	}
-	if gs.PowerSaveFPS > 60 {
-		gs.PowerSaveFPS = 60
-	}
-	psFPSSlider.Value = float32(gs.PowerSaveFPS)
-	psFPSSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	psFPSSlider.SetTooltip("Target FPS when power saving is active")
-	psFPSEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			SettingsLock.Lock()
-			v := int(ev.Value)
-			if v < 1 {
-				v = 1
-			}
-			if v > 60 {
-				v = 60
-			}
-			gs.PowerSaveFPS = v
-			SettingsLock.Unlock()
-			psFPSSlider.Value = float32(v)
-			settingsDirty = true
-		}
-	}
-	left.AddItem(psFPSSlider)
+	// (Power-save options moved to Advanced section)
 
 	pinLocCB, pinLocEvents := eui.NewCheckbox()
 	pinLocCB.Text = "Show pin-to locations"
@@ -2945,11 +2895,12 @@ func makeSettingsWindow() {
 	left.AddItem(accLabel)
 	left.AddItem(accentWheel)
 
-	label, _ = eui.NewText()
-	label.Text = "\nControls:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	left.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nControls:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	toggle, toggleEvents := eui.NewCheckbox()
 	toggle.Text = "Click-to-toggle movement"
@@ -3044,11 +2995,12 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(joystickBtn)
 
-	label, _ = eui.NewText()
-	label.Text = "\nQuality Options:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	left.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nQuality Options:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	qualityPresetDD, qpEvents := eui.NewDropdown()
 	qualityPresetDD.Options = []string{"Potato", "Low", "Standard", "High", "Custom"}
@@ -3086,11 +3038,12 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(qualityBtn)
 
-	label, _ = eui.NewText()
-	label.Text = "\nChat:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	left.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nChat:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	bubbleMsgCB, bubbleMsgEvents := eui.NewCheckbox()
 	bubbleMsgCB.Text = "Combine chat + console"
@@ -3208,11 +3161,12 @@ func makeSettingsWindow() {
 
 	// (Gamepad button moved above under Controls section)
 
-	label, _ = eui.NewText()
-	label.Text = "\nStatus Bar Options:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	right.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nStatus Bar Options:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    right.AddItem(label)
 
 	placements := []struct {
 		name  string
@@ -3254,11 +3208,12 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(barColorCB)
 
-	label, _ = eui.NewText()
-	label.Text = "\nOpacity Settings:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	right.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nOpacity Settings:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    right.AddItem(label)
 
 	maxNightSlider, maxNightEvents := eui.NewSlider()
 	maxNightSlider.Label = "Max Night Level"
@@ -3429,11 +3384,12 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(barOpacitySlider)
 
-	label, _ = eui.NewText()
-	label.Text = "\nText Sizes:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	center.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nText Sizes:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    center.AddItem(label)
 
 	labelFontSlider, labelFontEvents := eui.NewSlider()
 	labelFontSlider.Label = "Name Font Size"
@@ -3561,11 +3517,12 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(chatFontSlider)
 
-	label, _ = eui.NewText()
-	label.Text = "\nAudio:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	center.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nAudio:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    center.AddItem(label)
 
 	// Move Throttle Sounds to Chat & Audio area
 	throttleCB, throttleEvents := eui.NewCheckbox()
@@ -3583,16 +3540,18 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(throttleSoundCB)
 
-	mixBtn, mixEvents := eui.NewButton()
-	mixBtn.Text = "Mixer"
-	mixBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	mixBtn.FontSize = 12
-	mixEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			mixerWin.ToggleNear(ev.Item)
+	/*
+		mixBtn, mixEvents := eui.NewButton()
+		mixBtn.Text = "Mixer"
+		mixBtn.Size = eui.Point{X: panelWidth, Y: 24}
+		mixBtn.FontSize = 12
+		mixEvents.Handle = func(ev eui.UIEvent) {
+			if ev.Type == eui.EventClick {
+				mixerWin.ToggleNear(ev.Item)
+			}
 		}
-	}
-	center.AddItem(mixBtn)
+		center.AddItem(mixBtn)
+	*/
 
 	ttsSpeedSlider, ttsSpeedEvents := eui.NewSlider()
 	ttsSpeedSlider.Label = "TTS Speed"
@@ -3699,11 +3658,75 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(ttsEditBtn)
 
-	label, _ = eui.NewText()
-	label.Text = "\nAdvanced:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	right.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nAdvanced:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: panelWidth, Y: 50}
+    applyBoldFace(label)
+    center.AddItem(label)
+
+	// Power-save options (Advanced)
+	psBGCB, psBGEvents := eui.NewCheckbox()
+	psBGCB.Text = "Power save in background"
+	psBGCB.Size = eui.Point{X: panelWidth, Y: 24}
+	psBGCB.Checked = gs.PowerSaveBackground
+	psBGCB.SetTooltip("Reduce FPS when window is unfocused")
+	psBGEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveBackground = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	center.AddItem(psBGCB)
+
+	psAlwaysCB, psAlwaysEvents := eui.NewCheckbox()
+	psAlwaysCB.Text = "Always power save"
+	psAlwaysCB.Size = eui.Point{X: panelWidth, Y: 24}
+	psAlwaysCB.Checked = gs.PowerSaveAlways
+	psAlwaysCB.SetTooltip("Limit FPS even when focused (useful on laptops)")
+	psAlwaysEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveAlways = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	center.AddItem(psAlwaysCB)
+
+	psFPSSlider, psFPSEvents := eui.NewSlider()
+	psFPSSlider.Label = "Power-save FPS"
+	psFPSSlider.MinValue = 1
+	psFPSSlider.MaxValue = 60
+	psFPSSlider.IntOnly = true
+	if gs.PowerSaveFPS < 1 {
+		gs.PowerSaveFPS = 1
+	}
+	if gs.PowerSaveFPS > 60 {
+		gs.PowerSaveFPS = 60
+	}
+	psFPSSlider.Value = float32(gs.PowerSaveFPS)
+	psFPSSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
+	psFPSSlider.SetTooltip("Target FPS when power saving is active")
+	psFPSEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			SettingsLock.Lock()
+			v := int(ev.Value)
+			if v < 1 {
+				v = 1
+			}
+			if v > 60 {
+				v = 60
+			}
+			gs.PowerSaveFPS = v
+			SettingsLock.Unlock()
+			psFPSSlider.Value = float32(v)
+			settingsDirty = true
+		}
+	}
+	center.AddItem(psFPSSlider)
 
 	pluginKillCB, pluginKillEvents := eui.NewCheckbox()
 	pluginKillCB.Text = "Auto-kill spammy plugins"
@@ -3719,7 +3742,7 @@ func makeSettingsWindow() {
 		}
 	}
 
-	right.AddItem(pluginKillCB)
+	center.AddItem(pluginKillCB)
 
 	autoRecCB, autoRecEvents := eui.NewCheckbox()
 	autoRecCB.Text = "Auto-record sessions"
@@ -3733,7 +3756,7 @@ func makeSettingsWindow() {
 		}
 	}
 
-	right.AddItem(autoRecCB)
+	center.AddItem(autoRecCB)
 
 	debugBtn, debugEvents := eui.NewButton()
 	debugBtn.Text = "Debug Settings"
@@ -3746,7 +3769,7 @@ func makeSettingsWindow() {
 			debugWin.ToggleNear(ev.Item)
 		}
 	}
-	right.AddItem(debugBtn)
+	center.AddItem(debugBtn)
 
 	dlBtn, dlEvents := eui.NewButton()
 	dlBtn.Text = "Download Files"
@@ -3768,9 +3791,9 @@ func makeSettingsWindow() {
 			downloadWin.MarkOpen()
 		}
 	}
-	right.AddItem(dlBtn)
+	center.AddItem(dlBtn)
 
-	// Bottom-right: Reset All Settings
+	// Reset All Settings
 	resetBtn, resetEv := eui.NewButton()
 	resetBtn.Text = "Reset All Settings"
 	resetBtn.Size = eui.Point{X: panelWidth, Y: 24}
@@ -3785,7 +3808,7 @@ func makeSettingsWindow() {
 			confirmResetSettings()
 		}
 	}
-	right.AddItem(resetBtn)
+	center.AddItem(resetBtn)
 
 	outer.AddItem(left)
 	outer.AddItem(center)
@@ -4142,11 +4165,12 @@ func makeQualityWindow() {
 	center := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
 	center.Size = eui.Point{X: panelWidth, Y: 10}
 
-	label, _ := eui.NewText()
-	label.Text = "\nGPU Options:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: width, Y: 50}
-	left.AddItem(label)
+    label, _ := eui.NewText()
+    label.Text = "\nGPU Options:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: width, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	renderScale, renderScaleEvents := eui.NewSlider()
 	renderScale.Label = "Upscale game amount (sharpness)"
@@ -4361,11 +4385,12 @@ func makeQualityWindow() {
 
 	// (moved) Background behavior options are placed under Audio/Notifications
 
-	label, _ = eui.NewText()
-	label.Text = "\nImage denoising:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: width, Y: 50}
-	left.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nImage denoising:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: width, Y: 50}
+    applyBoldFace(label)
+    left.AddItem(label)
 
 	dCB, denoiseEvents := eui.NewCheckbox()
 	denoiseCB = dCB
@@ -4423,11 +4448,12 @@ func makeQualityWindow() {
 	}
 	left.AddItem(denoiseAmtSlider)
 
-	label, _ = eui.NewText()
-	label.Text = "\nMotion Smoothing Options:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: width, Y: 50}
-	center.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nMotion Smoothing Options:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: width, Y: 50}
+    applyBoldFace(label)
+    center.AddItem(label)
 
 	mCB, motionEvents := eui.NewCheckbox()
 	motionCB = mCB
@@ -4473,11 +4499,12 @@ func makeQualityWindow() {
 		center.AddItem(noSmoothCB)
 	*/
 
-	label, _ = eui.NewText()
-	label.Text = "\nAnimation Blending Options:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: width, Y: 50}
-	center.AddItem(label)
+    label, _ = eui.NewText()
+    label.Text = "\nAnimation Blending Options:"
+    label.FontSize = 15
+    label.Size = eui.Point{X: width, Y: 50}
+    applyBoldFace(label)
+    center.AddItem(label)
 
 	aCB, animEvents := eui.NewCheckbox()
 	animCB = aCB
