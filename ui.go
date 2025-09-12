@@ -2866,6 +2866,9 @@ func makeSettingsWindow() {
 				}
 				settingsDirty = true
 				settingsWin.Refresh()
+				// Theme may change accent mapping; rebuild dependent windows immediately.
+				updateInventoryWindow()
+				updatePlayersWindow()
 				updateDimmedScreenBG()
 				if accentWheel != nil {
 					var ac eui.Color
@@ -2883,7 +2886,10 @@ func makeSettingsWindow() {
 	accentWheel.WheelColor = ac
 	accentEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventColorChanged {
+			// Rebuild windows that cache accent into item colors so they update immediately.
 			settingsWin.Refresh()
+			updateInventoryWindow()
+			updatePlayersWindow()
 		}
 	}
 
