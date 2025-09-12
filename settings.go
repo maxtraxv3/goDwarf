@@ -55,6 +55,7 @@ var gsdef settings = settings{
 	BubbleScale:             2.0,
 	NameBgOpacity:           0.8,
 	NameTagLabelColors:      true,
+	NameTagsOnHoverOnly:     false,
 	BarOpacity:              0.66,
 	ObscuringPictureOpacity: 0.66,
 	FadeObscuringPictures:   false,
@@ -195,6 +196,8 @@ type settings struct {
 	BubbleScale             float64
 	NameBgOpacity           float64
 	NameTagLabelColors      bool
+	// NameTagsOnHoverOnly hides name-tags unless the cursor is over a mobile.
+	NameTagsOnHoverOnly     bool
 	BarOpacity              float64
 	ObscuringPictureOpacity float64
 	FadeObscuringPictures   bool

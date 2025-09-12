@@ -45,6 +45,9 @@ var loginWin *eui.WindowData
 var downloadWin *eui.WindowData
 var precacheWin *eui.WindowData
 var charactersList *eui.ItemData
+// loginConnectBtn holds the Connect button so we can enable/disable it
+// based on whether a character is selected.
+var loginConnectBtn *eui.ItemData
 var addCharWin *eui.WindowData
 var addCharName string
 var addCharPass string
@@ -1886,12 +1889,14 @@ func makeDownloadsWindow() {
 const charWinWidth = 500
 
 func updateCharacterButtons() {
-	if loginWin == nil || !loginWin.IsOpen() {
-		return
-	}
-	if charactersList == nil {
-		return
-	}
+    if loginWin == nil || !loginWin.IsOpen() {
+        return
+    }
+    if charactersList == nil {
+        return
+    }
+    // Preserve current scroll position while rebuilding the list
+    prevScroll := charactersList.Scroll
 	if name == "" {
 		if gs.LastCharacter != "" {
 			for _, c := range characters {
@@ -1909,10 +1914,10 @@ func updateCharacterButtons() {
 			pass = ""
 		}
 	}
-	for i := range charactersList.Contents {
-		charactersList.Contents[i] = nil
-	}
-	charactersList.Contents = charactersList.Contents[:0]
+    for i := range charactersList.Contents {
+        charactersList.Contents[i] = nil
+    }
+    charactersList.Contents = charactersList.Contents[:0]
 
 	if len(characters) == 0 {
 		empty, _ := eui.NewText()
@@ -2007,10 +2012,17 @@ func updateCharacterButtons() {
 			}
 			row.AddItem(trash)
 			charactersList.AddItem(row)
-		}
-	}
-	// Preserve window position while contents change size
-	loginWin.Refresh()
+        }
+    }
+    // Preserve window position while contents change size
+    // Restore prior scroll position to keep the user's place.
+    charactersList.Scroll = prevScroll
+    // Disable Connect when no character is selected; enable otherwise.
+    if loginConnectBtn != nil {
+        loginConnectBtn.Disabled = name == ""
+        loginConnectBtn.Dirty = true
+    }
+    loginWin.Refresh()
 }
 
 func makeAddCharacterWindow() {
@@ -2336,6 +2348,11 @@ func makeLoginWindow() {
 	connBtn.Padding = 10
 	connBtn.FontSize = 24
 	loginWin.DefaultButton = connBtn
+	// Keep a handle so we can enable/disable it dynamically.
+	loginConnectBtn = connBtn
+	// Default to disabled when no character is selected; updateCharacterButtons
+	// will keep this in sync as selection changes.
+	connBtn.Disabled = name == ""
 	connEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			if name == "" {
@@ -3293,6 +3310,23 @@ func makeSettingsWindow() {
 		}
 	}
 	right.AddItem(nameBorderCB)
+
+	// Name-tags hover-only toggle
+	nameHoverCB, nameHoverEvents := eui.NewCheckbox()
+	nameHoverCB.Text = "Show name-tags only on hover"
+	nameHoverCB.Size = eui.Point{X: panelWidth - 10, Y: 24}
+	nameHoverCB.Checked = gs.NameTagsOnHoverOnly
+	nameHoverCB.SetTooltip("Hide name-tags unless the cursor is over a character")
+	nameHoverEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			gs.NameTagsOnHoverOnly = ev.Checked
+			settingsDirty = true
+		}
+	}
+	right.AddItem(nameHoverCB)
 
 	bubbleOpSlider, bubbleOpEvents := eui.NewSlider()
 	bubbleOpSlider.Label = "Bubble Opacity"
