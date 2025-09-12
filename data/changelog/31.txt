@@ -7,3 +7,11 @@ clMov playback no longer creates or write text logs
 The synthesizer is now initialized on login to prevent the small pause when music or a notification sound is played for the first time.
 Added a replacement network adjustment option, currently on by default but fairly conservative value set (100ms) 
 Music playback now has better performance and starts playing more quickly.
+Added option to automatically record all sessions (with zip compression)
+Added ability to watch zipped clMov files directly.
+Fixed that chat bubbles would incorrectly scale up/down with game scale, slider added for adjustment.
+Cleaned up some old scaling code
+Framerate is throttled when the program is in the background to save cpu/battery.
+Added option to mute audio if the program is in the background.
+Added options to mute audio, and option to show system notifications (for game notifications) when the game is in the background. 
+fixed that whisper bubbles had a different font size than others

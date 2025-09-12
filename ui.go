@@ -1074,8 +1074,8 @@ func makeMixerWindow() {
 	if gs.Mute {
 		mixMuteBtn.Text = "Unmute"
 	}
-    // Make the mute button wider to accommodate label and adjacent checkbox context
-    mixMuteBtn.Size = eui.Point{X: 192, Y: 24}
+	// Make the mute button wider to accommodate label and adjacent checkbox context
+	mixMuteBtn.Size = eui.Point{X: 192, Y: 24}
 	mixMuteEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			gs.Mute = !gs.Mute
@@ -1116,32 +1116,32 @@ func makeMixerWindow() {
 			updateSoundVolume()
 		}
 	}
-    // Place mute-unfocused checkbox directly under Mute button in its own column
-    muteUnfocusCB, muteUnfocusEvents := eui.NewCheckbox()
-    muteUnfocusCB.Text = "Mute when unfocused"
-    // Match mute button width so the text fits comfortably
-    muteUnfocusCB.Size = eui.Point{X: 192, Y: 24}
-    muteUnfocusCB.Checked = gs.MuteWhenUnfocused
-    muteUnfocusCB.SetTooltip("Temporarily mute audio when window is not focused")
-    muteUnfocusEvents.Handle = func(ev eui.UIEvent) {
-        if ev.Type == eui.EventCheckboxChanged {
-            gs.MuteWhenUnfocused = ev.Checked
-            if ev.Checked {
-                if !ebiten.IsFocused() {
-                    focusMuted = true
-                }
-            } else {
-                focusMuted = false
-            }
-            settingsDirty = true
-            updateSoundVolume()
-        }
-    }
-    // Make the column 3x standard width so the mixer window grows accordingly
-    muteCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Size: eui.Point{X: 192, Y: 60}}
-    muteCol.AddItem(mixMuteBtn)
-    muteCol.AddItem(muteUnfocusCB)
-    flow.AddItem(muteCol)
+	// Place mute-unfocused checkbox directly under Mute button in its own column
+	muteUnfocusCB, muteUnfocusEvents := eui.NewCheckbox()
+	muteUnfocusCB.Text = "Mute when unfocused"
+	// Match mute button width so the text fits comfortably
+	muteUnfocusCB.Size = eui.Point{X: 192, Y: 24}
+	muteUnfocusCB.Checked = gs.MuteWhenUnfocused
+	muteUnfocusCB.SetTooltip("Temporarily mute audio when window is not focused")
+	muteUnfocusEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.MuteWhenUnfocused = ev.Checked
+			if ev.Checked {
+				if !ebiten.IsFocused() {
+					focusMuted = true
+				}
+			} else {
+				focusMuted = false
+			}
+			settingsDirty = true
+			updateSoundVolume()
+		}
+	}
+	// Make the column 3x standard width so the mixer window grows accordingly
+	muteCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Size: eui.Point{X: 192, Y: 60}}
+	muteCol.AddItem(mixMuteBtn)
+	muteCol.AddItem(muteUnfocusCB)
+	flow.AddItem(muteCol)
 
 	mixerWin.AddItem(flow)
 }
@@ -2712,6 +2712,69 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(alwaysTopCB)
 
+	// Power-save options
+	psBGCB, psBGEvents := eui.NewCheckbox()
+	psBGCB.Text = "Power save in background"
+	psBGCB.Size = eui.Point{X: panelWidth, Y: 24}
+	psBGCB.Checked = gs.PowerSaveBackground
+	psBGCB.SetTooltip("Reduce FPS when window is unfocused")
+	psBGEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveBackground = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	left.AddItem(psBGCB)
+
+	psAlwaysCB, psAlwaysEvents := eui.NewCheckbox()
+	psAlwaysCB.Text = "Always power save"
+	psAlwaysCB.Size = eui.Point{X: panelWidth, Y: 24}
+	psAlwaysCB.Checked = gs.PowerSaveAlways
+	psAlwaysCB.SetTooltip("Limit FPS even when focused (useful on laptops)")
+	psAlwaysEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveAlways = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	left.AddItem(psAlwaysCB)
+
+	psFPSSlider, psFPSEvents := eui.NewSlider()
+	psFPSSlider.Label = "Power-save FPS"
+	psFPSSlider.MinValue = 1
+	psFPSSlider.MaxValue = 60
+	psFPSSlider.IntOnly = true
+	if gs.PowerSaveFPS < 1 {
+		gs.PowerSaveFPS = 1
+	}
+	if gs.PowerSaveFPS > 60 {
+		gs.PowerSaveFPS = 60
+	}
+	psFPSSlider.Value = float32(gs.PowerSaveFPS)
+	psFPSSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
+	psFPSSlider.SetTooltip("Target FPS when power saving is active")
+	psFPSEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			SettingsLock.Lock()
+			v := int(ev.Value)
+			if v < 1 {
+				v = 1
+			}
+			if v > 60 {
+				v = 60
+			}
+			gs.PowerSaveFPS = v
+			SettingsLock.Unlock()
+			psFPSSlider.Value = float32(v)
+			settingsDirty = true
+		}
+	}
+	left.AddItem(psFPSSlider)
+
 	pinLocCB, pinLocEvents := eui.NewCheckbox()
 	pinLocCB.Text = "Show pin-to locations"
 	pinLocCB.Size = eui.Point{X: panelWidth, Y: 24}
@@ -4210,7 +4273,7 @@ func makeQualityWindow() {
 	}
 	left.AddItem(vsyncCB)
 
-    // (moved) Background behavior options are placed under Audio/Notifications
+	// (moved) Background behavior options are placed under Audio/Notifications
 
 	label, _ = eui.NewText()
 	label.Text = "\nImage denoising:"
@@ -4460,10 +4523,10 @@ func makeNotificationsWindow() {
 		flow.AddItem(cb)
 	}
 
-    // Background notifications while unfocused
-    addCB("Notify when in background", &gs.NotifyWhenBackground)
+	// Background notifications while unfocused
+	addCB("Notify when in background", &gs.NotifyWhenBackground)
 
-    addCB("Fallen", &gs.NotifyFallen)
+	addCB("Fallen", &gs.NotifyFallen)
 	addCB("Not fallen", &gs.NotifyNotFallen)
 	addCB("Shares", &gs.NotifyShares)
 	addCB("Friend online", &gs.NotifyFriendOnline)

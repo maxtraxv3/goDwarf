@@ -1232,9 +1232,27 @@ func worldDrawInfo() (int, int, float64) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	worldOriginX, worldOriginY, worldScale = worldDrawInfo()
-	// Cache now for the whole draw to reduce time.Now overhead.
-	now := time.Now()
+    // Power-save throttling: measure draw duration and sleep remaining time
+    // to achieve the requested FPS when active.
+    if gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground) {
+        frameStart := time.Now()
+        fps := gs.PowerSaveFPS
+        if fps < 1 {
+            fps = 1
+        }
+        if fps > 45 {
+            fps = 45
+        }
+        target := time.Second / time.Duration(fps)
+        defer func() {
+            if elapsed := time.Since(frameStart); elapsed < target {
+                time.Sleep(target - elapsed)
+            }
+        }()
+    }
+    worldOriginX, worldOriginY, worldScale = worldDrawInfo()
+    // Cache now for the whole draw to reduce time.Now overhead.
+    now := time.Now()
 
 	//Reduce render load while seeking clMov
 	if seekingMov {
@@ -1384,10 +1402,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
 
-	// If running in background, lightly sleep to reduce CPU.
-	if !lastFocused {
-		time.Sleep(66 * time.Millisecond)
-	}
+    // Old fixed background sleep replaced by deferred power-save throttle above.
 
 	//if gs.ShowFPS {
 	//	drawServerFPS(screen, screen.Bounds().Dx()-40, 4, serverFPS)

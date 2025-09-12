@@ -44,7 +44,7 @@ var gsdef settings = settings{
 	InputBarAlwaysOpen:      false,
 	KBWalkSpeed:             0.25,
 	MainFontSize:            8,
-	BubbleFontSize:          6,
+	BubbleFontSize:          15,
 	ConsoleFontSize:         12,
 	ChatFontSize:            14,
 	InventoryFontSize:       18,
@@ -73,37 +73,41 @@ var gsdef settings = settings{
 	BubbleMonsters:          true,
 	BubbleNarration:         true,
 
-	MotionSmoothing:       true,
-	ObjectPinning:         true,
-	BlendMobiles:          false,
-	BlendPicts:            true,
-	BlendAmount:           1.0,
-	MobileBlendAmount:     0.25,
-	MobileBlendFrames:     10,
-	PictBlendFrames:       10,
-	DenoiseImages:         true,
-	DenoiseSharpness:      4,
-	DenoiseAmount:         0.33,
-	ShowFPS:               true,
-	UIScale:               1.0,
-	Fullscreen:            false,
-	AlwaysOnTop:           false,
-	MasterVolume:          0.5,
-	GameVolume:            0.66,
-	MusicVolume:           0.8,
-	Music:                 true,
-	GameSound:             true,
-	Mute:                  false,
-	GameScale:             2.0,
-	BarPlacement:          BarPlacementBottom,
-	MaxNightLevel:         100,
-	MessagesToConsole:     false,
-	ChatTTS:               false,
-	ChatTTSVolume:         1.0,
-	ChatTTSSpeed:          1.25,
-	ChatTTSVoice:          "en_US-hfc_female-medium",
-	Notifications:         true,
-	NotifyWhenBackground:  false,
+	MotionSmoothing:      true,
+	ObjectPinning:        true,
+	BlendMobiles:         false,
+	BlendPicts:           true,
+	BlendAmount:          1.0,
+	MobileBlendAmount:    0.25,
+	MobileBlendFrames:    10,
+	PictBlendFrames:      10,
+	DenoiseImages:        true,
+	DenoiseSharpness:     4,
+	DenoiseAmount:        0.33,
+	ShowFPS:              true,
+	UIScale:              1.0,
+	Fullscreen:           false,
+	AlwaysOnTop:          false,
+	MasterVolume:         0.5,
+	GameVolume:           0.66,
+	MusicVolume:          0.8,
+	Music:                true,
+	GameSound:            true,
+	Mute:                 false,
+	GameScale:            2.0,
+	BarPlacement:         BarPlacementBottom,
+	MaxNightLevel:        100,
+	MessagesToConsole:    false,
+	ChatTTS:              false,
+	ChatTTSVolume:        1.0,
+	ChatTTSSpeed:         1.25,
+	ChatTTSVoice:         "en_US-hfc_female-medium",
+	Notifications:        true,
+	NotifyWhenBackground: false,
+	// Power saving defaults: limit FPS in background at 30fps
+	PowerSaveBackground:   true,
+	PowerSaveAlways:       false,
+	PowerSaveFPS:          30,
 	MuteWhenUnfocused:     false,
 	NotifyFallen:          true,
 	NotifyNotFallen:       true,
@@ -168,24 +172,24 @@ var gsdef settings = settings{
 }
 
 type settings struct {
-    Version int
+	Version int
 
-	LastCharacter           string
-	ClickToToggle           bool
-	MiddleClickMoveWindow   bool
-	InputBarAlwaysOpen      bool
-	KBWalkSpeed             float64
-	MainFontSize            float64
-	BubbleFontSize          float64
-	ConsoleFontSize         float64
-	ChatFontSize            float64
-	InventoryFontSize       float64
-	PlayersFontSize         float64
-	BubbleOpacity           float64
-	BubbleBaseLife          float64
-    BubbleLifePerWord       float64
-    // BubbleScale scales bubble visuals (not font). Range 1.0–8.0.
-    BubbleScale            float64
+	LastCharacter         string
+	ClickToToggle         bool
+	MiddleClickMoveWindow bool
+	InputBarAlwaysOpen    bool
+	KBWalkSpeed           float64
+	MainFontSize          float64
+	BubbleFontSize        float64
+	ConsoleFontSize       float64
+	ChatFontSize          float64
+	InventoryFontSize     float64
+	PlayersFontSize       float64
+	BubbleOpacity         float64
+	BubbleBaseLife        float64
+	BubbleLifePerWord     float64
+	// BubbleScale scales bubble visuals (not font). Range 1.0–8.0.
+	BubbleScale             float64
 	NameBgOpacity           float64
 	NameTagLabelColors      bool
 	BarOpacity              float64
@@ -206,41 +210,47 @@ type settings struct {
 	BubbleMonsters          bool
 	BubbleNarration         bool
 
-	MotionSmoothing       bool
-	ObjectPinning         bool
-	BlendMobiles          bool
-	BlendPicts            bool
-	BlendAmount           float64
-	MobileBlendAmount     float64
-	MobileBlendFrames     int
-	PictBlendFrames       int
-	DenoiseImages         bool
-	DenoiseSharpness      float64
-	DenoiseAmount         float64
-	ShowFPS               bool
-	UIScale               float64
-	Fullscreen            bool
-	AlwaysOnTop           bool
-	MasterVolume          float64
-	GameVolume            float64
-	MusicVolume           float64
-	Music                 bool
-	GameSound             bool
-	Mute                  bool
-	GameScale             float64
-	BarPlacement          BarPlacement
-	MaxNightLevel         int
-	forceNightLevel       int
-	Theme                 string
-	Style                 string
-	MessagesToConsole     bool
-	ChatTTS               bool
-	ChatTTSVolume         float64
-	ChatTTSSpeed          float64
-	ChatTTSVoice          string
-	ChatTTSBlocklist      []string
-	Notifications         bool
-	NotifyWhenBackground  bool
+	MotionSmoothing      bool
+	ObjectPinning        bool
+	BlendMobiles         bool
+	BlendPicts           bool
+	BlendAmount          float64
+	MobileBlendAmount    float64
+	MobileBlendFrames    int
+	PictBlendFrames      int
+	DenoiseImages        bool
+	DenoiseSharpness     float64
+	DenoiseAmount        float64
+	ShowFPS              bool
+	UIScale              float64
+	Fullscreen           bool
+	AlwaysOnTop          bool
+	MasterVolume         float64
+	GameVolume           float64
+	MusicVolume          float64
+	Music                bool
+	GameSound            bool
+	Mute                 bool
+	GameScale            float64
+	BarPlacement         BarPlacement
+	MaxNightLevel        int
+	forceNightLevel      int
+	Theme                string
+	Style                string
+	MessagesToConsole    bool
+	ChatTTS              bool
+	ChatTTSVolume        float64
+	ChatTTSSpeed         float64
+	ChatTTSVoice         string
+	ChatTTSBlocklist     []string
+	Notifications        bool
+	NotifyWhenBackground bool
+	// PowerSaveBackground reduces FPS when window is unfocused.
+	PowerSaveBackground bool
+	// PowerSaveAlways reduces FPS even when focused (e.g., laptops).
+	PowerSaveAlways bool
+	// PowerSaveFPS is the target FPS when power saving is active (1-45).
+	PowerSaveFPS          int
 	MuteWhenUnfocused     bool
 	NotifyFallen          bool
 	NotifyNotFallen       bool
@@ -428,6 +438,13 @@ func loadSettings() bool {
 	}
 
 	clampWindowSettings()
+	// Clamp power-save FPS and set sane defaults when out-of-range or zero
+	if gs.PowerSaveFPS < 1 {
+		gs.PowerSaveFPS = 1
+	}
+	if gs.PowerSaveFPS > 45 {
+		gs.PowerSaveFPS = 45
+	}
 	return settingsLoaded
 }
 
