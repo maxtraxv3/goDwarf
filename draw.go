@@ -70,6 +70,9 @@ const poseDead = 32
 const maxInterpPixels = 64
 const maxMobileInterpPixels = 64
 const maxPersistImageSize = 256
+
+// percent of area that must be outside the field to count as "on the edge"
+const edgeOutsidePercent = 45
 const secondBestShiftRatio = 0.4
 
 // sanity limits for parsed counts to avoid excessive allocations or
@@ -337,7 +340,8 @@ func pictureOnEdge(p framePicture) bool {
 	totalArea := w * h
 	visibleArea := visibleW * visibleH
 	offArea := totalArea - visibleArea
-	if offArea*10 < totalArea*7 {
+	// Require at least edgeOutsidePercent% of the picture outside the field
+	if offArea*100 < totalArea*edgeOutsidePercent {
 		return false
 	}
 	return true
@@ -363,7 +367,7 @@ func pictureVisible(p framePicture) bool {
 
 // mobileOnEdge reports whether the mobile overlaps the visible game field and
 // whether its bounding box touches or extends past the field boundaries. It
-// returns true only when one or two edges are crossed and at least 70% of the
+// returns true only when one or two edges are crossed and at least edgeOutsidePercent of the
 // mobile lies outside the field.
 func mobileOnEdge(m frameMobile, d frameDescriptor) bool {
 	size := mobileSizeFunc(d.PictID)
@@ -425,7 +429,8 @@ func mobileOnEdge(m frameMobile, d frameDescriptor) bool {
 	totalArea := size * size
 	visibleArea := visibleW * visibleH
 	offArea := totalArea - visibleArea
-	if offArea*10 < totalArea*7 {
+	// Require at least edgeOutsidePercent% of the mobile outside the field
+	if offArea*100 < totalArea*edgeOutsidePercent {
 		return false
 	}
 	return true
