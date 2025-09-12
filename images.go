@@ -339,9 +339,7 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	blended := newImage(size, size)
 	alpha := float32(step) / float32(total)
 	offPrev := (size - prevImg.Bounds().Dx()) / 2
-	op1 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	op1.Filter = ebiten.FilterNearest
-	op1.DisableMipmaps = true
+    op1 := acquireDrawOpts()
 	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
@@ -353,11 +351,9 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	op1.Filter = 0
 	op1.DisableMipmaps = false
 	op1.Blend = ebiten.BlendSourceOver
-	drawOptsPool.Put(op1)
+    releaseDrawOpts(op1)
 	offCur := (size - img.Bounds().Dx()) / 2
-	op2 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	op2.Filter = ebiten.FilterNearest
-	op2.DisableMipmaps = true
+    op2 := acquireDrawOpts()
 	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
@@ -369,7 +365,7 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	op2.Filter = 0
 	op2.DisableMipmaps = false
 	op2.Blend = ebiten.BlendSourceOver
-	drawOptsPool.Put(op2)
+    releaseDrawOpts(op2)
 	imageMu.Lock()
 	mobileBlendCache[k] = blended
 	imageMu.Unlock()
@@ -402,9 +398,7 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	alpha := float32(step) / float32(total)
 	offPrevX := (w - w1) / 2
 	offPrevY := (h - h1) / 2
-	op1 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	op1.Filter = ebiten.FilterNearest
-	op1.DisableMipmaps = true
+    op1 := acquireDrawOpts()
 	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
@@ -416,12 +410,10 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	op1.Filter = 0
 	op1.DisableMipmaps = false
 	op1.Blend = ebiten.BlendSourceOver
-	drawOptsPool.Put(op1)
+    releaseDrawOpts(op1)
 	offCurX := (w - w2) / 2
 	offCurY := (h - h2) / 2
-	op2 := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	op2.Filter = ebiten.FilterNearest
-	op2.DisableMipmaps = true
+    op2 := acquireDrawOpts()
 	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
@@ -433,7 +425,7 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	op2.Filter = 0
 	op2.DisableMipmaps = false
 	op2.Blend = ebiten.BlendSourceOver
-	drawOptsPool.Put(op2)
+    releaseDrawOpts(op2)
 	imageMu.Lock()
 	pictBlendCache[k] = blended
 	imageMu.Unlock()

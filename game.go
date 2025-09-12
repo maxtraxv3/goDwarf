@@ -48,12 +48,7 @@ var inAspectResize bool
 // updateDimmedScreenBG refreshes this color when the theme changes.
 var dimmedScreenBG = color.RGBA{0, 0, 0, 255}
 
-var (
-	// drawOptsPool pools DrawImageOptions to reduce allocations.
-	drawOptsPool = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
-	// textDrawOptsPool pools DrawOptions to reduce allocations.
-	textDrawOptsPool = sync.Pool{New: func() any { return &text.DrawOptions{} }}
-)
+// No pooling for draw options; use locals to favor stack allocation.
 
 func updateDimmedScreenBG() {
 	c := color.RGBA{0, 0, 0, 255}
@@ -147,25 +142,24 @@ func updateGameImageSize() {
 // acquireDrawOpts returns a DrawImageOptions from the shared pool initialized
 // with nearest filtering and mipmaps disabled. Call releaseDrawOpts when done.
 func acquireDrawOpts() *ebiten.DrawImageOptions {
-	op := drawOptsPool.Get().(*ebiten.DrawImageOptions)
-	*op = ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-	return op
+    op := &ebiten.DrawImageOptions{}
+    op.Filter = ebiten.FilterNearest
+    op.DisableMipmaps = true
+    return op
 }
 
-// releaseDrawOpts returns a DrawImageOptions to the shared pool.
-func releaseDrawOpts(op *ebiten.DrawImageOptions) {
-	drawOptsPool.Put(op)
-}
+// releaseDrawOpts is a no-op when not pooling.
+func releaseDrawOpts(op *ebiten.DrawImageOptions) {}
 
 func acquireTextDrawOpts() *text.DrawOptions {
-	op := textDrawOptsPool.Get().(*text.DrawOptions)
-	*op = text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}}
-	return op
+    op := &text.DrawOptions{}
+    op.DrawImageOptions.Filter = ebiten.FilterNearest
+    op.DrawImageOptions.DisableMipmaps = true
+    return op
 }
 
-func releaseTextDrawOpts(op *text.DrawOptions) {
-	textDrawOptsPool.Put(op)
-}
+// releaseTextDrawOpts is a no-op when not pooling.
+func releaseTextDrawOpts(op *text.DrawOptions) {}
 
 type inputState struct {
 	mouseX, mouseY int16

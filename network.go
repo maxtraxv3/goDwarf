@@ -101,35 +101,38 @@ func writeAll(conn net.Conn, data []byte) error {
 // udpBuffer holds leftover datagram data between reads.
 var udpBuffer []byte
 
+// udpReadBuf is a reusable scratch buffer for reading UDP datagrams.
+// Reusing this avoids allocating a new 64KB slice on every read.
+var udpReadBuf = make([]byte, 65535)
+
 // readUDPMessage reads a single length-prefixed message from the UDP
 // connection. Packets may be fragmented across multiple datagrams or multiple
 // messages may be present in a single datagram. Data is accumulated in
 // udpBuffer until a full message is available.
 func readUDPMessage(connection net.Conn) ([]byte, error) {
-	for {
-		if len(udpBuffer) >= 2 {
-			sz := int(binary.BigEndian.Uint16(udpBuffer[:2]))
-			if len(udpBuffer) >= 2+sz {
-				msg := append([]byte(nil), udpBuffer[2:2+sz]...)
-				udpBuffer = udpBuffer[2+sz:]
-				tag := binary.BigEndian.Uint16(msg[:2])
-				logDebug("recv udp tag %d len %d", tag, len(msg))
-				hexDump("recv", msg)
-				return msg, nil
-			}
-		}
+    for {
+        if len(udpBuffer) >= 2 {
+            sz := int(binary.BigEndian.Uint16(udpBuffer[:2]))
+            if len(udpBuffer) >= 2+sz {
+                msg := append([]byte(nil), udpBuffer[2:2+sz]...)
+                udpBuffer = udpBuffer[2+sz:]
+                tag := binary.BigEndian.Uint16(msg[:2])
+                logDebug("recv udp tag %d len %d", tag, len(msg))
+                hexDump("recv", msg)
+                return msg, nil
+            }
+        }
 
-		buf := make([]byte, 65535)
-		n, err := connection.Read(buf)
-		if err != nil {
-			//logError("read udp: %v", err)
-			return nil, err
-		}
-		if n == 0 {
-			return nil, fmt.Errorf("short udp packet")
-		}
-		udpBuffer = append(udpBuffer, buf[:n]...)
-	}
+        n, err := connection.Read(udpReadBuf)
+        if err != nil {
+            //logError("read udp: %v", err)
+            return nil, err
+        }
+        if n == 0 {
+            return nil, fmt.Errorf("short udp packet")
+        }
+        udpBuffer = append(udpBuffer, udpReadBuf[:n]...)
+    }
 }
 
 // sendPlayerInput sends the provided mouse state to the server. When

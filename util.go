@@ -150,27 +150,32 @@ func nextCommand() {
 // It returns the number of frames missing between the previous and
 // current acknowledgement numbers.
 func updateFrameCounters(newFrame int32) int {
-	now := time.Now().Unix()
-	idx := int(now % 5)
-	if bucketTimes[idx] != now {
-		frameBuckets[idx] = 0
-		lostBuckets[idx] = 0
-		bucketTimes[idx] = now
-	}
-	frameBuckets[idx]++
-	numFrames++
-	dropped := 0
-	if lastAckFrame != 0 {
-		lost := int(newFrame - lastAckFrame - 1)
-		if lost > 0 {
-			lostFrames += lost
-			dropped = lost
-			frameBuckets[idx] += lost
-			lostBuckets[idx] += lost
-		}
-	}
-	lastAckFrame = newFrame
-	return dropped
+    now := time.Now().Unix()
+    idx := int(now % 5)
+    if bucketTimes[idx] != now {
+        frameBuckets[idx] = 0
+        lostBuckets[idx] = 0
+        bucketTimes[idx] = now
+    }
+    // Ignore out-of-order or duplicate frames which can occur on UDP.
+    if lastAckFrame != 0 && newFrame <= lastAckFrame {
+        return 0
+    }
+
+    frameBuckets[idx]++
+    numFrames++
+    dropped := 0
+    if lastAckFrame != 0 {
+        lost := int(newFrame - lastAckFrame - 1)
+        if lost > 0 {
+            lostFrames += lost
+            dropped = lost
+            frameBuckets[idx] += lost
+            lostBuckets[idx] += lost
+        }
+    }
+    lastAckFrame = newFrame
+    return dropped
 }
 
 func droppedPercent() float64 {

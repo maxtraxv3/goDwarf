@@ -7,8 +7,7 @@ import (
 	"math"
 	"os"
 	"strings"
-	"sync"
-	"time"
+    "time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -23,29 +22,23 @@ var zoneIndicatorWin *windowData
 
 var dropdownReuse []openDropdown
 
-var drawImageOptionsPool = sync.Pool{New: func() any { return &ebiten.DrawImageOptions{} }}
-
 func acquireDrawImageOptions() *ebiten.DrawImageOptions {
-	op := drawImageOptionsPool.Get().(*ebiten.DrawImageOptions)
-	*op = ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
-	return op
+    op := &ebiten.DrawImageOptions{}
+    op.Filter = ebiten.FilterNearest
+    op.DisableMipmaps = true
+    return op
 }
 
-func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {
-	drawImageOptionsPool.Put(op)
-}
-
-var textDrawOptionsPool = sync.Pool{New: func() any { return &text.DrawOptions{} }}
+func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {}
 
 func acquireTextDrawOptions() *text.DrawOptions {
-	op := textDrawOptionsPool.Get().(*text.DrawOptions)
-	*op = text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}}
-	return op
+    op := &text.DrawOptions{}
+    op.DrawImageOptions.Filter = ebiten.FilterNearest
+    op.DrawImageOptions.DisableMipmaps = true
+    return op
 }
 
-func releaseTextDrawOptions(op *text.DrawOptions) {
-	textDrawOptionsPool.Put(op)
-}
+func releaseTextDrawOptions(op *text.DrawOptions) {}
 
 type openDropdown struct {
 	item   *itemData

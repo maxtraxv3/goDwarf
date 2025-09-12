@@ -35,6 +35,13 @@ func handleDisconnect() {
 	if recorder != nil {
 		stopRecording()
 	}
+	// Reset frame/loss counters so a new session starts fresh.
+	lastAckFrame = 0
+	numFrames = 0
+	lostFrames = 0
+	for i := range frameBuckets { frameBuckets[i] = 0 }
+	for i := range lostBuckets { lostBuckets[i] = 0 }
+	for i := range bucketTimes { bucketTimes[i] = 0 }
 	// Reset session sources so we return to splash state
 	clmov = ""
 	pcapPath = ""
