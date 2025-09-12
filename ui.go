@@ -2625,6 +2625,22 @@ func makeSettingsWindow() {
 	label.Size = eui.Point{X: panelWidth, Y: 50}
 	left.AddItem(label)
 
+    // Show classic Clan Lord splash image (from CL_Images id 4)
+    splashCB, splashEvents := eui.NewCheckbox()
+    splashCB.Text = "Show Clan Lord splash image"
+    splashCB.Size = eui.Point{X: panelWidth, Y: 24}
+    splashCB.Checked = gs.ShowClanLordSplashImage
+    splashCB.SetTooltip("Use CL_Images picture #4 for the splash screen")
+    splashEvents.Handle = func(ev eui.UIEvent) {
+        if ev.Type == eui.EventCheckboxChanged {
+            gs.ShowClanLordSplashImage = ev.Checked
+            settingsDirty = true
+            // Rebuild splash image now so changes are visible immediately.
+            prepareClassicSplash()
+        }
+    }
+    left.AddItem(splashCB)
+
 	/*
 				tilingCB, tilingEvents := eui.NewCheckbox()
 				tilingCB.Text = "Tiling window mode (buggy)"

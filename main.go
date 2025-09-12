@@ -188,6 +188,8 @@ func main() {
             dtms := float64(time.Since(imgStart).Nanoseconds()) / 1e6
             log.Printf("measure: CL_Images archive loaded in %.2fms frame=%d", dtms, frameCounter)
         }
+        // Build/restore the splash image according to settings.
+        prepareClassicSplash()
     }
 
     sndStart := time.Now()

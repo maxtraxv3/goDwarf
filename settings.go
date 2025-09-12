@@ -151,7 +151,10 @@ var gsdef settings = settings{
 	ThrottleSounds:  true,
 
 	NightEffect:    true,
-	ShaderLighting: true,
+    ShaderLighting: true,
+
+    // Window behavior
+    ShowClanLordSplashImage: true,
 
 	//Unexported
 	vsync:             true,
@@ -309,7 +312,10 @@ type settings struct {
 	hideMobiles       bool
 	vsync             bool
 	NightEffect       bool
-	ShaderLighting    bool
+    ShaderLighting    bool
+
+    // Window behavior
+    ShowClanLordSplashImage bool
 	lanczosUpscale    bool
 	precacheSounds    bool
 	precacheImages    bool
