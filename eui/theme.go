@@ -32,9 +32,26 @@ type Theme struct {
 }
 
 type themeFile struct {
-	Comment          string            `json:"Comment"`
-	Colors           map[string]string `json:"Colors"`
-	RecommendedStyle string            `json:"RecommendedStyle"`
+    Comment          string            `json:"Comment"`
+    Colors           map[string]string `json:"Colors"`
+    RecommendedStyle string            `json:"RecommendedStyle"`
+}
+
+// themeAccentRefs records which theme fields referred to the named "accent"
+// color in the source JSON so they can be updated dynamically when the accent
+// color changes.
+var themeAccentRefs struct {
+    WindowActive    bool
+    ButtonClick     bool
+    TextClick       bool
+    CheckboxClick   bool
+    RadioClick      bool
+    InputClick      bool
+    SliderClick     bool
+    SliderFilled    bool
+    DropdownClick   bool
+    DropdownSelect  bool
+    TabClick        bool
 }
 
 // resolveColor recursively resolves string references to colors after the
@@ -96,38 +113,88 @@ func LoadTheme(name string) error {
 		namedColors[strings.ToLower(n)] = c
 	}
 
-	// Start with the compiled in defaults
-	th := *baseTheme
-	if err := json.Unmarshal(data, &th); err != nil {
-		return err
-	}
+    // Start with the compiled in defaults
+    th := *baseTheme
+    if err := json.Unmarshal(data, &th); err != nil {
+        return err
+    }
 	// Extract additional color fields not present in Theme struct
 	var extra struct {
 		Slider struct {
 			SliderFilled string `json:"SliderFilled"`
 		} `json:"Slider"`
 	}
-	_ = json.Unmarshal(data, &extra)
-	currentTheme = &th
-	if extra.Slider.SliderFilled != "" {
-		if col, err := resolveColor(extra.Slider.SliderFilled, tf.Colors, map[string]bool{"sliderfilled": true}); err == nil {
-			namedColors["sliderfilled"] = col
-			currentTheme.Slider.SelectedColor = col
-		}
-	}
-	SetCurrentThemeName(name)
-	applyStyleToTheme(currentTheme)
-	updateThemeReferences(oldTheme, currentTheme)
-	applyStyleToItems(currentTheme)
-	markAllDirty()
-	if ac, ok := namedColors["accent"]; ok {
-		accentHue, accentSaturation, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(ac))
-	}
-	if tf.RecommendedStyle != "" {
-		_ = LoadStyle(tf.RecommendedStyle)
-	}
-	refreshThemeMod()
-	return nil
+    _ = json.Unmarshal(data, &extra)
+
+    // Capture which fields referenced the named "accent" color so we can
+    // update them when the user tweaks the accent via the color wheel.
+    // We only track a small set of fields that are designed to be accent-driven.
+    var refs struct {
+        Window struct {
+            ActiveColor string `json:"ActiveColor"`
+        } `json:"Window"`
+        Button struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Button"`
+        Text struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Text"`
+        Checkbox struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Checkbox"`
+        Radio struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Radio"`
+        Input struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Input"`
+        Slider struct {
+            ClickColor   string `json:"ClickColor"`
+            SliderFilled string `json:"SliderFilled"`
+        } `json:"Slider"`
+        Dropdown struct {
+            ClickColor    string `json:"ClickColor"`
+            SelectedColor string `json:"SelectedColor"`
+        } `json:"Dropdown"`
+        Tab struct {
+            ClickColor string `json:"ClickColor"`
+        } `json:"Tab"`
+    }
+    // Best-effort; ignore errors since not all fields are present in every palette
+    _ = json.Unmarshal(data, &refs)
+    // Helper to check if a string equals "accent" (case-insensitive, trimmed)
+    isAccent := func(s string) bool { return strings.ToLower(strings.TrimSpace(s)) == "accent" }
+    themeAccentRefs.WindowActive = isAccent(refs.Window.ActiveColor)
+    themeAccentRefs.ButtonClick = isAccent(refs.Button.ClickColor)
+    themeAccentRefs.TextClick = isAccent(refs.Text.ClickColor)
+    themeAccentRefs.CheckboxClick = isAccent(refs.Checkbox.ClickColor)
+    themeAccentRefs.RadioClick = isAccent(refs.Radio.ClickColor)
+    themeAccentRefs.InputClick = isAccent(refs.Input.ClickColor)
+    themeAccentRefs.SliderClick = isAccent(refs.Slider.ClickColor)
+    themeAccentRefs.SliderFilled = isAccent(refs.Slider.SliderFilled)
+    themeAccentRefs.DropdownClick = isAccent(refs.Dropdown.ClickColor)
+    themeAccentRefs.DropdownSelect = isAccent(refs.Dropdown.SelectedColor)
+    themeAccentRefs.TabClick = isAccent(refs.Tab.ClickColor)
+    currentTheme = &th
+    if extra.Slider.SliderFilled != "" {
+        if col, err := resolveColor(extra.Slider.SliderFilled, tf.Colors, map[string]bool{"sliderfilled": true}); err == nil {
+            namedColors["sliderfilled"] = col
+            currentTheme.Slider.SelectedColor = col
+        }
+    }
+    SetCurrentThemeName(name)
+    applyStyleToTheme(currentTheme)
+    updateThemeReferences(oldTheme, currentTheme)
+    applyStyleToItems(currentTheme)
+    markAllDirty()
+    if ac, ok := namedColors["accent"]; ok {
+        accentHue, accentSaturation, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(ac))
+    }
+    if tf.RecommendedStyle != "" {
+        _ = LoadStyle(tf.RecommendedStyle)
+    }
+    refreshThemeMod()
+    return nil
 }
 
 // updateThemeReferences replaces references to old theme with the new theme across
@@ -199,19 +266,94 @@ func SaveTheme(name string) error {
 // SetAccentColor updates the accent color in the current theme and applies it
 // to all windows and widgets.
 func SetAccentColor(c Color) {
-	accentHue, _, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(c))
-	if namedColors != nil {
-		namedColors["accent"] = AccentColor()
-	}
-	markAllDirty()
+    accentHue, _, accentValue, accentAlpha = rgbaToHSVA(color.RGBA(c))
+    if namedColors != nil {
+        namedColors["accent"] = AccentColor()
+    }
+    // If the active theme used the named accent for certain fields, update
+    // those concrete colors so widgets reflect the new accent immediately.
+    if currentTheme != nil {
+        ac := AccentColor()
+        if themeAccentRefs.WindowActive {
+            currentTheme.Window.ActiveColor = ac
+        }
+        if themeAccentRefs.ButtonClick {
+            currentTheme.Button.ClickColor = ac
+        }
+        if themeAccentRefs.TextClick {
+            currentTheme.Text.ClickColor = ac
+        }
+        if themeAccentRefs.CheckboxClick {
+            currentTheme.Checkbox.ClickColor = ac
+        }
+        if themeAccentRefs.RadioClick {
+            currentTheme.Radio.ClickColor = ac
+        }
+        if themeAccentRefs.InputClick {
+            currentTheme.Input.ClickColor = ac
+        }
+        if themeAccentRefs.SliderClick {
+            currentTheme.Slider.ClickColor = ac
+        }
+        if themeAccentRefs.SliderFilled {
+            currentTheme.Slider.SelectedColor = ac
+        }
+        if themeAccentRefs.DropdownClick {
+            currentTheme.Dropdown.ClickColor = ac
+        }
+        if themeAccentRefs.DropdownSelect {
+            currentTheme.Dropdown.SelectedColor = ac
+        }
+        if themeAccentRefs.TabClick {
+            currentTheme.Tab.ClickColor = ac
+        }
+    }
+    markAllDirty()
 }
 
 // SetAccentSaturation updates the saturation component of the accent color and
 // reapplies it to the current theme.
 func SetAccentSaturation(s float64) {
-	accentSaturation = clamp(s, 0, 1)
-	if namedColors != nil {
-		namedColors["accent"] = AccentColor()
-	}
-	markAllDirty()
+    accentSaturation = clamp(s, 0, 1)
+    if namedColors != nil {
+        namedColors["accent"] = AccentColor()
+    }
+    // Re-apply to theme fields which referenced accent
+    if currentTheme != nil {
+        ac := AccentColor()
+        if themeAccentRefs.WindowActive {
+            currentTheme.Window.ActiveColor = ac
+        }
+        if themeAccentRefs.ButtonClick {
+            currentTheme.Button.ClickColor = ac
+        }
+        if themeAccentRefs.TextClick {
+            currentTheme.Text.ClickColor = ac
+        }
+        if themeAccentRefs.CheckboxClick {
+            currentTheme.Checkbox.ClickColor = ac
+        }
+        if themeAccentRefs.RadioClick {
+            currentTheme.Radio.ClickColor = ac
+        }
+        if themeAccentRefs.InputClick {
+            currentTheme.Input.ClickColor = ac
+        }
+        if themeAccentRefs.SliderClick {
+            currentTheme.Slider.ClickColor = ac
+        }
+        if themeAccentRefs.SliderFilled {
+            currentTheme.Slider.SelectedColor = ac
+        }
+        if themeAccentRefs.DropdownClick {
+            currentTheme.Dropdown.ClickColor = ac
+        }
+        if themeAccentRefs.DropdownSelect {
+            currentTheme.Dropdown.SelectedColor = ac
+        }
+        if themeAccentRefs.TabClick {
+            currentTheme.Tab.ClickColor = ac
+        }
+    }
+    markAllDirty()
 }
