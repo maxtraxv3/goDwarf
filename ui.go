@@ -2305,6 +2305,8 @@ func makeLoginWindow() {
 	loginWin.Movable = true
 	// Set the login window opacity
 	loginWin.Opacity = 0.9
+	// Increase title font size for "Login" by 2pt
+	loginWin.SetTitleSize(loginWin.GetRawTitleSize() + 2)
 	loginWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
 	loginFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
 	charactersList = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
@@ -2323,6 +2325,7 @@ func makeLoginWindow() {
 	connBtn.Text = "Connect"
 	connBtn.Size = eui.Point{X: charWinWidth, Y: 48}
 	connBtn.Padding = 10
+	connBtn.FontSize = 24
 	loginWin.DefaultButton = connBtn
 	connEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
@@ -2433,7 +2436,10 @@ func makeLoginWindow() {
 
 	quitBttn, quitEvn := eui.NewButton()
 	quitBttn.Text = "Quit"
-	quitBttn.Size = eui.Point{X: charWinWidth, Y: 24}
+	// Increase Quit button font size by 2pt
+	quitBttn.FontSize = 24
+	// Double the height of the Quit button
+	quitBttn.Size = eui.Point{X: charWinWidth, Y: 48}
 	quitEvn.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			confirmQuit()
@@ -2488,6 +2494,11 @@ func makeLoginWindow() {
 	loginFlow.AddItem(label)
 	loginFlow.AddItem(addBtn)
 	loginFlow.AddItem(openBtn)
+	// Add a small spacer between Play movie file and Quit
+	spacer, _ := eui.NewText()
+	spacer.Text = ""
+	spacer.Size = eui.Point{X: 1, Y: 12}
+	loginFlow.AddItem(spacer)
 	loginFlow.AddItem(quitBttn)
 	loginFlow.AddItem(verFlow)
 
