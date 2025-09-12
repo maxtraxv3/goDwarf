@@ -60,6 +60,13 @@ func makeJoystickWindow() {
 	root.Size = eui.Point{X: 350, Y: 200}
 	joystickWin.AddItem(root)
 
+	// Prominent notice that this feature is WIP
+	wipLabel, _ := eui.NewText()
+	wipLabel.Text = "Work in progress, does not function"
+	wipLabel.FontSize = 18
+	wipLabel.Size = eui.Point{X: 350, Y: 28}
+	root.AddItem(wipLabel)
+
 	joystickIDs = ebiten.AppendGamepadIDs(joystickIDs[:0])
 	joystickNames = joystickNames[:0]
 	for _, id := range joystickIDs {

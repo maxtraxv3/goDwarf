@@ -2964,6 +2964,20 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(keySpeedSlider)
 
+	// Move Gamepad button into the Controls section
+	joystickBtn, joystickEvents := eui.NewButton()
+	joystickBtn.Text = "Gamepad"
+	joystickBtn.Size = eui.Point{X: panelWidth, Y: 24}
+	joystickEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			joystickWin.ToggleNear(ev.Item)
+		}
+	}
+	left.AddItem(joystickBtn)
+
 	label, _ = eui.NewText()
 	label.Text = "\nQuality Options:"
 	label.FontSize = 15
@@ -3126,18 +3140,7 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(bubbleBtn)
 
-	joystickBtn, joystickEvents := eui.NewButton()
-	joystickBtn.Text = "Gamepad"
-	joystickBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	joystickEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			joystickWin.ToggleNear(ev.Item)
-		}
-	}
-	left.AddItem(joystickBtn)
+	// (Gamepad button moved above under Controls section)
 
 	label, _ = eui.NewText()
 	label.Text = "\nStatus Bar Options:"
