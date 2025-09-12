@@ -69,7 +69,7 @@ const (
 const poseDead = 32
 const maxInterpPixels = 64
 const maxMobileInterpPixels = 64
-const maxPersistImageSize = 256
+const maxPersistImageSize = 512
 
 // percent of area that must be outside the field to count as "on the edge"
 const edgeOutsidePercent = 45
