@@ -15,3 +15,4 @@ Framerate is throttled when the program is in the background to save cpu/battery
 Added option to mute audio if the program is in the background.
 Added options to mute audio, and option to show system notifications (for game notifications) when the game is in the background. 
 fixed that whisper bubbles had a different font size than others
+Added powersaver option for laptops
