@@ -1883,7 +1883,7 @@ func makeDownloadsWindow() {
 	downloadWin.AddWindow(false)
 }
 
-const charWinWidth = 248
+const charWinWidth = 500
 
 func updateCharacterButtons() {
 	if loginWin == nil || !loginWin.IsOpen() {
@@ -1927,7 +1927,7 @@ func updateCharacterButtons() {
 		for _, c := range characters {
 			row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 
-			profItem, _ := eui.NewImageItem(32, 32)
+			profItem, _ := eui.NewImageItem(48, 48)
 			profItem.Margin = 4
 			profItem.Border = 0
 			profItem.Filled = false
@@ -1939,7 +1939,7 @@ func updateCharacterButtons() {
 			}
 			row.AddItem(profItem)
 
-			avItem, _ := eui.NewImageItem(32, 32)
+			avItem, _ := eui.NewImageItem(48, 48)
 			avItem.Margin = 4
 			avItem.Border = 0
 			avItem.Filled = false
@@ -1968,7 +1968,8 @@ func updateCharacterButtons() {
 			radio, radioEvents := eui.NewRadio()
 			radio.Text = c.Name
 			radio.RadioGroup = "characters"
-			radio.Size = eui.Point{X: 150, Y: 24}
+			radio.Size = eui.Point{X: 350, Y: 48}
+			radio.FontSize = 24
 			radio.Checked = name == c.Name
 			nameCopy := c.Name
 			hashCopy := c.passHash
