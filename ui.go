@@ -1353,6 +1353,7 @@ func stopRecording() {
 					consoleMessage("compress failed: " + err.Error())
 				} else {
 					consoleMessage("compressed: " + outName)
+					os.Remove(src)
 				}
 			}(saved)
 		} else if gs.PromptOnSaveRecording {
@@ -1805,8 +1806,8 @@ func makeDownloadsWindow() {
 				img.Denoise = gs.DenoiseImages
 				img.DenoiseSharpness = gs.DenoiseSharpness
 				img.DenoiseAmount = gs.DenoiseAmount
-            		clImages = img
-            		if measureLoads {
+				clImages = img
+				if measureLoads {
 					dtms := float64(time.Since(imgStart).Nanoseconds()) / 1e6
 					log.Printf("measure: CL_Images archive loaded in %.2fms frame=%d", dtms, frameCounter)
 				}
