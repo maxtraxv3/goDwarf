@@ -228,11 +228,7 @@ func refreshShortcutsList() {
             label = "user"
         }
     } else {
-        disp := pluginDisplayNames[p.owner]
-        if disp == "" {
-            disp = p.owner
-        }
-        label = disp
+        label = getPluginDisplayName(p.owner)
         if p.owner != "global" {
             label += " (script)"
         }

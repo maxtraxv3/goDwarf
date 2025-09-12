@@ -74,13 +74,10 @@ func refreshSavedDataList() {
 		if count == 0 {
 			continue
 		}
-		disp := pluginDisplayNames[o]
-		if disp == "" {
-			disp = o
-		}
-		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
-		txt, _ := eui.NewText()
-		txt.Text = fmt.Sprintf("%s (%d entries, %s)", disp, count, humanize.Bytes(uint64(fi.Size())))
+        disp := getPluginDisplayName(o)
+        row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+        txt, _ := eui.NewText()
+        txt.Text = fmt.Sprintf("%s (%d entries, %s)", disp, count, humanize.Bytes(uint64(fi.Size())))
 		txt.Size = eui.Point{X: 240, Y: 24}
 		row.AddItem(txt)
 		viewBtn, vh := eui.NewButton()
@@ -121,7 +118,7 @@ func showSavedDataEntries(owner string) {
 		}
 		dataEntriesWin.AddWindow(false)
 	}
-	dataEntriesWin.Title = pluginDisplayNames[owner] + " Data"
+    dataEntriesWin.Title = getPluginDisplayName(owner) + " Data"
 	refreshSavedDataEntries(owner)
 	dataEntriesWin.MarkOpen()
 }
