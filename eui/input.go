@@ -892,9 +892,11 @@ func (item *itemData) clickItem(mpos point, click bool) bool {
             if CtrlPressed {
                 moveScale = 1.0 / 8.0
             }
+            // Only trigger Action when the value actually changes.
+            old := item.Value
             item.setSliderValueWithModifiers(mpos, ShiftPressed, moveScale)
             item.markDirty()
-            if item.Action != nil {
+            if item.Action != nil && item.Value != old {
                 item.Action()
             }
         }

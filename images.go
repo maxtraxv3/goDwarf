@@ -1,15 +1,16 @@
 package main
 
 import (
-	"encoding/csv"
-	"fmt"
-	"image"
-	"image/png"
-	"log"
-	"os"
-	"path/filepath"
-	"strconv"
-	"sync"
+    "encoding/csv"
+    "fmt"
+    "image"
+    "image/png"
+    "log"
+    "os"
+    "path/filepath"
+    "strconv"
+    "sync"
+    "time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -129,20 +130,38 @@ func loadSheet(id uint16, colors []byte, forceTransparent bool) *ebiten.Image {
 	}
 	imageMu.Unlock()
 
-	if clImages != nil {
-		if img := clImages.Get(uint32(id), colors, forceTransparent); img != nil {
-			statImageLoaded(id)
-			if imgDump && colors == nil && !forceTransparent {
-				dumpImageSheet(id, img)
-			}
-			imageMu.Lock()
-			sheetCache[key] = img
-			imageMu.Unlock()
-			return img
-		}
-		log.Printf("missing image %d", id)
-	} else {
-		log.Printf("CL_Images not loaded when requesting image %d", id)
+    if clImages != nil {
+        var t0 time.Time
+        if measureLoads {
+            t0 = time.Now()
+        }
+        if img := clImages.Get(uint32(id), colors, forceTransparent); img != nil {
+            statImageLoaded(id)
+            if imgDump && colors == nil && !forceTransparent {
+                dumpImageSheet(id, img)
+            }
+            imageMu.Lock()
+            sheetCache[key] = img
+            imageMu.Unlock()
+            if measureLoads {
+                frames := clImages.NumFrames(uint32(id))
+                if frames <= 0 {
+                    frames = 1
+                }
+                innerW := img.Bounds().Dx() - 2
+                innerH := img.Bounds().Dy() - 2
+                h := 0
+                if frames > 0 {
+                    h = innerH / frames
+                }
+                dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
+                log.Printf("measure: sprite id=%d frames=%d size=%dx%d load=%.2fms frame=%d", id, frames, innerW, h, dtms, frameCounter)
+            }
+            return img
+        }
+        log.Printf("missing image %d", id)
+    } else {
+        log.Printf("CL_Images not loaded when requesting image %d", id)
 	}
 
 	return nil

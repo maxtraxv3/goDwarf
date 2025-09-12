@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -1794,6 +1795,7 @@ func makeDownloadsWindow() {
 				downloadWin.Refresh()
 				return
 			}
+			imgStart := time.Now()
 			img, err := climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
 			if err != nil {
 				logError("failed to load CL_Images: %v", err)
@@ -1803,7 +1805,11 @@ func makeDownloadsWindow() {
 				img.Denoise = gs.DenoiseImages
 				img.DenoiseSharpness = gs.DenoiseSharpness
 				img.DenoiseAmount = gs.DenoiseAmount
-				clImages = img
+            		clImages = img
+            		if measureLoads {
+					dtms := float64(time.Since(imgStart).Nanoseconds()) / 1e6
+					log.Printf("measure: CL_Images archive loaded in %.2fms frame=%d", dtms, frameCounter)
+				}
 				// Refresh windows that depend on CL_Images now that
 				// the archive is available so icons appear without
 				// requiring a manual resize.
@@ -1811,11 +1817,15 @@ func makeDownloadsWindow() {
 				playersDirty = true
 			}
 
+			sndStart := time.Now()
 			clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
 			if err != nil {
 				logError("failed to load CL_Sounds: %v", err)
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Sounds")
 				return
+			} else if measureLoads {
+				dtms := float64(time.Since(sndStart).Nanoseconds()) / 1e6
+				log.Printf("measure: CL_Sounds archive loaded in %.2fms frame=%d", dtms, frameCounter)
 			}
 			if s, err := checkDataFiles(clVersion); err == nil {
 				status = s
@@ -3934,7 +3944,7 @@ func showShaderDisablePrompt() {
 	msg, _ := eui.NewText()
 	msg.Text = "FPS has been under 50 for a while. Disabling shaders may help."
 	msg.FontSize = 12
-	msg.Size = eui.Point{X: 280, Y: 36}
+	msg.Size = eui.Point{X: 600, Y: 36}
 	flow.AddItem(msg)
 
 	shaderWarnDontShowCB, _ = eui.NewCheckbox()

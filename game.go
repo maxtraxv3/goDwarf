@@ -1089,19 +1089,22 @@ func (g *Game) Update() error {
 
 	queueInput(inputState{mouseX: x, mouseY: y, mouseDown: walk})
 
-	// Warn about poor performance and suggest disabling shaders.
-	if tcpConn != nil && gs.ShaderLighting && gs.PromptDisableShaders && !shaderWarnShown {
-		if ebiten.ActualFPS() < 50 {
-			if lowFPSSince.IsZero() {
-				lowFPSSince = now
-			} else if now.Sub(lowFPSSince) >= 30*time.Second {
-				shaderWarnShown = true
-				showShaderDisablePrompt()
-			}
-		} else {
-			lowFPSSince = time.Time{}
-		}
-	}
+    // Warn about poor performance and suggest disabling shaders.
+    // Suppress this while intentionally lowering FPS due to power saving
+    // (background/unfocused or always-on power save).
+    if tcpConn != nil && gs.ShaderLighting && gs.PromptDisableShaders && !shaderWarnShown {
+        powerSaving := gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground)
+        if !powerSaving && ebiten.ActualFPS() < 50 {
+            if lowFPSSince.IsZero() {
+                lowFPSSince = now
+            } else if now.Sub(lowFPSSince) >= 30*time.Second {
+                shaderWarnShown = true
+                showShaderDisablePrompt()
+            }
+        } else {
+            lowFPSSince = time.Time{}
+        }
+    }
 
 	updateHotkeyRecording()
 	checkHotkeys()

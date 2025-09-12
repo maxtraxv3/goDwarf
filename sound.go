@@ -1,16 +1,17 @@
 package main
 
 import (
-	"encoding/binary"
-	"encoding/csv"
-	"fmt"
-	"log"
-	"math"
-	"os"
-	"path/filepath"
-	"runtime"
-	"strconv"
-	"sync"
+    "encoding/binary"
+    "encoding/csv"
+    "fmt"
+    "log"
+    "math"
+    "os"
+    "path/filepath"
+    "runtime"
+    "strconv"
+    "sync"
+    "time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
@@ -442,8 +443,12 @@ func loadSound(id uint16) []byte {
 		return nil
 	}
 
-	//logDebug("loadSound(%d) fetching from archive", id)
-	s, err := c.Get(uint32(id))
+    //logDebug("loadSound(%d) fetching from archive", id)
+    var t0 time.Time
+    if measureLoads {
+        t0 = time.Now()
+    }
+    s, err := c.Get(uint32(id))
 	if s == nil {
 		if err != nil {
 			logError("unable to decode sound %d: %v", id, err)
@@ -456,7 +461,7 @@ func loadSound(id uint16) []byte {
 		return nil
 	}
 	statSoundLoaded(id)
-	//logDebug("loadSound(%d) loaded %d Hz %d-bit %d bytes", id, s.SampleRate, s.Bits, len(s.Data))
+    //logDebug("loadSound(%d) loaded %d Hz %d-bit %d bytes", id, s.SampleRate, s.Bits, len(s.Data))
 
 	srcRate := int(s.SampleRate / 2)
 	dstRate := audioContext.SampleRate()
@@ -512,15 +517,19 @@ func loadSound(id uint16) []byte {
 		pcm[2*i+1] = byte(v >> 8)
 	}
 
-	if sndDump {
-		dumpSound(id, s, pcm, dstRate)
-	}
+    if sndDump {
+        dumpSound(id, s, pcm, dstRate)
+    }
 
-	soundMu.Lock()
-	pcmCache[id] = pcm
-	soundMu.Unlock()
-	//logDebug("loadSound(%d) cached %d bytes", id, len(pcm))
-	return pcm
+    soundMu.Lock()
+    pcmCache[id] = pcm
+    soundMu.Unlock()
+    //logDebug("loadSound(%d) cached %d bytes", id, len(pcm))
+    if measureLoads && !t0.IsZero() {
+        dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
+        log.Printf("measure: sound id=%d rate=%dHz bits=%d ch=%d load=%.2fms frame=%d", id, s.SampleRate, s.Bits, s.Channels, dtms, frameCounter)
+    }
+    return pcm
 }
 
 func dumpSound(id uint16, s *clsnd.Sound, pcm []byte, rate int) {
