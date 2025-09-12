@@ -1969,7 +1969,7 @@ func updateCharacterButtons() {
 			radio.Text = c.Name
 			radio.RadioGroup = "characters"
 			radio.Size = eui.Point{X: 350, Y: 48}
-			radio.FontSize = 24
+			radio.FontSize = 20
 			radio.Checked = name == c.Name
 			nameCopy := c.Name
 			hashCopy := c.passHash
@@ -2074,13 +2074,16 @@ func makeAddCharacterWindow() {
 			if !addCharRemember {
 				hash = ""
 			}
+			// Check for existing character names case-insensitively
 			exists := false
 			for i := range characters {
-				if characters[i].Name == addCharName {
-					characters[i].passHash = hash
-					characters[i].DontRemember = !addCharRemember
+				if strings.EqualFold(characters[i].Name, addCharName) {
+					// Preserve canonical case from the stored character
+					addCharName = characters[i].Name
 					exists = true
-					break
+					// Inform the user and keep the Add window open
+					makeErrorWindow("Character already exists")
+					return
 				}
 			}
 			if !exists {
@@ -2310,7 +2313,12 @@ func makeLoginWindow() {
 	loginWin.SetTitleSize(loginWin.GetRawTitleSize() + 2)
 	loginWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
 	loginFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	// Characters list lives in its own flow and is scrollable.
+	// Use a fixed height so the window doesn't grow unbounded.
 	charactersList = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	charactersList.Scrollable = true
+	charactersList.Fixed = true
+	charactersList.Size = eui.Point{X: charWinWidth, Y: 300}
 
 	/*
 		manBtn, manBtnEvents := eui.NewButton(&eui.ItemData{Text: "Manage account", Size: eui.Point{X: 200, Y: 24}})
@@ -2450,8 +2458,8 @@ func makeLoginWindow() {
 	verFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Size: eui.Point{X: 260, Y: 24}}
 	verLabel, _ := eui.NewText()
 	verLabel.Text = fmt.Sprintf("goThoom test %4d", appVersion)
-	verLabel.FontSize = 9
-	verLabel.Size = eui.Point{X: 110, Y: 24}
+	verLabel.FontSize = 14
+	verLabel.Size = eui.Point{X: 357, Y: 24}
 	verFlow.AddItem(verLabel)
 
 	changeBtn, changeEvents := eui.NewButton()
@@ -2498,7 +2506,7 @@ func makeLoginWindow() {
 	// Add a small spacer between Play movie file and Quit
 	spacer, _ := eui.NewText()
 	spacer.Text = ""
-	spacer.Size = eui.Point{X: 1, Y: 12}
+	spacer.Size = eui.Point{X: 1, Y: 16}
 	loginFlow.AddItem(spacer)
 	loginFlow.AddItem(quitBttn)
 	loginFlow.AddItem(verFlow)

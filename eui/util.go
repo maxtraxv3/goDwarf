@@ -1206,24 +1206,31 @@ func markAllDirty() {
 }
 
 func (item *itemData) bounds(offset point) rect {
-	var r rect
-	if item.ItemType == ITEM_FLOW && !item.Fixed {
-		// Unfixed flows should report bounds based solely on their content
-		r = rect{X0: offset.X, Y0: offset.Y, X1: offset.X, Y1: offset.Y}
-	} else {
-		r = rect{
-			X0: offset.X,
-			Y0: offset.Y,
-			X1: offset.X + item.GetSize().X,
-			Y1: offset.Y + item.GetSize().Y,
-		}
-	}
-	if item.ItemType == ITEM_FLOW {
-		var flowOffset point
-		var subItems []*itemData
-		if len(item.Tabs) > 0 {
-			if item.ActiveTab >= len(item.Tabs) {
-				item.ActiveTab = 0
+    var r rect
+    if item.ItemType == ITEM_FLOW && !item.Fixed {
+        // Unfixed flows should report bounds based solely on their content
+        r = rect{X0: offset.X, Y0: offset.Y, X1: offset.X, Y1: offset.Y}
+    } else {
+        r = rect{
+            X0: offset.X,
+            Y0: offset.Y,
+            X1: offset.X + item.GetSize().X,
+            Y1: offset.Y + item.GetSize().Y,
+        }
+    }
+    if item.ItemType == ITEM_FLOW {
+        // For fixed flows, the bounds should be limited to the flow's
+        // own rectangle so autosize and hit-testing don't expand to the
+        // content beyond the fixed size. The content is visible via
+        // scrolling/clipping as needed.
+        if item.Fixed {
+            return r
+        }
+        var flowOffset point
+        var subItems []*itemData
+        if len(item.Tabs) > 0 {
+            if item.ActiveTab >= len(item.Tabs) {
+                item.ActiveTab = 0
 			}
 			subItems = item.Tabs[item.ActiveTab].Contents
 		} else {
@@ -1256,34 +1263,26 @@ func (item *itemData) bounds(offset point) rect {
 }
 
 func (win *windowData) contentBounds() point {
-	if len(win.Contents) == 0 {
-		return point{}
-	}
+    if len(win.Contents) == 0 {
+        return point{}
+    }
 
-	base := point{X: 0, Y: win.GetTitleSize()}
-	first := true
-	var b rect
+    base := point{X: 0, Y: win.GetTitleSize()}
+    first := true
+    var b rect
 
-	for _, item := range win.Contents {
-		var r rect
-		if item.ItemType == ITEM_FLOW {
-			cb := item.contentBounds()
-			r = rect{
-				X0: base.X + item.getPosition(win).X,
-				Y0: base.Y + item.getPosition(win).Y,
-				X1: base.X + item.getPosition(win).X + cb.X,
-				Y1: base.Y + item.getPosition(win).Y + cb.Y,
-			}
-		} else {
-			r = item.bounds(pointAdd(base, item.getPosition(win)))
-		}
-		if first {
-			b = r
-			first = false
-		} else {
-			b = unionRect(b, r)
-		}
-	}
+    for _, item := range win.Contents {
+        // Use the generic bounds calculation for all items, including flows.
+        // This ensures fixed flows contribute their set size to autosize,
+        // while unfixed flows contribute based on their content.
+        r := item.bounds(pointAdd(base, item.getPosition(win)))
+        if first {
+            b = r
+            first = false
+        } else {
+            b = unionRect(b, r)
+        }
+    }
 
 	if first {
 		return point{}
