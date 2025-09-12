@@ -201,31 +201,60 @@ func drawTooltip(screen *ebiten.Image, item *itemData) {
 }
 
 func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
-	if win.NoCache {
-		// In NoCache mode, render directly into the main screen with absolute
-		// coordinates. Do not alter win.Position; all helpers compute and draw
-		// using screen-space. Item.DrawRect stays absolute by passing base={0,0}.
-		if CacheCheck {
-			win.RenderCount++
-		}
-		size := win.GetSize()
-		if size.X < 1 || size.Y < 1 {
-			return
-		}
-		win.drawBG(screen)
-		win.drawItems(screen, point{}, dropdowns)
-		win.drawScrollbars(screen)
-		win.drawWinTitle(screen)
-		win.drawBorder(screen)
-		win.Dirty = false
-		// Collect dropdowns for separate overlay rendering and draw debug.
-		win.collectDropdowns(dropdowns)
-		win.drawDebug(screen)
-		if CacheCheck {
-			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
-		}
-		return
-	}
+    if win.NoCache {
+        // In NoCache mode, if opacity is < 1, render to a temporary offscreen
+        // image and composite with alpha. Otherwise, render directly to screen.
+        if CacheCheck {
+            win.RenderCount++
+        }
+        size := win.GetSize()
+        if size.X < 1 || size.Y < 1 {
+            return
+        }
+        if win.Opacity >= 0.9999 {
+            // Direct render
+            win.drawBG(screen)
+            win.drawItems(screen, point{}, dropdowns)
+            win.drawScrollbars(screen)
+            win.drawWinTitle(screen)
+            win.drawBorder(screen)
+            win.Dirty = false
+            // Collect dropdowns for separate overlay rendering and draw debug.
+            win.collectDropdowns(dropdowns)
+            win.drawDebug(screen)
+            if CacheCheck {
+                ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+            }
+            return
+        }
+
+        // Offscreen render for opacity blending
+        tmp := newImage(int(size.X), int(size.Y))
+        // Draw into tmp in local coords: temporarily zero Position like cached path
+        origPos := win.Position
+        basePos := win.getPosition()
+        win.Position = point{}
+        win.drawBG(tmp)
+        win.drawItems(tmp, basePos, dropdowns)
+        win.drawScrollbars(tmp)
+        win.drawWinTitle(tmp)
+        win.drawBorder(tmp)
+        win.Position = origPos
+        win.Dirty = false
+
+        op := acquireDrawImageOptions()
+        op.GeoM.Translate(float64(basePos.X), float64(basePos.Y))
+        op.ColorScale.Scale(1, 1, 1, win.Opacity)
+        screen.DrawImage(tmp, op)
+        releaseDrawImageOptions(op)
+        // Collect dropdowns for separate overlay rendering and draw debug.
+        win.collectDropdowns(dropdowns)
+        win.drawDebug(screen)
+        if CacheCheck {
+            ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+        }
+        return
+    }
 
 	// Cached/offscreen render path
 	if win.Dirty || win.Render == nil {
@@ -254,10 +283,23 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 	} else {
 		win.collectDropdowns(dropdowns)
 	}
-	op := acquireDrawImageOptions()
-	op.GeoM.Translate(float64(win.getPosition().X), float64(win.getPosition().Y))
-	screen.DrawImage(win.Render, op)
-	releaseDrawImageOptions(op)
+    op := acquireDrawImageOptions()
+    op.GeoM.Translate(float64(win.getPosition().X), float64(win.getPosition().Y))
+    // Apply per-window opacity when compositing cached image
+    if win.Opacity <= 0 {
+        // Nothing to draw
+        releaseDrawImageOptions(op)
+        win.drawDebug(screen)
+        if CacheCheck {
+            ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+        }
+        return
+    }
+    if win.Opacity < 0.9999 {
+        op.ColorScale.Scale(1, 1, 1, win.Opacity)
+    }
+    screen.DrawImage(win.Render, op)
+    releaseDrawImageOptions(op)
 	win.drawDebug(screen)
 	if CacheCheck {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
