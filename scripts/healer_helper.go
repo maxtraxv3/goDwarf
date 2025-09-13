@@ -3,8 +3,6 @@
 package main
 
 import (
-	"time"
-
 	"gt"
 )
 
@@ -14,46 +12,51 @@ const PluginAuthor = "Examples"
 const PluginCategory = "Profession"
 const PluginAPIVersion = 1
 
-// Init launches a tiny loop that watches for right clicks on ourselves.
+// Init subscribes to mouse click hotkeys rather than polling.
 func Init() {
-	go func() {
-		for {
-			if gt.MouseJustPressed("right") {
-				c := gt.LastClick()
-				if c.OnMobile {
-					if gt.IgnoreCase(c.Mobile.Name, gt.PlayerName()) {
-						equipItem("moonstone")
-						gt.Run("/use 10")
-					} else {
-						equipItem("asklepean")
-						gt.Run("/use " + c.Mobile.Name)
-					}
-				}
-			} else if gt.MouseJustPressed("middle") {
-				c := gt.LastClick()
-				if c.OnMobile {
-					if gt.IgnoreCase(c.Mobile.Name, gt.PlayerName()) {
-						equipItem("asklepean")
-						gt.Run("/use")
-					} else {
-						equipItem("moonstone")
-						gt.Run("/use 10")
-					}
-				}
-			}
-			time.Sleep(50 * time.Millisecond)
+	// RightClick: heal others, self-heal with moonstone
+	gt.AddHotkeyFn("RightClick", func(e gt.HotkeyEvent) {
+		c := gt.LastClick()
+		if !c.OnMobile {
+			return
 		}
-	}()
+		if gt.IgnoreCase(c.Mobile.Name, gt.PlayerName()) {
+			// Right-click self: use moonstone on self slot 10
+			equipItem("moonstone")
+			gt.Run("/use 10")
+		} else {
+			// Right-click other: use asklepean on target
+			equipItem("asklepean")
+			gt.Run("/use " + c.Mobile.Name)
+		}
+	})
+
+	// MiddleClick: reverse behavior from RightClick
+	gt.AddHotkeyFn("MiddleClick", func(e gt.HotkeyEvent) {
+		c := gt.LastClick()
+		if !c.OnMobile {
+			return
+		}
+		if gt.IgnoreCase(c.Mobile.Name, gt.PlayerName()) {
+			// Middle-click self: asklepean self-use
+			equipItem("asklepean")
+			gt.Run("/use")
+		} else {
+			// Middle-click other: moonstone to slot 10
+			equipItem("moonstone")
+			gt.Run("/use 10")
+		}
+	})
 }
 
 // equipItem equips the moonstone if it isn't already in hand.
 func equipItem(name string) {
-    for _, it := range gt.Inventory() {
-        if gt.IgnoreCase(it.Name, name) {
+	for _, it := range gt.Inventory() {
+		if gt.IgnoreCase(it.Name, name) {
             if !it.Equipped {
-                gt.Equip(it.ID)
+                gt.Equip(it.Name)
             }
-            return
-        }
-    }
+			return
+		}
+	}
 }

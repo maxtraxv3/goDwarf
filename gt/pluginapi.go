@@ -84,8 +84,18 @@ func EquippedItems() []InventoryItem { return nil }
 func HasItem(name string) bool       { return false }
 func IsEquipped(name string) bool    { return false }
 func Has(name string) bool           { return HasItem(name) }
-func Equip(id uint16)                {}
-func Unequip(id uint16)              {}
+// Equip equips an item by name (case-insensitive).
+func Equip(name string) {}
+// Unequip unequips an item by name (case-insensitive).
+func Unequip(name string) {}
+// EquipPartial equips the first item whose name contains the substring (case-insensitive).
+func EquipPartial(name string) {}
+// UnequipPartial unequips an equipped item whose name contains the substring (case-insensitive).
+func UnequipPartial(name string) {}
+// EquipById equips an item by numeric ID.
+func EquipById(id uint16) {}
+// UnequipById unequips an item by numeric ID.
+func UnequipById(id uint16) {}
 
 // Images and world overlay
 func WorldSize() (int, int)                              { return 0, 0 }

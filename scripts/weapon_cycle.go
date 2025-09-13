@@ -37,10 +37,6 @@ func cycleWeapon() {
 			break
 		}
 	}
-	for _, it := range inv {
-		if gt.IgnoreCase(it.Name, next) {
-			gt.Equip(it.ID)
-			return
-		}
-	}
+    // Equip by name using the simplified API
+    gt.Equip(next)
 }

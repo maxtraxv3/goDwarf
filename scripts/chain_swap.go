@@ -13,7 +13,7 @@ const PluginAuthor = "Examples"
 const PluginCategory = "Equipment"
 const PluginAPIVersion = 1
 
-var savedID uint16
+var savedName string
 var lastSwap time.Time
 
 // Init wires up our command and mouse-wheel hotkeys.
@@ -34,26 +34,26 @@ func swapChain() {
 	}
 	lastSwap = time.Now()
 
-    var chainID uint16
-    var equippedID uint16
+    var chainName string
+    var equippedName string
     for _, it := range gt.Inventory() {
         if gt.IgnoreCase(it.Name, "chain") {
-            chainID = it.ID
+            chainName = it.Name
         }
         if it.Equipped && !gt.IgnoreCase(it.Name, "chain") {
-            equippedID = it.ID
+            equippedName = it.Name
         }
     }
-    if chainID == 0 {
+    if chainName == "" {
         // No chain found.
         return
     }
-    if equippedID != 0 {
+    if equippedName != "" {
         // Remember what we unequipped so we can switch back later.
-        savedID = equippedID
-        gt.Equip(chainID)
-    } else if savedID != 0 {
+        savedName = equippedName
+        gt.Equip(chainName)
+    } else if savedName != "" {
         // Chain already equipped, so swap back.
-        gt.Equip(savedID)
+        gt.Equip(savedName)
     }
 }

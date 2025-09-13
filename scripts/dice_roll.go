@@ -44,9 +44,9 @@ func roll(args string) {
 	// Try to equip a dice item if present so others see it.
 	for _, it := range gt.Inventory() {
 		if gt.Includes(gt.Lower(it.Name), "dice") {
-			if !it.Equipped {
-				gt.Equip(it.ID)
-			}
+            if !it.Equipped {
+                gt.Equip(it.Name)
+            }
 			break
 		}
 	}
