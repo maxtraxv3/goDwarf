@@ -144,14 +144,15 @@ func getPlayers() []Player {
 
 func notifyPlayerHandlers(p Player) {
 	playerHandlersMu.RLock()
-	handlers := make([]func(Player), 0, len(playerHandlers)+len(pluginPlayerHandlers))
-	handlers = append(handlers, playerHandlers...)
-	for _, h := range pluginPlayerHandlers {
-		handlers = append(handlers, h.fn)
-	}
+	base := append([]func(Player){}, playerHandlers...)
+	plug := append([]playerHandler{}, pluginPlayerHandlers...)
 	playerHandlersMu.RUnlock()
-	for _, fn := range handlers {
+	for _, fn := range base {
 		go fn(p)
+	}
+	for _, h := range plug {
+		pluginLogEvent(h.owner, "PlayerHandler", p.Name)
+		go h.fn(p)
 	}
 }
 

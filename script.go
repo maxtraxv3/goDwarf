@@ -113,13 +113,13 @@ func exportsForPlugin(owner string) interp.Exports {
 		for k, v := range symbols {
 			m[k] = v
 		}
-        // Prefer string-based APIs; keep ID variants for power users
-        m["Equip"] = reflect.ValueOf(func(name string) { pluginEquipByName(owner, name) })
-        m["Unequip"] = reflect.ValueOf(func(name string) { pluginUnequipByName(owner, name) })
-        m["EquipPartial"] = reflect.ValueOf(func(name string) { pluginEquipPartial(owner, name) })
-        m["UnequipPartial"] = reflect.ValueOf(func(name string) { pluginUnequipPartial(owner, name) })
-        m["EquipById"] = reflect.ValueOf(func(id uint16) { pluginEquip(owner, id) })
-        m["UnequipById"] = reflect.ValueOf(func(id uint16) { pluginUnequip(owner, id) })
+		// Prefer string-based APIs; keep ID variants for power users
+		m["Equip"] = reflect.ValueOf(func(name string) { pluginEquipByName(owner, name) })
+		m["Unequip"] = reflect.ValueOf(func(name string) { pluginUnequipByName(owner, name) })
+		m["EquipPartial"] = reflect.ValueOf(func(name string) { pluginEquipPartial(owner, name) })
+		m["UnequipPartial"] = reflect.ValueOf(func(name string) { pluginUnequipPartial(owner, name) })
+		m["EquipById"] = reflect.ValueOf(func(id uint16) { pluginEquip(owner, id) })
+		m["UnequipById"] = reflect.ValueOf(func(id uint16) { pluginUnequip(owner, id) })
 		m["AddHotkey"] = reflect.ValueOf(func(combo, command string) { pluginAddHotkey(owner, combo, command) })
 		m["AddHotkeyFn"] = reflect.ValueOf(func(combo string, handler func(HotkeyEvent)) { pluginAddHotkeyFn(owner, combo, handler) })
 		m["RemoveHotkey"] = reflect.ValueOf(func(combo string) { pluginRemoveHotkey(owner, combo) })
@@ -500,6 +500,20 @@ func pluginConsole(msg string) {
 	}
 }
 
+func pluginLogEvent(owner, ev, data string) {
+	if !gs.pluginEventDebug {
+		return
+	}
+	line := fmt.Sprintf("[%s] %s: %s", owner, ev, data)
+	pluginDebugMu.Lock()
+	pluginDebugLines = append(pluginDebugLines, line)
+	if len(pluginDebugLines) > 200 {
+		pluginDebugLines = pluginDebugLines[len(pluginDebugLines)-200:]
+	}
+	pluginDebugMu.Unlock()
+	refreshPluginDebug()
+}
+
 func pluginShowNotification(msg string) {
 	showNotification(msg)
 }
@@ -713,6 +727,9 @@ var (
 	// Per-plugin world overlay draw operations.
 	pluginOverlayOps = map[string][]overlayOp{}
 	overlayMu        sync.RWMutex
+
+	pluginDebugLines []string
+	pluginDebugMu    sync.Mutex
 )
 
 // overlayOp describes a simple draw command for the world overlay.
@@ -1271,42 +1288,42 @@ func pluginEquip(owner string, id uint16) {
 // pluginEquipByName equips the first inventory item whose name matches the
 // provided name (case-insensitive). If the item is already equipped, it skips.
 func pluginEquipByName(owner, name string) {
-    if recordPluginSend(owner) {
-        return
-    }
-    targetName := strings.ToLower(strings.TrimSpace(name))
-    if targetName == "" {
-        return
-    }
-    items := getInventory()
-    var id uint16
-    idx := -1
-    for _, it := range items {
-        if strings.ToLower(it.Name) != targetName {
-            continue
-        }
-        // If any matching item is already equipped, skip as redundant.
-        if it.Equipped {
-            n := it.Name
-            if n == "" {
-                n = targetName
-            }
-            consoleMessage(n + " already equipped, skipping")
-            return
-        }
-        // Prefer the first match; use its ID and server-provided index.
-        id = it.ID
-        if idx < 0 {
-            idx = it.IDIndex
-        }
-        // Do not break; if there are multiple matches, the first branch sets id/idx
-        // and we continue to see if an equipped instance exists to early-out.
-    }
-    if idx < 0 {
-        return
-    }
-    queueEquipCommand(id, idx)
-    equipInventoryItem(id, idx, true)
+	if recordPluginSend(owner) {
+		return
+	}
+	targetName := strings.ToLower(strings.TrimSpace(name))
+	if targetName == "" {
+		return
+	}
+	items := getInventory()
+	var id uint16
+	idx := -1
+	for _, it := range items {
+		if strings.ToLower(it.Name) != targetName {
+			continue
+		}
+		// If any matching item is already equipped, skip as redundant.
+		if it.Equipped {
+			n := it.Name
+			if n == "" {
+				n = targetName
+			}
+			consoleMessage(n + " already equipped, skipping")
+			return
+		}
+		// Prefer the first match; use its ID and server-provided index.
+		id = it.ID
+		if idx < 0 {
+			idx = it.IDIndex
+		}
+		// Do not break; if there are multiple matches, the first branch sets id/idx
+		// and we continue to see if an equipped instance exists to early-out.
+	}
+	if idx < 0 {
+		return
+	}
+	queueEquipCommand(id, idx)
+	equipInventoryItem(id, idx, true)
 }
 
 func pluginUnequip(owner string, id uint16) {
@@ -1331,89 +1348,90 @@ func pluginUnequip(owner string, id uint16) {
 // pluginEquipPartial equips the first item whose name contains the pattern
 // (case-insensitive). If a matching item is already equipped, it skips.
 func pluginEquipPartial(owner, pattern string) {
-    if recordPluginSend(owner) {
-        return
-    }
-    p := strings.ToLower(strings.TrimSpace(pattern))
-    if p == "" {
-        return
-    }
-    items := getInventory()
-    var id uint16
-    idx := -1
-    // If any matching item is already equipped, skip as redundant.
-    for _, it := range items {
-        if strings.Contains(strings.ToLower(it.Name), p) && it.Equipped {
-            consoleMessage(it.Name + " already equipped, skipping")
-            return
-        }
-    }
-    for _, it := range items {
-        if strings.Contains(strings.ToLower(it.Name), p) {
-            id = it.ID
-            idx = it.IDIndex
-            break
-        }
-    }
-    if idx < 0 {
-        return
-    }
-    queueEquipCommand(id, idx)
-    equipInventoryItem(id, idx, true)
+	if recordPluginSend(owner) {
+		return
+	}
+	p := strings.ToLower(strings.TrimSpace(pattern))
+	if p == "" {
+		return
+	}
+	items := getInventory()
+	var id uint16
+	idx := -1
+	// If any matching item is already equipped, skip as redundant.
+	for _, it := range items {
+		if strings.Contains(strings.ToLower(it.Name), p) && it.Equipped {
+			consoleMessage(it.Name + " already equipped, skipping")
+			return
+		}
+	}
+	for _, it := range items {
+		if strings.Contains(strings.ToLower(it.Name), p) {
+			id = it.ID
+			idx = it.IDIndex
+			break
+		}
+	}
+	if idx < 0 {
+		return
+	}
+	queueEquipCommand(id, idx)
+	equipInventoryItem(id, idx, true)
 }
 
 // pluginUnequipPartial unequips any equipped item whose name contains the
 // provided pattern (case-insensitive).
 func pluginUnequipPartial(owner, pattern string) {
-    if recordPluginSend(owner) {
-        return
-    }
-    p := strings.ToLower(strings.TrimSpace(pattern))
-    if p == "" {
-        return
-    }
-    items := getInventory()
-    for _, it := range items {
-        if it.Equipped && strings.Contains(strings.ToLower(it.Name), p) {
-            pendingCommand = fmt.Sprintf("/unequip %d", it.ID)
-            equipInventoryItem(it.ID, -1, false)
-            return
-        }
-    }
+	if recordPluginSend(owner) {
+		return
+	}
+	p := strings.ToLower(strings.TrimSpace(pattern))
+	if p == "" {
+		return
+	}
+	items := getInventory()
+	for _, it := range items {
+		if it.Equipped && strings.Contains(strings.ToLower(it.Name), p) {
+			pendingCommand = fmt.Sprintf("/unequip %d", it.ID)
+			equipInventoryItem(it.ID, -1, false)
+			return
+		}
+	}
 }
+
 // pluginUnequipByName unequips an item by name (case-insensitive). If multiple
 // items share the name, it unequips any equipped instance.
 func pluginUnequipByName(owner, name string) {
-    if recordPluginSend(owner) {
-        return
-    }
-    targetName := strings.ToLower(strings.TrimSpace(name))
-    if targetName == "" {
-        return
-    }
-    items := getInventory()
-    var id uint16
-    equipped := false
-    for _, it := range items {
-        if strings.ToLower(it.Name) != targetName {
-            continue
-        }
-        if it.Equipped {
-            id = it.ID
-            equipped = true
-            break
-        }
-        // Remember an ID even if not equipped yet; we still require equipped=true
-        // to proceed, matching previous Unequip behavior.
-        if id == 0 {
-            id = it.ID
-        }
-    }
-    if !equipped {
-        return
-    }
-    pendingCommand = fmt.Sprintf("/unequip %d", id)
-    equipInventoryItem(id, -1, false)
+	if recordPluginSend(owner) {
+		return
+	}
+	targetName := strings.ToLower(strings.TrimSpace(name))
+	if targetName == "" {
+		return
+	}
+	items := getInventory()
+	var id uint16
+	equipped := false
+	for _, it := range items {
+		if strings.ToLower(it.Name) != targetName {
+			continue
+		}
+		if it.Equipped {
+			id = it.ID
+			equipped = true
+			break
+		}
+		// Remember an ID even if not equipped yet; we still require equipped=true
+		// to proceed, matching previous Unequip behavior.
+		if id == 0 {
+			id = it.ID
+		}
+	}
+	if !equipped {
+		return
+	}
+	pendingCommand = fmt.Sprintf("/unequip %d", id)
+	equipInventoryItem(id, -1, false)
 }
 
 func pluginRegisterInputHandler(owner string, fn func(string) string) {
@@ -1530,14 +1548,12 @@ func pluginRegisterChatHandler(owner string, fn func(string)) {
 
 func runInputHandlers(txt string) string {
 	inputHandlersMu.RLock()
-	handlers := make([]func(string) string, len(pluginInputHandlers))
-	for i, h := range pluginInputHandlers {
-		handlers[i] = h.fn
-	}
+	handlers := append([]inputHandler{}, pluginInputHandlers...)
 	inputHandlersMu.RUnlock()
 	for _, h := range handlers {
-		if h != nil {
-			txt = h(txt)
+		if h.fn != nil {
+			pluginLogEvent(h.owner, "InputHandler", txt)
+			txt = h.fn(txt)
 		}
 	}
 	return txt
@@ -1571,18 +1587,17 @@ func runChatTriggers(msg string) {
 	for phrase, hs := range pluginTriggers {
 		if strings.Contains(strings.ToLower(msg), phrase) {
 			for _, h := range hs {
-				// Name filter matches literal name if set.
 				if h.name != "" && h.name != strings.ToLower(speaker) {
 					continue
 				}
-				// Flag filter: default to ChatAny, then require intersection.
 				f := h.flags
 				if f == 0 {
 					f = ChatAny
 				}
-				match := (f & msgFlags) != 0
-				if match {
+				if (f & msgFlags) != 0 {
+					owner := h.owner
 					fn := h.fn
+					pluginLogEvent(owner, "ChatTrigger", fmt.Sprintf("%q %q", phrase, msg))
 					go fn(msg)
 				}
 			}
@@ -1592,14 +1607,12 @@ func runChatTriggers(msg string) {
 
 	// Dispatch all-chat handlers (no phrase filtering).
 	chatHandlersMu.RLock()
-	handlers := make([]func(string), 0, len(pluginChatHandlers))
-	for _, h := range pluginChatHandlers {
-		handlers = append(handlers, h.fn)
-	}
+	handlers := append([]chatHandler{}, pluginChatHandlers...)
 	chatHandlersMu.RUnlock()
 	for _, h := range handlers {
-		if h != nil {
-			go h(msg)
+		if h.fn != nil {
+			pluginLogEvent(h.owner, "ChatHandler", msg)
+			go h.fn(msg)
 		}
 	}
 }
@@ -1610,6 +1623,7 @@ func runConsoleTriggers(msg string) {
 	for phrase, hs := range pluginConsoleTriggers {
 		if strings.Contains(msgLower, phrase) {
 			for _, h := range hs {
+				pluginLogEvent(h.owner, "ConsoleTrigger", fmt.Sprintf("%q %q", phrase, msg))
 				fn := h.fn
 				go fn(msg)
 			}

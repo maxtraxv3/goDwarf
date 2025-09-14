@@ -89,6 +89,7 @@ var pluginDetails *eui.ItemData
 var selectedPlugin string
 var pluginConfigWin *eui.WindowData
 var pluginConfigOwner string
+var pluginDebugList *eui.ItemData
 
 // Checkboxes in the Windows window so we can update their state live
 var windowsPlayersCB *eui.ItemData
@@ -511,6 +512,28 @@ func makePluginsWindow() {
 	}
 	buttonsBottom.AddItem(openBtn)
 
+	debugFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	root.AddItem(debugFlow)
+	debugCB, debugEvents := eui.NewCheckbox()
+	debugCB.Text = "Debug events"
+	debugCB.Size = eui.Point{X: 160, Y: 24}
+	debugCB.Checked = gs.pluginEventDebug
+	debugEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.pluginEventDebug = ev.Checked
+			pluginDebugList.Invisible = !ev.Checked
+			if ev.Checked {
+				refreshPluginDebug()
+			}
+		}
+	}
+	debugFlow.AddItem(debugCB)
+	dbg := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Scrollable: true}
+	dbg.Size = eui.Point{X: 480, Y: 120}
+	dbg.Invisible = !gs.pluginEventDebug
+	pluginDebugList = dbg
+	debugFlow.AddItem(dbg)
+
 	pluginsWin.AddWindow(false)
 	refreshPluginsWindow()
 }
@@ -816,6 +839,26 @@ func refreshPluginDetails() {
 		}
 	}
 
+	if pluginsWin != nil {
+		pluginsWin.Refresh()
+	}
+}
+
+func refreshPluginDebug() {
+	if pluginDebugList == nil {
+		return
+	}
+	pluginDebugList.Contents = pluginDebugList.Contents[:0]
+	pluginDebugMu.Lock()
+	lines := append([]string(nil), pluginDebugLines...)
+	pluginDebugMu.Unlock()
+	for _, ln := range lines {
+		t, _ := eui.NewText()
+		t.Text = ln
+		t.FontSize = 12
+		t.Size = eui.Point{X: 400, Y: 16}
+		pluginDebugList.AddItem(t)
+	}
 	if pluginsWin != nil {
 		pluginsWin.Refresh()
 	}
