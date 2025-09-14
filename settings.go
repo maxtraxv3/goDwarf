@@ -172,6 +172,7 @@ var gsdef settings = settings{
 	pictAgainDebug:    false,
 	pictIDDebug:       false,
 	pluginOutputDebug: false,
+	pluginEventDebug:  false,
 	forceNightLevel:   -1,
 }
 
@@ -309,6 +310,7 @@ type settings struct {
 	pictAgainDebug    bool
 	pictIDDebug       bool
 	pluginOutputDebug bool
+	pluginEventDebug  bool
 	altNetMode        bool
 	altNetDelay       int
 	hideMoving        bool

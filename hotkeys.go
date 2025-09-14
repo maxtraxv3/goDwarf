@@ -978,6 +978,7 @@ func checkHotkeys() {
 				// If this is a plugin hotkey with a function handler, call it.
 				if hk.Plugin != "" {
 					if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
+						pluginLogEvent(hk.Plugin, "Hotkey", combo)
 						parts := strings.Split(combo, "-")
 						trig := ""
 						if len(parts) > 0 {

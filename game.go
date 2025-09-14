@@ -861,36 +861,37 @@ func (g *Game) Update() error {
 					}()
 				} else {
 					// Try built-in or plugin-registered commands first
-                                        if strings.HasPrefix(txt, "/") {
-                                                lower := strings.ToLower(txt)
-                                                if strings.HasPrefix(lower, "/testhooks") {
-                                                        consoleMessage("> " + txt)
-                                                        arg := strings.TrimSpace(txt[len("/testhooks"):])
-                                                        testScriptHooks(arg)
-                                                } else {
-                                                        parts := strings.SplitN(strings.TrimPrefix(txt, "/"), " ", 2)
-                                                        name := strings.ToLower(parts[0])
-                                                        args := ""
-                                                        if len(parts) > 1 {
-                                                                args = parts[1]
-                                                        }
-                                                        if handler, ok := pluginCommands[name]; ok && handler != nil {
-                                                                owner := pluginCommandOwners[name]
-                                                                if !pluginDisabled[owner] {
-                                                                        consoleMessage("> " + txt)
-                                                                        go handler(args)
-                                                                } else {
-                                                                        // Disabled plugin commands should fall through so the
-                                                                        // server still receives the user's input.
-                                                                        pendingCommand = txt
-                                                                }
-                                                        } else {
-                                                                pendingCommand = txt
-                                                        }
-                                                }
-                                        } else {
-                                                pendingCommand = txt
-                                        }
+					if strings.HasPrefix(txt, "/") {
+						lower := strings.ToLower(txt)
+						if strings.HasPrefix(lower, "/testhooks") {
+							consoleMessage("> " + txt)
+							arg := strings.TrimSpace(txt[len("/testhooks"):])
+							testScriptHooks(arg)
+						} else {
+							parts := strings.SplitN(strings.TrimPrefix(txt, "/"), " ", 2)
+							name := strings.ToLower(parts[0])
+							args := ""
+							if len(parts) > 1 {
+								args = parts[1]
+							}
+							if handler, ok := pluginCommands[name]; ok && handler != nil {
+								owner := pluginCommandOwners[name]
+								if !pluginDisabled[owner] {
+									consoleMessage("> " + txt)
+									pluginLogEvent(owner, "Command", args)
+									go handler(args)
+								} else {
+									// Disabled plugin commands should fall through so the
+									// server still receives the user's input.
+									pendingCommand = txt
+								}
+							} else {
+								pendingCommand = txt
+							}
+						}
+					} else {
+						pendingCommand = txt
+					}
 					// consoleMessage("> " + txt)
 				}
 				inputHistory = append(inputHistory, txt)
