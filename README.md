@@ -99,6 +99,55 @@ Tip: The input bar auto-expands as you type and has a context menu for quick pas
 goThoom can load optional scripts at startup using [yaegi](https://github.com/traefik/yaegi), a Go interpreter.
 Place `.go` files inside the `scripts/` directory.
 
+### Testing server messages
+
+Use the `/testhooks` command to inject fake server messages for debugging or
+script development. Run `/testhooks help` to see available message names.
+
+```
+/testhooks MESSAGE [NAME] DATA
+```
+
+`MESSAGE` is a server message name like `share` or `info`. Supply `NAME`
+for messages referencing a mobile, and put the message body in `DATA`. Running
+`/testhooks` without arguments emits a few sample messages.
+
+Available message types:
+
+| Name | Tag | Description |
+|------|-----|-------------|
+| bard | ba | bard message |
+| backend | be | back-end command |
+| clan | cn | clan name |
+| config | cf | config |
+| nodisplay | dd | do not display |
+| demo | de | demo notice |
+| depart | dp | depart |
+| download | dl | download |
+| error | er | error message |
+| gm | gm | game master |
+| fallen | hf | has fallen |
+| notfallen | nf | no longer fallen |
+| info | in | info |
+| inventory | iv | inventory |
+| karma | ka | karma |
+| karmarecv | kr | karma received |
+| logoff | lf | log off |
+| logon | lg | log on |
+| location | lo | location |
+| multi | ml | multilingual |
+| monster | mn | monster name |
+| music | mu | music |
+| news | nw | news |
+| player | pn | player name |
+| share | sh | share |
+| unshare | su | unshare |
+| textlog | tl | text log only |
+| think | th | think |
+| mono | tt | monospaced style |
+| who | wh | who list |
+| youkilled | yk | you killed |
+
 ---
 ## Build from source
 
