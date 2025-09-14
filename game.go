@@ -142,20 +142,20 @@ func updateGameImageSize() {
 // acquireDrawOpts returns a DrawImageOptions from the shared pool initialized
 // with nearest filtering and mipmaps disabled. Call releaseDrawOpts when done.
 func acquireDrawOpts() *ebiten.DrawImageOptions {
-    op := &ebiten.DrawImageOptions{}
-    op.Filter = ebiten.FilterNearest
-    op.DisableMipmaps = true
-    return op
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterNearest
+	op.DisableMipmaps = true
+	return op
 }
 
 // releaseDrawOpts is a no-op when not pooling.
 func releaseDrawOpts(op *ebiten.DrawImageOptions) {}
 
 func acquireTextDrawOpts() *text.DrawOptions {
-    op := &text.DrawOptions{}
-    op.DrawImageOptions.Filter = ebiten.FilterNearest
-    op.DrawImageOptions.DisableMipmaps = true
-    return op
+	op := &text.DrawOptions{}
+	op.DrawImageOptions.Filter = ebiten.FilterNearest
+	op.DrawImageOptions.DisableMipmaps = true
+	return op
 }
 
 // releaseTextDrawOpts is a no-op when not pooling.
@@ -526,14 +526,14 @@ func cloneDrawState(src drawState) drawState {
 // computeInterpolation returns the blend factors for frame interpolation and onion skinning.
 // It returns separate fade values for mobiles and pictures based on their respective rates.
 func computeInterpolation(now, prevTime, curTime time.Time, mobileRate, pictRate float64) (alpha float64, mobileFade, pictFade float32) {
-    if suppressInterpOnce {
-        // Skip interpolation for a single frame (e.g., after start/seek).
-        suppressInterpOnce = false
-        return 1.0, 1.0, 1.0
-    }
-    alpha = 1.0
-    mobileFade = 1.0
-    pictFade = 1.0
+	if suppressInterpOnce {
+		// Skip interpolation for a single frame (e.g., after start/seek).
+		suppressInterpOnce = false
+		return 1.0, 1.0, 1.0
+	}
+	alpha = 1.0
+	mobileFade = 1.0
+	pictFade = 1.0
 	if (gs.MotionSmoothing || gs.BlendMobiles || gs.BlendPicts) && !curTime.IsZero() && curTime.After(prevTime) {
 		// Use cached frame time to avoid repeated runtime.Now calls
 		elapsed := now.Sub(prevTime)
@@ -581,24 +581,25 @@ var once sync.Once
 var lastBackpace time.Time
 var lastPlayersRefreshTick time.Time
 var lastFocused bool
+
 // suppressInterpOnce skips interpolation for the next draw frame.
 var suppressInterpOnce bool
 
 func (g *Game) Update() error {
 	// Background behaviors: mute and slow render when unfocused
 	focused := ebiten.IsFocused()
-    if focused != lastFocused {
-        if !focused {
-            if gs.MuteWhenUnfocused {
-                focusMuted = true
-            }
-        } else {
-            focusMuted = false
-        }
-        // Immediately propagate effective master volume change to active players.
-        updateSoundVolume()
-        lastFocused = focused
-    }
+	if focused != lastFocused {
+		if !focused {
+			if gs.MuteWhenUnfocused {
+				focusMuted = true
+			}
+		} else {
+			focusMuted = false
+		}
+		// Immediately propagate effective master volume change to active players.
+		updateSoundVolume()
+		lastFocused = focused
+	}
 	// Cache the current time once per frame and reuse everywhere.
 	now := time.Now()
 	select {
@@ -859,26 +860,31 @@ func (g *Game) Update() error {
 						}
 					}()
 				} else {
-					// Try plugin-registered commands first
+					// Try built-in or plugin-registered commands first
 					if strings.HasPrefix(txt, "/") {
-						parts := strings.SplitN(strings.TrimPrefix(txt, "/"), " ", 2)
-						name := strings.ToLower(parts[0])
-						args := ""
-						if len(parts) > 1 {
-							args = parts[1]
-						}
-						if handler, ok := pluginCommands[name]; ok && handler != nil {
-							owner := pluginCommandOwners[name]
-							if !pluginDisabled[owner] {
-								consoleMessage("> " + txt)
-								go handler(args)
+						if strings.EqualFold(txt, "/testhooks") {
+							consoleMessage("> " + txt)
+							testScriptHooks()
+						} else {
+							parts := strings.SplitN(strings.TrimPrefix(txt, "/"), " ", 2)
+							name := strings.ToLower(parts[0])
+							args := ""
+							if len(parts) > 1 {
+								args = parts[1]
+							}
+							if handler, ok := pluginCommands[name]; ok && handler != nil {
+								owner := pluginCommandOwners[name]
+								if !pluginDisabled[owner] {
+									consoleMessage("> " + txt)
+									go handler(args)
+								} else {
+									// Disabled plugin commands should fall through so the
+									// server still receives the user's input.
+									pendingCommand = txt
+								}
 							} else {
-								// Disabled plugin commands should fall through so the
-								// server still receives the user's input.
 								pendingCommand = txt
 							}
-						} else {
-							pendingCommand = txt
 						}
 					} else {
 						pendingCommand = txt
@@ -1096,22 +1102,22 @@ func (g *Game) Update() error {
 
 	queueInput(inputState{mouseX: x, mouseY: y, mouseDown: walk})
 
-    // Warn about poor performance and suggest disabling shaders.
-    // Suppress this while intentionally lowering FPS due to power saving
-    // (background/unfocused or always-on power save).
-    if tcpConn != nil && gs.ShaderLighting && gs.PromptDisableShaders && !shaderWarnShown {
-        powerSaving := gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground)
-        if !powerSaving && ebiten.ActualFPS() < 50 {
-            if lowFPSSince.IsZero() {
-                lowFPSSince = now
-            } else if now.Sub(lowFPSSince) >= 30*time.Second {
-                shaderWarnShown = true
-                showShaderDisablePrompt()
-            }
-        } else {
-            lowFPSSince = time.Time{}
-        }
-    }
+	// Warn about poor performance and suggest disabling shaders.
+	// Suppress this while intentionally lowering FPS due to power saving
+	// (background/unfocused or always-on power save).
+	if tcpConn != nil && gs.ShaderLighting && gs.PromptDisableShaders && !shaderWarnShown {
+		powerSaving := gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground)
+		if !powerSaving && ebiten.ActualFPS() < 50 {
+			if lowFPSSince.IsZero() {
+				lowFPSSince = now
+			} else if now.Sub(lowFPSSince) >= 30*time.Second {
+				shaderWarnShown = true
+				showShaderDisablePrompt()
+			}
+		} else {
+			lowFPSSince = time.Time{}
+		}
+	}
 
 	updateHotkeyRecording()
 	checkHotkeys()
@@ -1242,27 +1248,27 @@ func worldDrawInfo() (int, int, float64) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-    // Power-save throttling: measure draw duration and sleep remaining time
-    // to achieve the requested FPS when active.
-    if gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground) {
-        frameStart := time.Now()
-        fps := gs.PowerSaveFPS
-        if fps < 1 {
-            fps = 1
-        }
-        if fps > 45 {
-            fps = 45
-        }
-        target := time.Second / time.Duration(fps)
-        defer func() {
-            if elapsed := time.Since(frameStart); elapsed < target {
-                time.Sleep(target - elapsed)
-            }
-        }()
-    }
-    worldOriginX, worldOriginY, worldScale = worldDrawInfo()
-    // Cache now for the whole draw to reduce time.Now overhead.
-    now := time.Now()
+	// Power-save throttling: measure draw duration and sleep remaining time
+	// to achieve the requested FPS when active.
+	if gs.PowerSaveAlways || (!ebiten.IsFocused() && gs.PowerSaveBackground) {
+		frameStart := time.Now()
+		fps := gs.PowerSaveFPS
+		if fps < 1 {
+			fps = 1
+		}
+		if fps > 45 {
+			fps = 45
+		}
+		target := time.Second / time.Duration(fps)
+		defer func() {
+			if elapsed := time.Since(frameStart); elapsed < target {
+				time.Sleep(target - elapsed)
+			}
+		}()
+	}
+	worldOriginX, worldOriginY, worldScale = worldDrawInfo()
+	// Cache now for the whole draw to reduce time.Now overhead.
+	now := time.Now()
 
 	//Reduce render load while seeking clMov
 	if seekingMov {
@@ -1412,7 +1418,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
 
-    // Old fixed background sleep replaced by deferred power-save throttle above.
+	// Old fixed background sleep replaced by deferred power-save throttle above.
 
 	//if gs.ShowFPS {
 	//	drawServerFPS(screen, screen.Bounds().Dx()-40, 4, serverFPS)
@@ -2110,17 +2116,17 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 	}
 	x := roundToInt((h + float64(fieldCenterX)) * gs.GameScale)
 	y := roundToInt((v + float64(fieldCenterY)) * gs.GameScale)
-    if d, ok := snap.descriptors[m.Index]; ok {
-        // Option: hide name-tags unless hovered
-        if gs.NameTagsOnHoverOnly {
-            lastHoverMu.Lock()
-            hovered := lastHover.OnMobile && lastHover.Mobile.Index == m.Index
-            lastHoverMu.Unlock()
-            if !hovered {
-                return
-            }
-        }
-        nameAlpha := uint8(gs.NameBgOpacity*255 + 0.5)
+	if d, ok := snap.descriptors[m.Index]; ok {
+		// Option: hide name-tags unless hovered
+		if gs.NameTagsOnHoverOnly {
+			lastHoverMu.Lock()
+			hovered := lastHover.OnMobile && lastHover.Mobile.Index == m.Index
+			lastHoverMu.Unlock()
+			if !hovered {
+				return
+			}
+		}
+		nameAlpha := uint8(gs.NameBgOpacity*255 + 0.5)
 		size := mobileSize(d.PictID)
 		if size <= 0 {
 			size = 40
