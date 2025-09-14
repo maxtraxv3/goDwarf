@@ -25,7 +25,6 @@ func initHelpUI() {
 		return
 	}
 	helpWin, helpList, _ = makeTextWindow("Help", eui.HZoneCenter, eui.VZoneMiddleTop, false)
-	helpWin.AutoSize = true
 	helpWin.Size = eui.Point{X: 1700, Y: 800}
 	helpLines = strings.Split(strings.ReplaceAll(helpText, "\r\n", "\n"), "\n")
 	helpList.FlowType = eui.FLOW_HORIZONTAL
@@ -41,13 +40,14 @@ func openHelpWindow(anchor *eui.ItemData) {
 	if helpWin == nil {
 		return
 	}
-	rebuildHelpColumns()
 	if anchor != nil {
 		helpWin.MarkOpenNear(anchor)
 	} else {
 		helpWin.MarkOpen()
 	}
-	rebuildHelpColumns()
+	if helpWin.OnResize != nil {
+		helpWin.OnResize()
+	}
 	helpWin.Refresh()
 }
 
@@ -114,36 +114,53 @@ func rebuildHelpColumns() {
 	}
 	wrapW := float64(contentW - 3*pad)
 
-    type section struct{ lines []string; rows int }
-    var sections []section
-    isDivider := func(s string) bool {
-        s = strings.TrimSpace(s)
-        if s == "" { return false }
-        cnt := 0
-        for _, r := range s { if r == '-' { cnt++ } else { return false } }
-        return cnt > 4
-    }
-    for i := 0; i < len(helpLines); {
-        ln := helpLines[i]
-        if i+1 < len(helpLines) && isDivider(helpLines[i+1]) {
-            sec := []string{ln}
-            i += 2
-            for i < len(helpLines) {
-                if i+1 < len(helpLines) && isDivider(helpLines[i+1]) { break }
-                sec = append(sec, helpLines[i])
-                i++
-            }
-            sections = append(sections, section{lines: sec})
-            continue
-        }
-        var sec []string
-        for i < len(helpLines) {
-            if i+1 < len(helpLines) && isDivider(helpLines[i+1]) { break }
-            sec = append(sec, helpLines[i])
-            i++
-        }
-        if len(sec) > 0 { sections = append(sections, section{lines: sec}) }
-    }
+	type section struct {
+		lines []string
+		rows  int
+	}
+	var sections []section
+	isDivider := func(s string) bool {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return false
+		}
+		cnt := 0
+		for _, r := range s {
+			if r == '-' {
+				cnt++
+			} else {
+				return false
+			}
+		}
+		return cnt > 4
+	}
+	for i := 0; i < len(helpLines); {
+		ln := helpLines[i]
+		if i+1 < len(helpLines) && isDivider(helpLines[i+1]) {
+			sec := []string{ln}
+			i += 2
+			for i < len(helpLines) {
+				if i+1 < len(helpLines) && isDivider(helpLines[i+1]) {
+					break
+				}
+				sec = append(sec, helpLines[i])
+				i++
+			}
+			sections = append(sections, section{lines: sec})
+			continue
+		}
+		var sec []string
+		for i < len(helpLines) {
+			if i+1 < len(helpLines) && isDivider(helpLines[i+1]) {
+				break
+			}
+			sec = append(sec, helpLines[i])
+			i++
+		}
+		if len(sec) > 0 {
+			sections = append(sections, section{lines: sec})
+		}
+	}
 
 	for i := range sections {
 		rows := 0
@@ -161,15 +178,24 @@ func rebuildHelpColumns() {
 	heights := [3]int{}
 	capRows := int(float32(clientHAvail) / rowUnits)
 	// helpers
-    addLine := func(col int, txt string) int {
-        _, ls := wrapText(txt, face, wrapW)
-        wrapped := strings.Join(ls, "\n")
-        // skip if divider (more than 4 dashes)
-        tl := strings.TrimSpace(wrapped)
-        dashCount := 0
-        onlyDashes := true
-        for _, r := range tl { if r == '-' { dashCount++ } else { onlyDashes = false; break } }
-        if onlyDashes && dashCount > 4 { return 0 }
+	addLine := func(col int, txt string) int {
+		_, ls := wrapText(txt, face, wrapW)
+		wrapped := strings.Join(ls, "\n")
+		// skip if divider (more than 4 dashes)
+		tl := strings.TrimSpace(wrapped)
+		dashCount := 0
+		onlyDashes := true
+		for _, r := range tl {
+			if r == '-' {
+				dashCount++
+			} else {
+				onlyDashes = false
+				break
+			}
+		}
+		if onlyDashes && dashCount > 4 {
+			return 0
+		}
 		t, _ := eui.NewText()
 		t.Text = wrapped
 		t.FontSize = 15
