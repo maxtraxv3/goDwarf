@@ -159,7 +159,6 @@ var gsdef settings = settings{
 
 	//Unexported
 	vsync:             true,
-	lanczosUpscale:    false,
 	precacheSounds:    false,
 	precacheImages:    false,
 	smoothMoving:      false,
@@ -321,7 +320,6 @@ type settings struct {
 
 	// Window behavior
 	ShowClanLordSplashImage bool
-	lanczosUpscale          bool
 	precacheSounds          bool
 	precacheImages          bool
 	smoothMoving            bool
