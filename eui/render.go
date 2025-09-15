@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 	"strings"
-    "time"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -23,19 +23,19 @@ var zoneIndicatorWin *windowData
 var dropdownReuse []openDropdown
 
 func acquireDrawImageOptions() *ebiten.DrawImageOptions {
-    op := &ebiten.DrawImageOptions{}
-    op.Filter = ebiten.FilterNearest
-    op.DisableMipmaps = true
-    return op
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterNearest
+	op.DisableMipmaps = true
+	return op
 }
 
 func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {}
 
 func acquireTextDrawOptions() *text.DrawOptions {
-    op := &text.DrawOptions{}
-    op.DrawImageOptions.Filter = ebiten.FilterNearest
-    op.DrawImageOptions.DisableMipmaps = true
-    return op
+	op := &text.DrawOptions{}
+	op.DrawImageOptions.Filter = ebiten.FilterNearest
+	op.DrawImageOptions.DisableMipmaps = true
+	return op
 }
 
 func releaseTextDrawOptions(op *text.DrawOptions) {}
@@ -201,60 +201,60 @@ func drawTooltip(screen *ebiten.Image, item *itemData) {
 }
 
 func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
-    if win.NoCache {
-        // In NoCache mode, if opacity is < 1, render to a temporary offscreen
-        // image and composite with alpha. Otherwise, render directly to screen.
-        if CacheCheck {
-            win.RenderCount++
-        }
-        size := win.GetSize()
-        if size.X < 1 || size.Y < 1 {
-            return
-        }
-        if win.Opacity >= 0.9999 {
-            // Direct render
-            win.drawBG(screen)
-            win.drawItems(screen, point{}, dropdowns)
-            win.drawScrollbars(screen)
-            win.drawWinTitle(screen)
-            win.drawBorder(screen)
-            win.Dirty = false
-            // Collect dropdowns for separate overlay rendering and draw debug.
-            win.collectDropdowns(dropdowns)
-            win.drawDebug(screen)
-            if CacheCheck {
-                ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
-            }
-            return
-        }
+	if win.NoCache {
+		// In NoCache mode, if opacity is < 1, render to a temporary offscreen
+		// image and composite with alpha. Otherwise, render directly to screen.
+		if CacheCheck {
+			win.RenderCount++
+		}
+		size := win.GetSize()
+		if size.X < 1 || size.Y < 1 {
+			return
+		}
+		if win.Opacity >= 0.9999 {
+			// Direct render
+			win.drawBG(screen)
+			win.drawItems(screen, point{}, dropdowns)
+			win.drawScrollbars(screen)
+			win.drawWinTitle(screen)
+			win.drawBorder(screen)
+			win.Dirty = false
+			// Collect dropdowns for separate overlay rendering and draw debug.
+			win.collectDropdowns(dropdowns)
+			win.drawDebug(screen)
+			if CacheCheck {
+				ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+			}
+			return
+		}
 
-        // Offscreen render for opacity blending
-        tmp := newImage(int(size.X), int(size.Y))
-        // Draw into tmp in local coords: temporarily zero Position like cached path
-        origPos := win.Position
-        basePos := win.getPosition()
-        win.Position = point{}
-        win.drawBG(tmp)
-        win.drawItems(tmp, basePos, dropdowns)
-        win.drawScrollbars(tmp)
-        win.drawWinTitle(tmp)
-        win.drawBorder(tmp)
-        win.Position = origPos
-        win.Dirty = false
+		// Offscreen render for opacity blending
+		tmp := newImage(int(size.X), int(size.Y))
+		// Draw into tmp in local coords: temporarily zero Position like cached path
+		origPos := win.Position
+		basePos := win.getPosition()
+		win.Position = point{}
+		win.drawBG(tmp)
+		win.drawItems(tmp, basePos, dropdowns)
+		win.drawScrollbars(tmp)
+		win.drawWinTitle(tmp)
+		win.drawBorder(tmp)
+		win.Position = origPos
+		win.Dirty = false
 
-        op := acquireDrawImageOptions()
-        op.GeoM.Translate(float64(basePos.X), float64(basePos.Y))
-        op.ColorScale.Scale(1, 1, 1, win.Opacity)
-        screen.DrawImage(tmp, op)
-        releaseDrawImageOptions(op)
-        // Collect dropdowns for separate overlay rendering and draw debug.
-        win.collectDropdowns(dropdowns)
-        win.drawDebug(screen)
-        if CacheCheck {
-            ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
-        }
-        return
-    }
+		op := acquireDrawImageOptions()
+		op.GeoM.Translate(float64(basePos.X), float64(basePos.Y))
+		op.ColorScale.Scale(1, 1, 1, win.Opacity)
+		screen.DrawImage(tmp, op)
+		releaseDrawImageOptions(op)
+		// Collect dropdowns for separate overlay rendering and draw debug.
+		win.collectDropdowns(dropdowns)
+		win.drawDebug(screen)
+		if CacheCheck {
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+		}
+		return
+	}
 
 	// Cached/offscreen render path
 	if win.Dirty || win.Render == nil {
@@ -283,23 +283,23 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 	} else {
 		win.collectDropdowns(dropdowns)
 	}
-    op := acquireDrawImageOptions()
-    op.GeoM.Translate(float64(win.getPosition().X), float64(win.getPosition().Y))
-    // Apply per-window opacity when compositing cached image
-    if win.Opacity <= 0 {
-        // Nothing to draw
-        releaseDrawImageOptions(op)
-        win.drawDebug(screen)
-        if CacheCheck {
-            ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
-        }
-        return
-    }
-    if win.Opacity < 0.9999 {
-        op.ColorScale.Scale(1, 1, 1, win.Opacity)
-    }
-    screen.DrawImage(win.Render, op)
-    releaseDrawImageOptions(op)
+	op := acquireDrawImageOptions()
+	op.GeoM.Translate(float64(win.getPosition().X), float64(win.getPosition().Y))
+	// Apply per-window opacity when compositing cached image
+	if win.Opacity <= 0 {
+		// Nothing to draw
+		releaseDrawImageOptions(op)
+		win.drawDebug(screen)
+		if CacheCheck {
+			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
+		}
+		return
+	}
+	if win.Opacity < 0.9999 {
+		op.ColorScale.Scale(1, 1, 1, win.Opacity)
+	}
+	screen.DrawImage(win.Render, op)
+	releaseDrawImageOptions(op)
 	win.drawDebug(screen)
 	if CacheCheck {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
@@ -1435,7 +1435,7 @@ func (item *itemData) drawItemInternal(parent *itemData, offset point, base poin
 	} else if item.ItemType == ITEM_IMAGE_FAST {
 		if item.Image != nil {
 			iw, ih := item.Image.Bounds().Dx(), item.Image.Bounds().Dy()
-			op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+			op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: false}
 			scale := math.Min(float64(maxSize.X)/float64(iw), float64(maxSize.Y)/float64(ih))
 			if scale != 1.0 {
 				op.GeoM.Scale(scale, scale)
