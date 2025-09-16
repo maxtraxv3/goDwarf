@@ -523,11 +523,11 @@ func applyFadeInOut(samples []int16, rate int) {
 	}
 }
 
-// applyGameSoundReverb adds a very light ambience tuned to resemble a wide
-// open field. The goal is mostly a dry signal with a faint sense of distance,
-// so the processing uses short delays, low feedback, and a gentle roll-off of
-// the high end. The work is done on 32-bit intermediate samples so the later
-// normalization still fits the 16-bit output range.
+// applyGameSoundReverb adds a light ambience tuned to resemble a wide open
+// field. The goal is mostly a dry signal with a faint but noticeable sense of
+// distance, so the processing uses short delays, controlled feedback, and a
+// gentle roll-off of the high end. The work is done on 32-bit intermediate
+// samples so the later normalization still fits the 16-bit output range.
 func applyGameSoundReverb(samples []int32) {
 	if len(samples) == 0 {
 		return
@@ -564,14 +564,14 @@ func applyGameSoundReverb(samples []int32) {
 		wetBuffer[i] = wet
 	}
 
-	if shelf := newHighShelf(float64(rate), 3800, -3); shelf != nil {
+	if shelf := newHighShelf(float64(rate), 3800, -2); shelf != nil {
 		applyBiquad(wetBuffer, shelf)
 	}
 
-	applySlapDelay(wetBuffer, rate, 0.085, 0.35, 0.45)
+	applySlapDelay(wetBuffer, rate, 0.085, 0.42, 0.58)
 
-	const wetMix = 0.08
-	const scatterRatio = 0.35
+	const wetMix = 0.14
+	const scatterRatio = 0.4
 	combMix := wetMix * (1 - scatterRatio)
 	if combMix < 0 {
 		combMix = 0
@@ -581,8 +581,8 @@ func applyGameSoundReverb(samples []int32) {
 		scatterMix = 0
 	}
 	const dryMix = 1 - wetMix
-	const wetLowpass = 0.25
-	const scatterFeedback = 0.07
+	const wetLowpass = 0.3
+	const scatterFeedback = 0.1
 	const maxInt32 = float64(1<<31 - 1)
 	const minInt32 = -float64(1 << 31)
 
