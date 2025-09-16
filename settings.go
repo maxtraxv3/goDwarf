@@ -151,6 +151,7 @@ var gsdef settings = settings{
 	BarColorByValue: false,
 	ThrottleSounds:  true,
 	SoundReverb:     true,
+	MusicReverb:     true,
 
 	NightEffect:    true,
 	ShaderLighting: true,
@@ -305,6 +306,7 @@ type settings struct {
 	BarColorByValue bool
 	ThrottleSounds  bool
 	SoundReverb     bool
+	MusicReverb     bool
 
 	imgPlanesDebug    bool
 	smoothingDebug    bool

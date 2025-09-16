@@ -3640,6 +3640,19 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(reverbCB)
 
+	musicReverbCB, musicReverbEvents := eui.NewCheckbox()
+	musicReverbCB.Text = "Reverb for music"
+	musicReverbCB.Size = eui.Point{X: panelWidth, Y: 24}
+	musicReverbCB.Checked = gs.MusicReverb
+	musicReverbCB.SetTooltip("Add space and ambience to background music")
+	musicReverbEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.MusicReverb = ev.Checked
+			settingsDirty = true
+		}
+	}
+	center.AddItem(musicReverbCB)
+
 	/*
 		mixBtn, mixEvents := eui.NewButton()
 		mixBtn.Text = "Mixer"
