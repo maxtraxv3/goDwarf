@@ -39,9 +39,15 @@ func handleDisconnect() {
 	lastAckFrame = 0
 	numFrames = 0
 	lostFrames = 0
-	for i := range frameBuckets { frameBuckets[i] = 0 }
-	for i := range lostBuckets { lostBuckets[i] = 0 }
-	for i := range bucketTimes { bucketTimes[i] = 0 }
+	for i := range frameBuckets {
+		frameBuckets[i] = 0
+	}
+	for i := range lostBuckets {
+		lostBuckets[i] = 0
+	}
+	for i := range bucketTimes {
+		bucketTimes[i] = 0
+	}
 	// Reset session sources so we return to splash state
 	clmov = ""
 	pcapPath = ""
@@ -412,6 +418,10 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		if result != 0 {
+			if result == -30987 {
+				passHash = ""
+				setCharacterPassHash(name, "", false)
+			}
 			tcpConn.Close()
 			udpConn.Close()
 			if name, ok := errorNames[result]; ok {

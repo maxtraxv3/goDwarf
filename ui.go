@@ -56,6 +56,8 @@ var passWin *eui.WindowData
 var passInput *eui.ItemData
 var passWarn *eui.ItemData
 var passPrev string
+var passRemember bool
+var passRememberCB *eui.ItemData
 
 var changelogWin *eui.WindowData
 
@@ -2240,6 +2242,17 @@ func makePasswordWindow() {
 	passWarn.FontSize = 12
 	flow.AddItem(passWarn)
 
+	passRememberCB, rememberEvents := eui.NewCheckbox()
+	passRememberCB.Text = "Remember Password"
+	passRememberCB.Size = eui.Point{X: 200, Y: 24}
+	passRememberCB.Checked = passRemember
+	rememberEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			passRemember = ev.Checked
+		}
+	}
+	flow.AddItem(passRememberCB)
+
 	btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 
 	cancelBtn, cancelEvents := eui.NewButton()
@@ -2263,6 +2276,18 @@ func makePasswordWindow() {
 			if pass == "" {
 				makeErrorWindow("Error: Login: password is empty")
 				return
+			}
+			if name != "" {
+				if passRemember {
+					h := md5.Sum([]byte(pass))
+					hash := hex.EncodeToString(h[:])
+					passHash = hash
+					setCharacterPassHash(name, hash, true)
+					pass = ""
+				} else {
+					passHash = ""
+					setCharacterPassHash(name, "", false)
+				}
 			}
 			passWin.Close()
 			startLogin()
@@ -2359,6 +2384,7 @@ func startLogin() {
 			pass = ""
 			// Bring login forward first so the popup stays on top
 			loginWin.MarkOpen()
+			updateCharacterButtons()
 			makeErrorWindow("Error: Login: " + err.Error())
 		}
 	}()
@@ -2414,8 +2440,19 @@ func makeLoginWindow() {
 				return
 			}
 			if passHash == "" && pass == "" {
+				passRemember = true
+				for i := range characters {
+					if characters[i].Name == name {
+						passRemember = !characters[i].DontRemember
+						break
+					}
+				}
 				if passWin == nil {
 					makePasswordWindow()
+				}
+				if passRememberCB != nil {
+					passRememberCB.Checked = passRemember
+					passRememberCB.Dirty = true
 				}
 				pass = ""
 				if passInput != nil {
