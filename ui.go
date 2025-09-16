@@ -4366,7 +4366,7 @@ func makeQualityWindow() {
 	dd, spriteUpscaleEvents := eui.NewDropdown()
 	spriteUpscaleDD = dd
 	spriteUpscaleDD.Label = "Sprite Upscaling"
-	spriteUpscaleDD.Options = []string{"Off", "2x XBR-like", "3x XBR-like", "4x XBR-like"}
+	spriteUpscaleDD.Options = []string{"Off", "2x Smart Upscale", "3x Smart Upscale", "4x Smart Upscale"}
 	spriteUpscaleDD.Size = eui.Point{X: width - 10, Y: 24}
 	spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
 	spriteUpscaleDD.SetTooltip("Edge-aware upscaling for world sprites (higher values increase VRAM use)")
