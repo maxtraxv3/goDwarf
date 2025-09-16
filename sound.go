@@ -1,17 +1,17 @@
 package main
 
 import (
-    "encoding/binary"
-    "encoding/csv"
-    "fmt"
-    "log"
-    "math"
-    "os"
-    "path/filepath"
-    "runtime"
-    "strconv"
-    "sync"
-    "time"
+	"encoding/binary"
+	"encoding/csv"
+	"fmt"
+	"log"
+	"math"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	maxSounds = 64
-	dbPad     = -3
+	maxSounds         = 64
+	dbPad             = -3
+	reverbTailSeconds = 0.28 // allow time for the reverb tail to decay
 )
 
 var (
@@ -69,7 +70,8 @@ func playSound(ids []uint16) {
 	if len(ids) == 0 || gs.Mute || focusMuted || !gs.GameSound {
 		return
 	}
-	go func(ids []uint16) {
+	useReverb := gs.SoundReverb
+	go func(ids []uint16, enableReverb bool) {
 		if gs.Mute || focusMuted || !gs.GameSound {
 			return
 		}
@@ -118,21 +120,34 @@ func playSound(ids []uint16) {
 			return
 		}
 
-		mixed := make([]int32, maxSamples)
+		mixSamples := maxSamples
+		if mixSamples == 0 {
+			return
+		}
+
+		tailSamples := 0
+		if enableReverb {
+			tailSamples = int(float64(audioContext.SampleRate()) * reverbTailSeconds)
+		}
+		totalSamples := mixSamples + tailSamples
+		mixed := make([]int32, totalSamples)
 
 		chunks := runtime.NumCPU()
-		if chunks > maxSamples {
-			chunks = maxSamples
+		if chunks > mixSamples {
+			chunks = mixSamples
 		}
-		chunkSize := (maxSamples + chunks - 1) / chunks
+		if chunks < 1 {
+			chunks = 1
+		}
+		chunkSize := (mixSamples + chunks - 1) / chunks
 
 		var wg sync.WaitGroup
 		maxCh := make(chan int32, chunks)
 
-		for start := 0; start < maxSamples; start += chunkSize {
+		for start := 0; start < mixSamples; start += chunkSize {
 			end := start + chunkSize
-			if end > maxSamples {
-				end = maxSamples
+			if end > mixSamples {
+				end = mixSamples
 			}
 			wg.Add(1)
 			go func(start, end int) {
@@ -160,10 +175,24 @@ func playSound(ids []uint16) {
 		wg.Wait()
 		close(maxCh)
 
+		if enableReverb {
+			applyGameSoundReverb(mixed, audioContext.SampleRate())
+		}
+
 		maxVal := int32(0)
 		for v := range maxCh {
-			if v > maxVal {
+			if !enableReverb && v > maxVal {
 				maxVal = v
+			}
+		}
+		if enableReverb {
+			for _, v := range mixed {
+				if v < 0 {
+					v = -v
+				}
+				if v > maxVal {
+					maxVal = v
+				}
 			}
 		}
 
@@ -222,7 +251,7 @@ func playSound(ids []uint16) {
 
 		//logDebug("playSound playing")
 		p.Play()
-	}(ids)
+	}(ids, useReverb)
 }
 
 // initSoundContext initializes the global audio context.
@@ -415,6 +444,104 @@ func applyFadeInOut(samples []int16, rate int) {
 	}
 }
 
+// applyGameSoundReverb adds a feedback reverb tuned to mimic hearing a source
+// in an open field a short distance away. The processing works on 32-bit
+// intermediate samples so the later normalization step still keeps the output
+// within 16-bit range.
+func applyGameSoundReverb(samples []int32, rate int) {
+	if len(samples) == 0 || rate <= 0 {
+		return
+	}
+
+	type comb struct {
+		delay    int
+		feedback float64
+	}
+
+	base := []struct {
+		seconds  float64
+		feedback float64
+	}{
+		{seconds: 0.057, feedback: 0.43},
+		{seconds: 0.093, feedback: 0.39},
+		{seconds: 0.137, feedback: 0.36},
+		{seconds: 0.181, feedback: 0.33},
+	}
+
+	combs := make([]comb, 0, len(base))
+	for _, c := range base {
+		delay := int(float64(rate) * c.seconds)
+		if delay < 1 {
+			continue
+		}
+		combs = append(combs, comb{delay: delay, feedback: c.feedback})
+	}
+	if len(combs) == 0 {
+		return
+	}
+
+	buffers := make([][]float64, len(combs))
+	indices := make([]int, len(combs))
+	last := make([]float64, len(combs))
+	for i, c := range combs {
+		buffers[i] = make([]float64, c.delay)
+	}
+
+	preDelaySamples := int(float64(rate) * 0.011)
+	var preDelay []float64
+	if preDelaySamples > 0 {
+		preDelay = make([]float64, preDelaySamples)
+	}
+	preIndex := 0
+
+	const wetMix = 0.34
+	const dryMix = 1 - wetMix
+	const damping = 0.45
+	const dryAirDamping = 0.5
+	const maxInt32 = float64(1<<31 - 1)
+	const minInt32 = -float64(1 << 31)
+	mixScale := wetMix / float64(len(combs))
+
+	var dryState float64
+
+	for i := 0; i < len(samples); i++ {
+		input := float64(samples[i])
+		source := input
+		if len(preDelay) > 0 {
+			source = preDelay[preIndex]
+			preDelay[preIndex] = input
+			preIndex++
+			if preIndex >= len(preDelay) {
+				preIndex = 0
+			}
+		}
+		wet := 0.0
+		for idx := range combs {
+			buf := buffers[idx]
+			pos := indices[idx]
+			delayed := buf[pos]
+			damped := delayed*(1-damping) + last[idx]*damping
+			wet += damped
+			buf[pos] = source + damped*combs[idx].feedback
+			last[idx] = damped
+			pos++
+			if pos >= len(buf) {
+				pos = 0
+			}
+			indices[idx] = pos
+		}
+
+		dryState += (input - dryState) * dryAirDamping
+		val := dryState*dryMix + wet*mixScale
+		if val > maxInt32 {
+			val = maxInt32
+		} else if val < minInt32 {
+			val = minInt32
+		}
+		samples[i] = int32(math.Round(val))
+	}
+}
+
 // loadSound retrieves a sound by ID, resamples it to match the audio context's
 // sample rate, and caches the resulting PCM bytes. The CL_Sounds archive is
 // opened on first use and individual sounds are parsed lazily.
@@ -443,12 +570,12 @@ func loadSound(id uint16) []byte {
 		return nil
 	}
 
-    //logDebug("loadSound(%d) fetching from archive", id)
-    var t0 time.Time
-    if measureLoads {
-        t0 = time.Now()
-    }
-    s, err := c.Get(uint32(id))
+	//logDebug("loadSound(%d) fetching from archive", id)
+	var t0 time.Time
+	if measureLoads {
+		t0 = time.Now()
+	}
+	s, err := c.Get(uint32(id))
 	if s == nil {
 		if err != nil {
 			logError("unable to decode sound %d: %v", id, err)
@@ -461,7 +588,7 @@ func loadSound(id uint16) []byte {
 		return nil
 	}
 	statSoundLoaded(id)
-    //logDebug("loadSound(%d) loaded %d Hz %d-bit %d bytes", id, s.SampleRate, s.Bits, len(s.Data))
+	//logDebug("loadSound(%d) loaded %d Hz %d-bit %d bytes", id, s.SampleRate, s.Bits, len(s.Data))
 
 	srcRate := int(s.SampleRate / 2)
 	dstRate := audioContext.SampleRate()
@@ -517,19 +644,19 @@ func loadSound(id uint16) []byte {
 		pcm[2*i+1] = byte(v >> 8)
 	}
 
-    if sndDump {
-        dumpSound(id, s, pcm, dstRate)
-    }
+	if sndDump {
+		dumpSound(id, s, pcm, dstRate)
+	}
 
-    soundMu.Lock()
-    pcmCache[id] = pcm
-    soundMu.Unlock()
-    //logDebug("loadSound(%d) cached %d bytes", id, len(pcm))
-    if measureLoads && !t0.IsZero() {
-        dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
-        log.Printf("measure: sound id=%d rate=%dHz bits=%d ch=%d load=%.2fms frame=%d", id, s.SampleRate, s.Bits, s.Channels, dtms, frameCounter)
-    }
-    return pcm
+	soundMu.Lock()
+	pcmCache[id] = pcm
+	soundMu.Unlock()
+	//logDebug("loadSound(%d) cached %d bytes", id, len(pcm))
+	if measureLoads && !t0.IsZero() {
+		dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
+		log.Printf("measure: sound id=%d rate=%dHz bits=%d ch=%d load=%.2fms frame=%d", id, s.SampleRate, s.Bits, s.Channels, dtms, frameCounter)
+	}
+	return pcm
 }
 
 func dumpSound(id uint16, s *clsnd.Sound, pcm []byte, rate int) {
