@@ -1571,6 +1571,8 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 		img = loadMobileFrame(d.PictID, state, colors)
 		plane = d.Plane
 	}
+	curKey := makeMobileKey(d.PictID, state, colors)
+	img = getScaledMobileFrame(curKey, img)
 	var prevImg *ebiten.Image
 	var prevColors []byte
 	var prevPict uint16
@@ -1590,14 +1592,19 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 			prevImg = loadMobileFrame(pd.PictID, pm.State, prevColors)
 			prevPict = pd.PictID
 			prevState = pm.State
+			prevKey := makeMobileKey(prevPict, prevState, prevColors)
+			prevImg = getScaledMobileFrame(prevKey, prevImg)
 		}
 	}
 	if img != nil {
-		size := img.Bounds().Dx()
+		size := mobileSize(d.PictID)
+		if size == 0 {
+			size = img.Bounds().Dx()
+		}
 		addLightSource(uint32(d.PictID), float64(x), float64(y), size)
 		blend := gs.BlendMobiles && prevImg != nil && fade > 0 && fade < 1
 		var src *ebiten.Image
-		drawSize := size
+		drawSize := img.Bounds().Dx()
 		if blend {
 			steps := gs.MobileBlendFrames
 			idx := int(fade * float32(steps))
@@ -1608,7 +1615,6 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 				idx = steps - 1
 			}
 			prevKey := makeMobileKey(prevPict, prevState, prevColors)
-			curKey := makeMobileKey(d.PictID, state, colors)
 			if b := mobileBlendFrame(prevKey, curKey, prevImg, img, idx, steps); b != nil {
 				src = b
 				drawSize = b.Bounds().Dx()
@@ -1624,10 +1630,14 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 			}
 		} else {
 			src = img
+			drawSize = img.Bounds().Dx()
 		}
+		target := float64(roundToInt(float64(size) * gs.GameScale))
 		scale := gs.GameScale
-		scaled := float64(roundToInt(float64(drawSize) * scale))
-		scale = scaled / float64(drawSize)
+		if drawSize > 0 {
+			scale = target / float64(drawSize)
+		}
+		scaled := float64(drawSize) * scale
 		op := acquireDrawOpts()
 		op.Filter = ebiten.FilterNearest
 		op.DisableMipmaps = true
@@ -1837,6 +1847,7 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 	addLightSource(uint32(p.PictID), float64(x), float64(y), w)
 
 	img := loadImageFrame(p.PictID, frame)
+	img = getScaledPictureFrame(p.PictID, frame, img)
 	fadeAlpha := float32(1.0)
 	if gs.FadeObscuringPictures && w > 0 && h > 0 && clImages != nil && !clImages.IsSemiTransparent(uint32(p.PictID)) {
 		for _, m := range mobiles {
@@ -1873,6 +1884,7 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 	if gs.BlendPicts && clImages != nil {
 		if prevFrame != frame {
 			prevImg = loadImageFrame(p.PictID, prevFrame)
+			prevImg = getScaledPictureFrame(p.PictID, prevFrame, prevImg)
 		}
 	}
 
@@ -1907,12 +1919,24 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 		if src != nil {
 			drawW, drawH = src.Bounds().Dx(), src.Bounds().Dy()
 		}
-		// Integer-only scaling for in-world sprites
-		sx, sy := gs.GameScale, gs.GameScale
-		scaledW := float64(roundToInt(float64(drawW) * sx))
-		scaledH := float64(roundToInt(float64(drawH) * sy))
-		sx = scaledW / float64(drawW)
-		sy = scaledH / float64(drawH)
+		targetW := float64(roundToInt(float64(w) * gs.GameScale))
+		targetH := float64(roundToInt(float64(h) * gs.GameScale))
+		if targetW <= 0 && drawW > 0 {
+			targetW = float64(drawW)
+		}
+		if targetH <= 0 && drawH > 0 {
+			targetH = float64(drawH)
+		}
+		sx := gs.GameScale
+		sy := gs.GameScale
+		if drawW > 0 {
+			sx = targetW / float64(drawW)
+		}
+		if drawH > 0 {
+			sy = targetH / float64(drawH)
+		}
+		scaledW := float64(drawW) * sx
+		scaledH := float64(drawH) * sy
 		op := acquireDrawOpts()
 		op.Filter = ebiten.FilterNearest
 		op.DisableMipmaps = true

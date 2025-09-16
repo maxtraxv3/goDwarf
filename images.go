@@ -1,16 +1,16 @@
 package main
 
 import (
-    "encoding/csv"
-    "fmt"
-    "image"
-    "image/png"
-    "log"
-    "os"
-    "path/filepath"
-    "strconv"
-    "sync"
-    "time"
+	"encoding/csv"
+	"fmt"
+	"image"
+	"image/png"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -55,6 +55,16 @@ type pictBlendKey struct {
 	total uint8
 }
 
+type scaledImageKey struct {
+	imageKey
+	scale uint8
+}
+
+type scaledMobileKey struct {
+	mobileKey
+	scale uint8
+}
+
 var (
 	// imageCache holds cropped animation frames keyed by picture ID and
 	// frame index.
@@ -70,6 +80,10 @@ var (
 	mobileBlendCache = make(map[mobileBlendKey]*ebiten.Image)
 	// pictBlendCache stores pre-rendered blended picture frames.
 	pictBlendCache = make(map[pictBlendKey]*ebiten.Image)
+	// scaledImageCache stores pixel-art upscaled world picture frames.
+	scaledImageCache = make(map[scaledImageKey]*ebiten.Image)
+	// scaledMobileCache stores pixel-art upscaled mobile frames.
+	scaledMobileCache = make(map[scaledMobileKey]*ebiten.Image)
 
 	imageMu  sync.Mutex
 	clImages *climg.CLImages
@@ -130,38 +144,38 @@ func loadSheet(id uint16, colors []byte, forceTransparent bool) *ebiten.Image {
 	}
 	imageMu.Unlock()
 
-    if clImages != nil {
-        var t0 time.Time
-        if measureLoads {
-            t0 = time.Now()
-        }
-        if img := clImages.Get(uint32(id), colors, forceTransparent); img != nil {
-            statImageLoaded(id)
-            if imgDump && colors == nil && !forceTransparent {
-                dumpImageSheet(id, img)
-            }
-            imageMu.Lock()
-            sheetCache[key] = img
-            imageMu.Unlock()
-            if measureLoads {
-                frames := clImages.NumFrames(uint32(id))
-                if frames <= 0 {
-                    frames = 1
-                }
-                innerW := img.Bounds().Dx() - 2
-                innerH := img.Bounds().Dy() - 2
-                h := 0
-                if frames > 0 {
-                    h = innerH / frames
-                }
-                dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
-                log.Printf("measure: sprite id=%d frames=%d size=%dx%d load=%.2fms frame=%d", id, frames, innerW, h, dtms, frameCounter)
-            }
-            return img
-        }
-        log.Printf("missing image %d", id)
-    } else {
-        log.Printf("CL_Images not loaded when requesting image %d", id)
+	if clImages != nil {
+		var t0 time.Time
+		if measureLoads {
+			t0 = time.Now()
+		}
+		if img := clImages.Get(uint32(id), colors, forceTransparent); img != nil {
+			statImageLoaded(id)
+			if imgDump && colors == nil && !forceTransparent {
+				dumpImageSheet(id, img)
+			}
+			imageMu.Lock()
+			sheetCache[key] = img
+			imageMu.Unlock()
+			if measureLoads {
+				frames := clImages.NumFrames(uint32(id))
+				if frames <= 0 {
+					frames = 1
+				}
+				innerW := img.Bounds().Dx() - 2
+				innerH := img.Bounds().Dy() - 2
+				h := 0
+				if frames > 0 {
+					h = innerH / frames
+				}
+				dtms := float64(time.Since(t0).Nanoseconds()) / 1e6
+				log.Printf("measure: sprite id=%d frames=%d size=%dx%d load=%.2fms frame=%d", id, frames, innerW, h, dtms, frameCounter)
+			}
+			return img
+		}
+		log.Printf("missing image %d", id)
+	} else {
+		log.Printf("CL_Images not loaded when requesting image %d", id)
 	}
 
 	return nil
@@ -329,6 +343,72 @@ func loadMobileFrame(id uint16, state uint8, colors []byte) *ebiten.Image {
 	return img
 }
 
+func ebitenImageToRGBA(img *ebiten.Image) *image.RGBA {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+	if w == 0 || h == 0 {
+		return rgba
+	}
+	img.ReadPixels(rgba.Pix)
+	return rgba
+}
+
+func upscaleSpriteImage(img *ebiten.Image, factor int) *ebiten.Image {
+	if factor <= 1 || img == nil {
+		return img
+	}
+	src := ebitenImageToRGBA(img)
+	var scaled *image.RGBA
+	switch factor {
+	case 2:
+		scaled = scale2xRGBA(src)
+	case 3:
+		scaled = scale3xRGBA(src)
+	default:
+		return img
+	}
+	return newImageFromImage(scaled)
+}
+
+func getScaledPictureFrame(id uint16, frame int, img *ebiten.Image) *ebiten.Image {
+	factor := int(gs.SpriteUpscale)
+	if factor <= 1 || img == nil {
+		return img
+	}
+	key := scaledImageKey{imageKey: makeImageKey(id, frame), scale: uint8(factor)}
+	imageMu.Lock()
+	if cached, ok := scaledImageCache[key]; ok {
+		imageMu.Unlock()
+		return cached
+	}
+	imageMu.Unlock()
+	scaled := upscaleSpriteImage(img, factor)
+	imageMu.Lock()
+	scaledImageCache[key] = scaled
+	imageMu.Unlock()
+	return scaled
+}
+
+func getScaledMobileFrame(key mobileKey, img *ebiten.Image) *ebiten.Image {
+	factor := int(gs.SpriteUpscale)
+	if factor <= 1 || img == nil {
+		return img
+	}
+	sKey := scaledMobileKey{mobileKey: key, scale: uint8(factor)}
+	imageMu.Lock()
+	if cached, ok := scaledMobileCache[sKey]; ok {
+		imageMu.Unlock()
+		return cached
+	}
+	imageMu.Unlock()
+	scaled := upscaleSpriteImage(img, factor)
+	imageMu.Lock()
+	scaledMobileCache[sKey] = scaled
+	imageMu.Unlock()
+	return scaled
+}
+
 // mobileSize returns the dimension of a single mobile frame for the given
 // image ID. If the image cannot be loaded, 0 is returned.
 func mobileSize(id uint16) int {
@@ -358,7 +438,7 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	blended := newImage(size, size)
 	alpha := float32(step) / float32(total)
 	offPrev := (size - prevImg.Bounds().Dx()) / 2
-    op1 := acquireDrawOpts()
+	op1 := acquireDrawOpts()
 	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
@@ -370,9 +450,9 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	op1.Filter = 0
 	op1.DisableMipmaps = false
 	op1.Blend = ebiten.BlendSourceOver
-    releaseDrawOpts(op1)
+	releaseDrawOpts(op1)
 	offCur := (size - img.Bounds().Dx()) / 2
-    op2 := acquireDrawOpts()
+	op2 := acquireDrawOpts()
 	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
@@ -384,7 +464,7 @@ func mobileBlendFrame(from, to mobileKey, prevImg, img *ebiten.Image, step, tota
 	op2.Filter = 0
 	op2.DisableMipmaps = false
 	op2.Blend = ebiten.BlendSourceOver
-    releaseDrawOpts(op2)
+	releaseDrawOpts(op2)
 	imageMu.Lock()
 	mobileBlendCache[k] = blended
 	imageMu.Unlock()
@@ -417,7 +497,7 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	alpha := float32(step) / float32(total)
 	offPrevX := (w - w1) / 2
 	offPrevY := (h - h1) / 2
-    op1 := acquireDrawOpts()
+	op1 := acquireDrawOpts()
 	op1.ColorScale.Reset()
 	op1.ColorScale.ScaleAlpha(1 - alpha)
 	op1.Blend = ebiten.BlendCopy
@@ -429,10 +509,10 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	op1.Filter = 0
 	op1.DisableMipmaps = false
 	op1.Blend = ebiten.BlendSourceOver
-    releaseDrawOpts(op1)
+	releaseDrawOpts(op1)
 	offCurX := (w - w2) / 2
 	offCurY := (h - h2) / 2
-    op2 := acquireDrawOpts()
+	op2 := acquireDrawOpts()
 	op2.ColorScale.Reset()
 	op2.ColorScale.ScaleAlpha(alpha)
 	op2.Blend = ebiten.BlendLighter
@@ -444,53 +524,85 @@ func pictBlendFrame(id uint16, fromFrame, toFrame int, prevImg, img *ebiten.Imag
 	op2.Filter = 0
 	op2.DisableMipmaps = false
 	op2.Blend = ebiten.BlendSourceOver
-    releaseDrawOpts(op2)
+	releaseDrawOpts(op2)
 	imageMu.Lock()
 	pictBlendCache[k] = blended
 	imageMu.Unlock()
 	return blended
 }
 
+type imageCacheStatsData struct {
+	sheetCount        int
+	sheetBytes        int
+	frameCount        int
+	frameBytes        int
+	scaledFrameCount  int
+	scaledFrameBytes  int
+	mobileCount       int
+	mobileBytes       int
+	scaledMobileCount int
+	scaledMobileBytes int
+	mobileBlendCount  int
+	mobileBlendBytes  int
+	pictBlendCount    int
+	pictBlendBytes    int
+}
+
 // imageCacheStats returns the counts and approximate memory usage in bytes for
-// each of the image caches: sheetCache, imageCache, and mobileCache.
-func imageCacheStats() (sheetCount, sheetBytes, frameCount, frameBytes, mobileCount, mobileBytes, mobileBlendCount, mobileBlendBytes, pictBlendCount, pictBlendBytes int) {
+// each of the image caches: sheets, cropped frames, scaled variants, and blends.
+func imageCacheStats() imageCacheStatsData {
 	imageMu.Lock()
 	defer imageMu.Unlock()
 
+	var stats imageCacheStatsData
 	for _, img := range sheetCache {
 		if img != nil {
-			sheetCount++
+			stats.sheetCount++
 			b := img.Bounds()
-			sheetBytes += b.Dx() * b.Dy() * 4
+			stats.sheetBytes += b.Dx() * b.Dy() * 4
 		}
 	}
 	for _, img := range imageCache {
 		if img != nil {
-			frameCount++
+			stats.frameCount++
 			b := img.Bounds()
-			frameBytes += b.Dx() * b.Dy() * 4
+			stats.frameBytes += b.Dx() * b.Dy() * 4
+		}
+	}
+	for _, img := range scaledImageCache {
+		if img != nil {
+			stats.scaledFrameCount++
+			b := img.Bounds()
+			stats.scaledFrameBytes += b.Dx() * b.Dy() * 4
 		}
 	}
 	for _, img := range mobileCache {
 		if img != nil {
-			mobileCount++
+			stats.mobileCount++
 			b := img.Bounds()
-			mobileBytes += b.Dx() * b.Dy() * 4
+			stats.mobileBytes += b.Dx() * b.Dy() * 4
+		}
+	}
+	for _, img := range scaledMobileCache {
+		if img != nil {
+			stats.scaledMobileCount++
+			b := img.Bounds()
+			stats.scaledMobileBytes += b.Dx() * b.Dy() * 4
 		}
 	}
 	for _, img := range mobileBlendCache {
 		if img != nil {
-			mobileBlendCount++
+			stats.mobileBlendCount++
 			b := img.Bounds()
-			mobileBlendBytes += b.Dx() * b.Dy() * 4
+			stats.mobileBlendBytes += b.Dx() * b.Dy() * 4
 		}
 	}
 	for _, img := range pictBlendCache {
 		if img != nil {
-			pictBlendCount++
+			stats.pictBlendCount++
 			b := img.Bounds()
-			pictBlendBytes += b.Dx() * b.Dy() * 4
+			stats.pictBlendBytes += b.Dx() * b.Dy() * 4
 		}
 	}
-	return
+	return stats
 }
