@@ -148,11 +148,12 @@ var gsdef settings = settings{
 	ShaderLightStrength: 1.0,
 	ShaderGlowStrength:  1.0,
 
-	PotatoGPU:       false,
-	BarColorByValue: false,
-	ThrottleSounds:  true,
-	SoundReverb:     true,
-	MusicReverb:     true,
+	PotatoGPU:             false,
+	BarColorByValue:       false,
+	ThrottleSounds:        true,
+	SoundEnhancement:      true,
+	MusicEnhancement:      true,
+	HighQualityResampling: true,
 
 	NightEffect:    true,
 	ShaderLighting: true,
@@ -303,12 +304,13 @@ type settings struct {
 	ShaderLightStrength float64
 	ShaderGlowStrength  float64
 
-	PotatoGPU       bool
-	EnabledPlugins  map[string]any
-	BarColorByValue bool
-	ThrottleSounds  bool
-	SoundReverb     bool
-	MusicReverb     bool
+	PotatoGPU             bool
+	EnabledPlugins        map[string]any
+	BarColorByValue       bool
+	ThrottleSounds        bool
+	SoundEnhancement      bool
+	MusicEnhancement      bool
+	HighQualityResampling bool
 
 	imgPlanesDebug    bool
 	smoothingDebug    bool
@@ -372,7 +374,9 @@ func loadSettings() bool {
 
 	type settingsFile struct {
 		settings
-		EnabledPlugins map[string]any `json:"EnabledPlugins"`
+		EnabledPlugins    map[string]any `json:"EnabledPlugins"`
+		LegacySoundReverb *bool          `json:"SoundReverb"`
+		LegacyMusicReverb *bool          `json:"MusicReverb"`
 	}
 
 	tmp := settingsFile{settings: gsdef}
@@ -383,6 +387,12 @@ func loadSettings() bool {
 	}
 
 	if tmp.settings.Version == SETTINGS_VERSION {
+		if tmp.LegacySoundReverb != nil {
+			tmp.settings.SoundEnhancement = *tmp.LegacySoundReverb
+		}
+		if tmp.LegacyMusicReverb != nil {
+			tmp.settings.MusicEnhancement = *tmp.LegacyMusicReverb
+		}
 		gs = tmp.settings
 		// Normalize and retain whatever was in the file; migrate into runtime scope map.
 		gs.EnabledPlugins = make(map[string]any)

@@ -404,7 +404,7 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 		return err
 	}
 
-	if gs.MusicReverb {
+	if gs.MusicEnhancement {
 		applyMusicReverb(leftAll, rightAll, sampleRate)
 	}
 

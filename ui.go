@@ -3652,31 +3652,45 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(throttleSoundCB)
 
-	reverbCB, reverbEvents := eui.NewCheckbox()
-	reverbCB.Text = "Reverb for sound effects"
-	reverbCB.Size = eui.Point{X: panelWidth, Y: 24}
-	reverbCB.Checked = gs.SoundReverb
-	reverbCB.SetTooltip("Add subtle room ambience to in-game sounds")
-	reverbEvents.Handle = func(ev eui.UIEvent) {
+	enhancementCB, enhancementEvents := eui.NewCheckbox()
+	enhancementCB.Text = "Audio enhancement for sound effects"
+	enhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
+	enhancementCB.Checked = gs.SoundEnhancement
+	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
+	enhancementEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.SoundReverb = ev.Checked
+			gs.SoundEnhancement = ev.Checked
 			settingsDirty = true
 		}
 	}
-	center.AddItem(reverbCB)
+	center.AddItem(enhancementCB)
 
-	musicReverbCB, musicReverbEvents := eui.NewCheckbox()
-	musicReverbCB.Text = "Reverb for music"
-	musicReverbCB.Size = eui.Point{X: panelWidth, Y: 24}
-	musicReverbCB.Checked = gs.MusicReverb
-	musicReverbCB.SetTooltip("Add space and ambience to background music")
-	musicReverbEvents.Handle = func(ev eui.UIEvent) {
+	resampleCB, resampleEvents := eui.NewCheckbox()
+	resampleCB.Text = "High quality resampling"
+	resampleCB.Size = eui.Point{X: panelWidth, Y: 24}
+	resampleCB.Checked = gs.HighQualityResampling
+	resampleCB.SetTooltip("Lanczos resampling and dithering for cleaner audio (uses more CPU)")
+	resampleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.MusicReverb = ev.Checked
+			gs.HighQualityResampling = ev.Checked
+			clearCaches()
 			settingsDirty = true
 		}
 	}
-	center.AddItem(musicReverbCB)
+	center.AddItem(resampleCB)
+
+	musicEnhancementCB, musicEnhancementEvents := eui.NewCheckbox()
+	musicEnhancementCB.Text = "Audio enhancement for music"
+	musicEnhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
+	musicEnhancementCB.Checked = gs.MusicEnhancement
+	musicEnhancementCB.SetTooltip("Add space and ambience to background music")
+	musicEnhancementEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.MusicEnhancement = ev.Checked
+			settingsDirty = true
+		}
+	}
+	center.AddItem(musicEnhancementCB)
 
 	/*
 		mixBtn, mixEvents := eui.NewButton()
