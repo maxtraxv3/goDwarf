@@ -184,7 +184,7 @@ func renderSong(program int, notes []Note) ([]float32, []float32, error) {
 		}
 	}
 
-	// Render extra frames to capture reverb/decay and provide space to fade out.
+	// Render extra frames for decay
 	totalSamples := maxEnd + tailSamples + fadeOutSamples
 
 	leftAll := make([]float32, 0, totalSamples)
@@ -427,7 +427,7 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 	player.Play()
 
 	// Compute the logical song duration from note events (without long
-	// reverb tail), then add a small grace period to avoid clipping endings.
+	// decay tail), then add a small grace period to avoid clipping endings.
 	// Wait for the audio to finish based on the rendered PCM duration, with
 	// a small grace period for device buffering. This avoids cutting off
 	// lingering releases on guitar/harp-like patches without altering timing.
