@@ -896,7 +896,7 @@ func loadSound(id uint16) []byte {
 	statSoundLoaded(id)
 	//logDebug("loadSound(%d) loaded %d Hz %d-bit %d bytes", id, s.SampleRate, s.Bits, len(s.Data))
 
-	srcRate := int(s.SampleRate / 2)
+	srcRate := int(s.SampleRate)
 	dstRate := audioContext.SampleRate()
 
 	// Decode the sound data into 16-bit samples.
