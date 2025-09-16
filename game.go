@@ -38,6 +38,14 @@ var uiMouseDown bool
 // integer multiple of the native field size and is composited into the window.
 var worldRT *ebiten.Image
 
+// worldRTUsedRect tracks the active portion of worldRT used for the latest
+// frame, and worldViewRect tracks the region of gameImage that displays the
+// composited world.
+var (
+	worldRTUsedRect image.Rectangle
+	worldViewRect   image.Rectangle
+)
+
 // gameImageItem is the UI image item inside the game window that displays
 // the rendered world, and gameImage is its backing texture.
 var gameImageItem *eui.ItemData
@@ -1293,6 +1301,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	updateGameImageSize()
 	if gameImage == nil {
 		// UI not ready yet
+		worldViewRect = image.Rectangle{}
+		worldRTUsedRect = image.Rectangle{}
 		eui.Draw(screen)
 		return
 	}
@@ -1326,7 +1336,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	offW := worldW * offIntScale
 	offH := worldH * offIntScale
 	ensureWorldRT(offW, offH)
-	worldView := worldRT.SubImage(image.Rect(0, 0, offW, offH)).(*ebiten.Image)
+	worldRect := image.Rect(0, 0, offW, offH)
+	worldRTUsedRect = worldRect
+	worldView := worldRT.SubImage(worldRect).(*ebiten.Image)
 	worldView.Fill(color.Black)
 
 	// Render splash or live frame into worldRT using the offscreen scale
@@ -1381,26 +1393,40 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op.GeoM.Translate(tx, ty)
 	gameImage.DrawImage(worldView, op)
 	releaseDrawOpts(op)
+	left := roundToInt(tx)
+	top := roundToInt(ty)
+	right := left + roundToInt(drawW)
+	bottom := top + roundToInt(drawH)
+	if left < 0 {
+		left = 0
+	}
+	if top < 0 {
+		top = 0
+	}
+	if right > bufW {
+		right = bufW
+	}
+	if bottom > bufH {
+		bottom = bufH
+	}
+	viewRect := image.Rect(left, top, right, bottom).Intersect(gameImage.Bounds())
+	if viewRect.Empty() {
+		worldViewRect = image.Rectangle{}
+	} else {
+		worldViewRect = viewRect
+	}
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale := float64(offIntScale) * scaleDown
 		gs.GameScale = finalScale
-		left := roundToInt(tx)
-		top := roundToInt(ty)
-		right := left + roundToInt(drawW)
-		bottom := top + roundToInt(drawH)
-		if right > bufW {
-			right = bufW
+		if !viewRect.Empty() {
+			worldView := gameImage.SubImage(viewRect).(*ebiten.Image)
+			drawSpeechBubbles(worldView, snap, alpha)
+			// Draw plugin overlays on top of the world view.
+			drawPluginOverlays(worldView, finalScale)
+			// Recording/Playback badge in top-left of world view
+			drawRecPlayBadge(worldView)
 		}
-		if bottom > bufH {
-			bottom = bufH
-		}
-		worldView := gameImage.SubImage(image.Rect(left, top, right, bottom)).(*ebiten.Image)
-		drawSpeechBubbles(worldView, snap, alpha)
-		// Draw plugin overlays on top of the world view.
-		drawPluginOverlays(worldView, finalScale)
-		// Recording/Playback badge in top-left of world view
-		drawRecPlayBadge(worldView)
 		gs.GameScale = prev
 	}
 

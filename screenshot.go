@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/png"
 	"os"
 	"path"
@@ -11,9 +12,29 @@ import (
 )
 
 func takeScreenshot() {
-	if worldRT == nil {
+	var shot image.Image
+	if gameImage != nil {
+		rect := worldViewRect
+		if !rect.Empty() {
+			rect = rect.Intersect(gameImage.Bounds())
+			if !rect.Empty() {
+				shot = gameImage.SubImage(rect)
+			}
+		}
+	}
+	if shot == nil && worldRT != nil {
+		rect := worldRTUsedRect
+		if !rect.Empty() {
+			rect = rect.Intersect(worldRT.Bounds())
+			if !rect.Empty() {
+				shot = worldRT.SubImage(rect)
+			}
+		}
+	}
+	if shot == nil {
 		return
 	}
+
 	dir := filepath.Join(dataDirPath, "Screenshots")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		logError("screenshot: create %v: %v", dir, err)
@@ -42,8 +63,9 @@ func takeScreenshot() {
 		return
 	}
 	defer f.Close()
-	if err := png.Encode(f, worldRT); err != nil {
+	if err := png.Encode(f, shot); err != nil {
 		logError("screenshot: encode %v: %v", fn, err)
+		return
 	}
 	consoleMessage(fmt.Sprintf("snapshot taken: %s", filepath.Base(fn)))
 }
