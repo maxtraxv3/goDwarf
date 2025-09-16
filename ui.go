@@ -3627,6 +3627,19 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(throttleSoundCB)
 
+	reverbCB, reverbEvents := eui.NewCheckbox()
+	reverbCB.Text = "Reverb for sound effects"
+	reverbCB.Size = eui.Point{X: panelWidth, Y: 24}
+	reverbCB.Checked = gs.SoundReverb
+	reverbCB.SetTooltip("Add subtle room ambience to in-game sounds")
+	reverbEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.SoundReverb = ev.Checked
+			settingsDirty = true
+		}
+	}
+	center.AddItem(reverbCB)
+
 	/*
 		mixBtn, mixEvents := eui.NewButton()
 		mixBtn.Text = "Mixer"
