@@ -219,12 +219,7 @@ func playSound(ids []uint16) {
 			scale *= math.Min(1, 32767.0/float64(maxVal))
 		}
 
-		var out []byte
-		if enableEnhancement {
-			out = make([]byte, len(left)*4)
-		} else {
-			out = make([]byte, len(left)*2)
-		}
+		out := make([]byte, len(left)*4)
 
 		wg = sync.WaitGroup{}
 		for start := 0; start < len(left); start += chunkSize {
@@ -233,7 +228,7 @@ func playSound(ids []uint16) {
 				end = len(left)
 			}
 			wg.Add(1)
-			go func(start, end int, stereo bool) {
+			go func(start, end int) {
 				defer wg.Done()
 				for i := start; i < end; i++ {
 					lv := int32(float64(left[i]) * scale)
@@ -242,24 +237,20 @@ func playSound(ids []uint16) {
 					} else if lv < -32768 {
 						lv = -32768
 					}
-					if stereo {
-						rv := lv
-						if right != nil {
-							rv = int32(float64(right[i]) * scale)
-							if rv > 32767 {
-								rv = 32767
-							} else if rv < -32768 {
-								rv = -32768
-							}
+					rv := lv
+					if right != nil {
+						rv = int32(float64(right[i]) * scale)
+						if rv > 32767 {
+							rv = 32767
+						} else if rv < -32768 {
+							rv = -32768
 						}
-						off := 4 * i
-						binary.LittleEndian.PutUint16(out[off:], uint16(int16(lv)))
-						binary.LittleEndian.PutUint16(out[off+2:], uint16(int16(rv)))
-					} else {
-						binary.LittleEndian.PutUint16(out[2*i:], uint16(int16(lv)))
 					}
+					off := 4 * i
+					binary.LittleEndian.PutUint16(out[off:], uint16(int16(lv)))
+					binary.LittleEndian.PutUint16(out[off+2:], uint16(int16(rv)))
 				}
-			}(start, end, enableEnhancement)
+			}(start, end)
 		}
 		wg.Wait()
 
