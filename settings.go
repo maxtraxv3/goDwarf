@@ -96,6 +96,7 @@ var gsdef settings = settings{
 	GameSound:            true,
 	Mute:                 false,
 	GameScale:            2.0,
+	SpriteUpscale:        2,
 	BarPlacement:         BarPlacementBottom,
 	MaxNightLevel:        100,
 	MessagesToConsole:    false,
@@ -241,6 +242,7 @@ type settings struct {
 	GameSound            bool
 	Mute                 bool
 	GameScale            float64
+	SpriteUpscale        int
 	BarPlacement         BarPlacement
 	MaxNightLevel        int
 	forceNightLevel      int
@@ -454,6 +456,10 @@ func loadSettings() bool {
 	// Clamp BubbleScale to 1.0–8.0
 	if gs.BubbleScale < 1.0 || gs.BubbleScale > 8.0 {
 		gs.BubbleScale = gsdef.BubbleScale
+	}
+
+	if gs.SpriteUpscale != 0 && gs.SpriteUpscale != 2 && gs.SpriteUpscale != 3 {
+		gs.SpriteUpscale = gsdef.SpriteUpscale
 	}
 
 	if gs.WindowWidth > 0 && gs.WindowHeight > 0 {
@@ -754,9 +760,11 @@ var (
 
 func applyQualityPreset(name string) {
 	var p qualityPreset
+	spriteUpscale := gsdef.SpriteUpscale
 	switch name {
 	case "Ultra Low":
 		p = ultraLowPreset
+		spriteUpscale = 0
 	case "Low":
 		p = lowPreset
 	case "Standard":
@@ -772,6 +780,7 @@ func applyQualityPreset(name string) {
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
 	gs.ShaderLighting = p.ShaderLighting
+	gs.SpriteUpscale = spriteUpscale
 
 	if denoiseCB != nil {
 		denoiseCB.Checked = gs.DenoiseImages
@@ -784,6 +793,9 @@ func applyQualityPreset(name string) {
 	}
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
+	}
+	if spriteUpscaleDD != nil {
+		spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
 	}
 
 	applySettings()
