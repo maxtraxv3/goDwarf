@@ -147,3 +147,11 @@ func scale3xRGBA(src *image.RGBA) *image.RGBA {
 	}
 	return dst
 }
+
+func scale4xRGBA(src *image.RGBA) *image.RGBA {
+	if src == nil {
+		return image.NewRGBA(image.Rect(0, 0, 0, 0))
+	}
+	first := scale2xRGBA(src)
+	return scale2xRGBA(first)
+}

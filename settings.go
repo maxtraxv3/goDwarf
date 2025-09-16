@@ -458,7 +458,7 @@ func loadSettings() bool {
 		gs.BubbleScale = gsdef.BubbleScale
 	}
 
-	if gs.SpriteUpscale != 0 && gs.SpriteUpscale != 2 && gs.SpriteUpscale != 3 {
+	if gs.SpriteUpscale != 0 && gs.SpriteUpscale != 2 && gs.SpriteUpscale != 3 && gs.SpriteUpscale != 4 {
 		gs.SpriteUpscale = gsdef.SpriteUpscale
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	"testing"
@@ -63,5 +64,37 @@ func TestScale3xRGBAProducesExpectedEdges(t *testing.T) {
 	middleRight := dst.RGBAAt(5, 4)
 	if middleRight != red {
 		t.Fatalf("expected middle-right pixel to adopt right neighbor, got %#v", middleRight)
+	}
+}
+
+func TestScale4xRGBAChainsTwoScale2xPasses(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	blue := color.RGBA{0, 0, 255, 255}
+	red := color.RGBA{255, 0, 0, 255}
+	green := color.RGBA{0, 255, 0, 255}
+	white := color.RGBA{255, 255, 255, 255}
+
+	src.SetRGBA(1, 0, blue)
+	src.SetRGBA(0, 1, blue)
+	src.SetRGBA(1, 1, white)
+	src.SetRGBA(2, 1, red)
+	src.SetRGBA(1, 2, green)
+
+	dst := scale4xRGBA(src)
+	if dst.Bounds().Dx() != 12 || dst.Bounds().Dy() != 12 {
+		t.Fatalf("unexpected size: %v", dst.Bounds())
+	}
+
+	expected := scale2xRGBA(scale2xRGBA(src))
+	if !dst.Bounds().Eq(expected.Bounds()) {
+		t.Fatalf("expected bounds %v, got %v", expected.Bounds(), dst.Bounds())
+	}
+	if !bytes.Equal(dst.Pix, expected.Pix) {
+		t.Fatalf("4x upscale should match two chained 2x passes")
+	}
+
+	center := dst.RGBAAt(8, 8)
+	if center != white {
+		t.Fatalf("expected center pixel to remain white, got %#v", center)
 	}
 }

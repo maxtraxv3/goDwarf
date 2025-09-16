@@ -365,6 +365,8 @@ func upscaleSpriteImage(img *ebiten.Image, factor int) *ebiten.Image {
 		scaled = scale2xRGBA(src)
 	case 3:
 		scaled = scale3xRGBA(src)
+	case 4:
+		scaled = scale4xRGBA(src)
 	default:
 		return img
 	}
