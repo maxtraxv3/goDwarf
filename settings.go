@@ -51,6 +51,16 @@ func spriteUpscaleFactor() int {
 	return spriteUpscaleFactorFromScale(gs.GameScale)
 }
 
+func clampSoundEnhancementAmount(v float64) float64 {
+	if v < 0.1 {
+		return 0.1
+	}
+	if v > 10 {
+		return 10
+	}
+	return v
+}
+
 var gsdef settings = settings{
 	Version: SETTINGS_VERSION,
 
@@ -164,12 +174,13 @@ var gsdef settings = settings{
 	ShaderLightStrength: 1.0,
 	ShaderGlowStrength:  1.0,
 
-	PotatoGPU:             false,
-	BarColorByValue:       false,
-	ThrottleSounds:        true,
-	SoundEnhancement:      true,
-	MusicEnhancement:      true,
-	HighQualityResampling: true,
+	PotatoGPU:              false,
+	BarColorByValue:        false,
+	ThrottleSounds:         true,
+	SoundEnhancement:       true,
+	SoundEnhancementAmount: 1.0,
+	MusicEnhancement:       true,
+	HighQualityResampling:  true,
 
 	NightEffect:    true,
 	ShaderLighting: true,
@@ -320,13 +331,14 @@ type settings struct {
 	ShaderLightStrength float64
 	ShaderGlowStrength  float64
 
-	PotatoGPU             bool
-	EnabledPlugins        map[string]any
-	BarColorByValue       bool
-	ThrottleSounds        bool
-	SoundEnhancement      bool
-	MusicEnhancement      bool
-	HighQualityResampling bool
+	PotatoGPU              bool
+	EnabledPlugins         map[string]any
+	BarColorByValue        bool
+	ThrottleSounds         bool
+	SoundEnhancement       bool
+	SoundEnhancementAmount float64
+	MusicEnhancement       bool
+	HighQualityResampling  bool
 
 	imgPlanesDebug    bool
 	smoothingDebug    bool
@@ -468,6 +480,8 @@ func loadSettings() bool {
 	if gs.ShaderGlowStrength < 0 || gs.ShaderGlowStrength > 2 {
 		gs.ShaderGlowStrength = gsdef.ShaderGlowStrength
 	}
+
+	gs.SoundEnhancementAmount = clampSoundEnhancementAmount(gs.SoundEnhancementAmount)
 
 	// Clamp BubbleScale to 1.0–8.0
 	if gs.BubbleScale < 1.0 || gs.BubbleScale > 8.0 {

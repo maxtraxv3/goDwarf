@@ -3634,13 +3634,30 @@ func makeSettingsWindow() {
 	enhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
 	enhancementCB.Checked = gs.SoundEnhancement
 	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
+	enhancementStrengthSlider, enhancementStrengthEvents := eui.NewSlider()
+	enhancementStrengthSlider.Label = "Enhancement Strength"
+	enhancementStrengthSlider.MinValue = 0.1
+	enhancementStrengthSlider.MaxValue = 10
+	enhancementStrengthSlider.Value = float32(gs.SoundEnhancementAmount)
+	enhancementStrengthSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
+	enhancementStrengthSlider.Disabled = !gs.SoundEnhancement
+	enhancementStrengthSlider.SetTooltip("0.1 is subtle, 10 is very pronounced")
 	enhancementEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.SoundEnhancement = ev.Checked
+			enhancementStrengthSlider.Disabled = !ev.Checked
 			settingsDirty = true
 		}
 	}
 	center.AddItem(enhancementCB)
+
+	enhancementStrengthEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.SoundEnhancementAmount = clampSoundEnhancementAmount(float64(ev.Value))
+			settingsDirty = true
+		}
+	}
+	center.AddItem(enhancementStrengthSlider)
 
 	resampleCB, resampleEvents := eui.NewCheckbox()
 	resampleCB.Text = "High quality resampling"
@@ -4342,18 +4359,18 @@ func makeQualityWindow() {
 	left.AddItem(renderScale)
 
 	/*
-	                                showFPSCB, showFPSEvents := eui.NewCheckbox()
-	                                showFPSCB.Text = "Show FPS + UPS"
-					showFPSCB.Size = eui.Point{X: width, Y: 24}
-					showFPSCB.Checked = gs.ShowFPS
-					showFPSCB.SetTooltip("Display frames per second, and updates per second")
-					showFPSEvents.Handle = func(ev eui.UIEvent) {
-						if ev.Type == eui.EventCheckboxChanged {
-							gs.ShowFPS = ev.Checked
-							settingsDirty = true
+		                                showFPSCB, showFPSEvents := eui.NewCheckbox()
+		                                showFPSCB.Text = "Show FPS + UPS"
+						showFPSCB.Size = eui.Point{X: width, Y: 24}
+						showFPSCB.Checked = gs.ShowFPS
+						showFPSCB.SetTooltip("Display frames per second, and updates per second")
+						showFPSEvents.Handle = func(ev eui.UIEvent) {
+							if ev.Type == eui.EventCheckboxChanged {
+								gs.ShowFPS = ev.Checked
+								settingsDirty = true
+							}
 						}
-					}
-					flow.AddItem(showFPSCB)
+						flow.AddItem(showFPSCB)
 	*/
 
 	psCB, precacheSoundEvents := eui.NewCheckbox()
