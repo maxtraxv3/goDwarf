@@ -75,6 +75,28 @@ func applyBoldFace(it *eui.ItemData) {
 	}
 }
 
+func spriteUpscaleIndex(val int) int {
+	switch val {
+	case 2:
+		return 1
+	case 3:
+		return 2
+	default:
+		return 0
+	}
+}
+
+func spriteUpscaleValue(idx int) int {
+	switch idx {
+	case 1:
+		return 2
+	case 2:
+		return 3
+	default:
+		return 0
+	}
+}
+
 var changelogList *eui.ItemData
 var changelogPrevBtn *eui.ItemData
 var changelogNextBtn *eui.ItemData
@@ -106,19 +128,22 @@ var shaderWarnWin *eui.WindowData
 var shaderWarnDontShowCB *eui.ItemData
 
 var (
-	sheetCacheLabel  *eui.ItemData
-	frameCacheLabel  *eui.ItemData
-	mobileCacheLabel *eui.ItemData
-	soundCacheLabel  *eui.ItemData
-	mobileBlendLabel *eui.ItemData
-	pictBlendLabel   *eui.ItemData
-	totalCacheLabel  *eui.ItemData
-	pingLabel        *eui.ItemData
+	sheetCacheLabel        *eui.ItemData
+	frameCacheLabel        *eui.ItemData
+	scaledFrameCacheLabel  *eui.ItemData
+	mobileCacheLabel       *eui.ItemData
+	scaledMobileCacheLabel *eui.ItemData
+	soundCacheLabel        *eui.ItemData
+	mobileBlendLabel       *eui.ItemData
+	pictBlendLabel         *eui.ItemData
+	totalCacheLabel        *eui.ItemData
+	pingLabel              *eui.ItemData
 
 	recordBtn         *eui.ItemData
 	recordStatus      *eui.ItemData
 	recordPath        string
 	qualityPresetDD   *eui.ItemData
+	spriteUpscaleDD   *eui.ItemData
 	shaderLightSlider *eui.ItemData
 	shaderGlowSlider  *eui.ItemData
 	denoiseCB         *eui.ItemData
@@ -3627,31 +3652,45 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(throttleSoundCB)
 
-	reverbCB, reverbEvents := eui.NewCheckbox()
-	reverbCB.Text = "Reverb for sound effects"
-	reverbCB.Size = eui.Point{X: panelWidth, Y: 24}
-	reverbCB.Checked = gs.SoundReverb
-	reverbCB.SetTooltip("Add subtle room ambience to in-game sounds")
-	reverbEvents.Handle = func(ev eui.UIEvent) {
+	enhancementCB, enhancementEvents := eui.NewCheckbox()
+	enhancementCB.Text = "Audio enhancement for sound effects"
+	enhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
+	enhancementCB.Checked = gs.SoundEnhancement
+	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
+	enhancementEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.SoundReverb = ev.Checked
+			gs.SoundEnhancement = ev.Checked
 			settingsDirty = true
 		}
 	}
-	center.AddItem(reverbCB)
+	center.AddItem(enhancementCB)
 
-	musicReverbCB, musicReverbEvents := eui.NewCheckbox()
-	musicReverbCB.Text = "Reverb for music"
-	musicReverbCB.Size = eui.Point{X: panelWidth, Y: 24}
-	musicReverbCB.Checked = gs.MusicReverb
-	musicReverbCB.SetTooltip("Add space and ambience to background music")
-	musicReverbEvents.Handle = func(ev eui.UIEvent) {
+	resampleCB, resampleEvents := eui.NewCheckbox()
+	resampleCB.Text = "High quality resampling"
+	resampleCB.Size = eui.Point{X: panelWidth, Y: 24}
+	resampleCB.Checked = gs.HighQualityResampling
+	resampleCB.SetTooltip("Lanczos resampling and dithering for cleaner audio (uses more CPU)")
+	resampleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.MusicReverb = ev.Checked
+			gs.HighQualityResampling = ev.Checked
+			clearCaches()
 			settingsDirty = true
 		}
 	}
-	center.AddItem(musicReverbCB)
+	center.AddItem(resampleCB)
+
+	musicEnhancementCB, musicEnhancementEvents := eui.NewCheckbox()
+	musicEnhancementCB.Text = "Audio enhancement for music"
+	musicEnhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
+	musicEnhancementCB.Checked = gs.MusicEnhancement
+	musicEnhancementCB.SetTooltip("Add space and ambience to background music")
+	musicEnhancementEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.MusicEnhancement = ev.Checked
+			settingsDirty = true
+		}
+	}
+	center.AddItem(musicEnhancementCB)
 
 	/*
 		mixBtn, mixEvents := eui.NewButton()
@@ -4320,19 +4359,41 @@ func makeQualityWindow() {
 	}
 	left.AddItem(renderScale)
 
-	/*
-		showFPSCB, showFPSEvents := eui.NewCheckbox()
-		showFPSCB.Text = "Show FPS + UPS"
-		showFPSCB.Size = eui.Point{X: width, Y: 24}
-		showFPSCB.Checked = gs.ShowFPS
-		showFPSCB.SetTooltip("Display frames per second, and updates per second")
-		showFPSEvents.Handle = func(ev eui.UIEvent) {
-			if ev.Type == eui.EventCheckboxChanged {
-				gs.ShowFPS = ev.Checked
+	dd, spriteUpscaleEvents := eui.NewDropdown()
+	spriteUpscaleDD = dd
+	spriteUpscaleDD.Label = "Sprite Upscaling"
+	spriteUpscaleDD.Options = []string{"Off", "2x XBR-like", "3x XBR-like"}
+	spriteUpscaleDD.Size = eui.Point{X: width - 10, Y: 24}
+	spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
+	spriteUpscaleDD.SetTooltip("Edge-aware upscaling for world sprites (higher values increase VRAM use)")
+	spriteUpscaleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventDropdownSelected {
+			newVal := spriteUpscaleValue(ev.Index)
+			if newVal != gs.SpriteUpscale {
+				gs.SpriteUpscale = newVal
 				settingsDirty = true
+				clearCaches()
+				if qualityPresetDD != nil {
+					qualityPresetDD.Selected = detectQualityPreset()
+				}
 			}
 		}
-		flow.AddItem(showFPSCB)
+	}
+	left.AddItem(spriteUpscaleDD)
+
+	/*
+	                showFPSCB, showFPSEvents := eui.NewCheckbox()
+	                showFPSCB.Text = "Show FPS + UPS"
+			showFPSCB.Size = eui.Point{X: width, Y: 24}
+			showFPSCB.Checked = gs.ShowFPS
+			showFPSCB.SetTooltip("Display frames per second, and updates per second")
+			showFPSEvents.Handle = func(ev eui.UIEvent) {
+				if ev.Type == eui.EventCheckboxChanged {
+					gs.ShowFPS = ev.Checked
+					settingsDirty = true
+				}
+			}
+			flow.AddItem(showFPSCB)
 	*/
 
 	psCB, precacheSoundEvents := eui.NewCheckbox()
@@ -5107,11 +5168,23 @@ func makeDebugWindow() {
 	frameCacheLabel.FontSize = 10
 	debugFlow.AddItem(frameCacheLabel)
 
+	scaledFrameCacheLabel, _ = eui.NewText()
+	scaledFrameCacheLabel.Text = ""
+	scaledFrameCacheLabel.Size = eui.Point{X: width, Y: 24}
+	scaledFrameCacheLabel.FontSize = 10
+	debugFlow.AddItem(scaledFrameCacheLabel)
+
 	mobileCacheLabel, _ = eui.NewText()
 	mobileCacheLabel.Text = ""
 	mobileCacheLabel.Size = eui.Point{X: width, Y: 24}
 	mobileCacheLabel.FontSize = 10
 	debugFlow.AddItem(mobileCacheLabel)
+
+	scaledMobileCacheLabel, _ = eui.NewText()
+	scaledMobileCacheLabel.Text = ""
+	scaledMobileCacheLabel.Size = eui.Point{X: width, Y: 24}
+	scaledMobileCacheLabel.FontSize = 10
+	debugFlow.AddItem(scaledMobileCacheLabel)
 
 	soundCacheLabel, _ = eui.NewText()
 	soundCacheLabel.Text = ""
@@ -5159,27 +5232,35 @@ func updateDebugStats() {
 		return
 	}
 
-	sheetCount, sheetBytes, frameCount, frameBytes, mobileCount, mobileBytes, mobileBlendCount, mobileBlendBytes, pictBlendCount, pictBlendBytes := imageCacheStats()
+	stats := imageCacheStats()
 	soundCount, soundBytes := soundCacheStats()
 
 	if sheetCacheLabel != nil {
-		sheetCacheLabel.Text = fmt.Sprintf("Sprite Sheets: %d (%s)", sheetCount, humanize.Bytes(uint64(sheetBytes)))
+		sheetCacheLabel.Text = fmt.Sprintf("Sprite Sheets: %d (%s)", stats.sheetCount, humanize.Bytes(uint64(stats.sheetBytes)))
 		sheetCacheLabel.Dirty = true
 	}
 	if frameCacheLabel != nil {
-		frameCacheLabel.Text = fmt.Sprintf("Animation Frames: %d (%s)", frameCount, humanize.Bytes(uint64(frameBytes)))
+		frameCacheLabel.Text = fmt.Sprintf("Animation Frames: %d (%s)", stats.frameCount, humanize.Bytes(uint64(stats.frameBytes)))
 		frameCacheLabel.Dirty = true
 	}
+	if scaledFrameCacheLabel != nil {
+		scaledFrameCacheLabel.Text = fmt.Sprintf("Upscaled Frames: %d (%s)", stats.scaledFrameCount, humanize.Bytes(uint64(stats.scaledFrameBytes)))
+		scaledFrameCacheLabel.Dirty = true
+	}
 	if mobileCacheLabel != nil {
-		mobileCacheLabel.Text = fmt.Sprintf("Mobile Animation Frames: %d (%s)", mobileCount, humanize.Bytes(uint64(mobileBytes)))
+		mobileCacheLabel.Text = fmt.Sprintf("Mobile Animation Frames: %d (%s)", stats.mobileCount, humanize.Bytes(uint64(stats.mobileBytes)))
 		mobileCacheLabel.Dirty = true
 	}
+	if scaledMobileCacheLabel != nil {
+		scaledMobileCacheLabel.Text = fmt.Sprintf("Upscaled Mobile Frames: %d (%s)", stats.scaledMobileCount, humanize.Bytes(uint64(stats.scaledMobileBytes)))
+		scaledMobileCacheLabel.Dirty = true
+	}
 	if mobileBlendLabel != nil {
-		mobileBlendLabel.Text = fmt.Sprintf("Mobile Blend Frames: %d (%s)", mobileBlendCount, humanize.Bytes(uint64(mobileBlendBytes)))
+		mobileBlendLabel.Text = fmt.Sprintf("Mobile Blend Frames: %d (%s)", stats.mobileBlendCount, humanize.Bytes(uint64(stats.mobileBlendBytes)))
 		mobileBlendLabel.Dirty = true
 	}
 	if pictBlendLabel != nil {
-		pictBlendLabel.Text = fmt.Sprintf("World Blend Frames: %d (%s)", pictBlendCount, humanize.Bytes(uint64(pictBlendBytes)))
+		pictBlendLabel.Text = fmt.Sprintf("World Blend Frames: %d (%s)", stats.pictBlendCount, humanize.Bytes(uint64(stats.pictBlendBytes)))
 		pictBlendLabel.Dirty = true
 	}
 	if soundCacheLabel != nil {
@@ -5187,7 +5268,8 @@ func updateDebugStats() {
 		soundCacheLabel.Dirty = true
 	}
 	if totalCacheLabel != nil {
-		totalCacheLabel.Text = fmt.Sprintf("Total: %s", humanize.Bytes(uint64(sheetBytes+frameBytes+mobileBytes+soundBytes+mobileBlendBytes+pictBlendBytes)))
+		total := stats.sheetBytes + stats.frameBytes + stats.scaledFrameBytes + stats.mobileBytes + stats.scaledMobileBytes + stats.mobileBlendBytes + stats.pictBlendBytes + soundBytes
+		totalCacheLabel.Text = fmt.Sprintf("Total: %s", humanize.Bytes(uint64(total)))
 		totalCacheLabel.Dirty = true
 	}
 }

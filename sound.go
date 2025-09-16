@@ -69,8 +69,8 @@ func playSound(ids []uint16) {
 	if len(ids) == 0 || gs.Mute || focusMuted || !gs.GameSound {
 		return
 	}
-	useReverb := gs.SoundReverb
-	go func(ids []uint16, enableReverb bool) {
+	useEnhancement := gs.SoundEnhancement
+	go func(ids []uint16, enableEnhancement bool) {
 		if gs.Mute || focusMuted || !gs.GameSound {
 			return
 		}
@@ -168,24 +168,34 @@ func playSound(ids []uint16) {
 		}
 		wg.Wait()
 		close(maxCh)
-
+    
 		if enableReverb {
 			applyGameSoundReverb(mixed)
 		}
 
 		maxVal := int32(0)
 		for v := range maxCh {
-			if !enableReverb && v > maxVal {
+			if !enableEnhancement && v > maxVal {
 				maxVal = v
 			}
 		}
-		if enableReverb {
-			for _, v := range mixed {
+		if enableEnhancement {
+			for i := 0; i < len(left); i++ {
+				v := left[i]
 				if v < 0 {
 					v = -v
 				}
 				if v > maxVal {
 					maxVal = v
+				}
+				if right != nil {
+					vr := right[i]
+					if vr < 0 {
+						vr = -vr
+					}
+					if vr > maxVal {
+						maxVal = vr
+					}
 				}
 			}
 		}
@@ -196,27 +206,47 @@ func playSound(ids []uint16) {
 			scale *= math.Min(1, 32767.0/float64(maxVal))
 		}
 
-		out := make([]byte, len(mixed)*2)
+		var out []byte
+		if enableEnhancement {
+			out = make([]byte, len(left)*4)
+		} else {
+			out = make([]byte, len(left)*2)
+		}
 
 		wg = sync.WaitGroup{}
-		for start := 0; start < len(mixed); start += chunkSize {
+		for start := 0; start < len(left); start += chunkSize {
 			end := start + chunkSize
-			if end > len(mixed) {
-				end = len(mixed)
+			if end > len(left) {
+				end = len(left)
 			}
 			wg.Add(1)
-			go func(start, end int) {
+			go func(start, end int, stereo bool) {
 				defer wg.Done()
 				for i := start; i < end; i++ {
-					v := int32(float64(mixed[i]) * scale)
-					if v > 32767 {
-						v = 32767
-					} else if v < -32768 {
-						v = -32768
+					lv := int32(float64(left[i]) * scale)
+					if lv > 32767 {
+						lv = 32767
+					} else if lv < -32768 {
+						lv = -32768
 					}
-					binary.LittleEndian.PutUint16(out[2*i:], uint16(int16(v)))
+					if stereo {
+						rv := lv
+						if right != nil {
+							rv = int32(float64(right[i]) * scale)
+							if rv > 32767 {
+								rv = 32767
+							} else if rv < -32768 {
+								rv = -32768
+							}
+						}
+						off := 4 * i
+						binary.LittleEndian.PutUint16(out[off:], uint16(int16(lv)))
+						binary.LittleEndian.PutUint16(out[off+2:], uint16(int16(rv)))
+					} else {
+						binary.LittleEndian.PutUint16(out[2*i:], uint16(int16(lv)))
+					}
 				}
-			}(start, end)
+			}(start, end, enableEnhancement)
 		}
 		wg.Wait()
 
@@ -245,7 +275,7 @@ func playSound(ids []uint16) {
 
 		//logDebug("playSound playing")
 		p.Play()
-	}(ids, useReverb)
+	}(ids, useEnhancement)
 }
 
 // initSoundContext initializes the global audio context.
@@ -414,6 +444,57 @@ func u8ToS16TPDF(data []byte, seed uint32) []int16 {
 	return out
 }
 
+func u8ToS16Fast(data []byte) []int16 {
+	out := make([]int16, len(data))
+	for i, b := range data {
+		v := int32(b)*257 - 32768
+		if v > math.MaxInt16 {
+			v = math.MaxInt16
+		} else if v < math.MinInt16 {
+			v = math.MinInt16
+		}
+		out[i] = int16(v)
+	}
+	return out
+}
+
+func ResampleLinearInt16(src []int16, srcRate, dstRate int) []int16 {
+	if len(src) == 0 {
+		return nil
+	}
+	if srcRate <= 0 || dstRate <= 0 || srcRate == dstRate {
+		out := make([]int16, len(src))
+		copy(out, src)
+		return out
+	}
+
+	n := int(math.Round(float64(len(src)) * float64(dstRate) / float64(srcRate)))
+	if n < 1 {
+		n = 1
+	}
+	out := make([]int16, n)
+	step := float64(srcRate) / float64(dstRate)
+	pos := 0.0
+	lastIdx := len(src) - 1
+	for i := 0; i < n; i++ {
+		idx := int(pos)
+		if idx > lastIdx {
+			idx = lastIdx
+		}
+		frac := pos - float64(idx)
+		s0 := float64(src[idx])
+		var s1 float64
+		if idx < lastIdx {
+			s1 = float64(src[idx+1])
+		} else {
+			s1 = s0
+		}
+		out[i] = int16(math.Round(s0 + (s1-s0)*frac))
+		pos += step
+	}
+	return out
+}
+
 // applyFadeInOut applies a tiny fade to the start and end of the samples
 // to avoid clicks when sounds begin or end abruptly. The fade length is
 // approximately 5ms of audio.
@@ -457,10 +538,31 @@ func applyGameSoundReverb(samples []int32) {
 	if rate <= 0 {
 		return
 	}
+	if gain >= 0.999 {
+		gain = 0.999
+	} else if gain <= -0.999 {
+		gain = -0.999
+	}
+	buf := make([]float64, delay)
+	idx := 0
+	for i := 0; i < len(samples); i++ {
+		input := samples[i]
+		delayed := buf[idx]
+		output := -gain*input + delayed
+		buf[idx] = input + gain*output
+		samples[i] = output
+		idx++
+		if idx >= delay {
+			idx = 0
+		}
+	}
+}
 
-	type comb struct {
-		delay    int
-		feedback float64
+func buildMicroAmbience(input []float64, rate int, offset int) []float64 {
+	n := len(input)
+	out := make([]float64, n)
+	if n == 0 || rate <= 0 {
+		return out
 	}
 
 	base := []struct {
@@ -472,9 +574,13 @@ func applyGameSoundReverb(samples []int32) {
 		{seconds: 0.044, feedback: 0.13},
 	}
 
-	combs := make([]comb, 0, len(base))
-	for _, c := range base {
-		delay := int(float64(rate) * c.seconds)
+	combs := make([]comb, 0, len(baseDelays))
+	for i, base := range baseDelays {
+		adj := base
+		if offset != 0 && i%2 == 1 {
+			adj += offset
+		}
+		delay := scaleDelaySamples(adj, rate)
 		if delay < 1 {
 			continue
 		}
@@ -491,13 +597,25 @@ func applyGameSoundReverb(samples []int32) {
 		return
 	}
 
-	buffers := make([][]float64, len(combs))
-	indices := make([]int, len(combs))
-	last := make([]float64, len(combs))
-	for i, c := range combs {
-		buffers[i] = make([]float64, c.delay)
+	for i := 0; i < n; i++ {
+		in := input[i]
+		wet := 0.0
+		for j := range combs {
+			c := &combs[j]
+			delayed := c.buf[c.idx]
+			c.state += lpCoef * (delayed - c.state)
+			wet += c.state
+			c.buf[c.idx] = in + c.state*c.fb
+			c.idx++
+			if c.idx >= len(c.buf) {
+				c.idx = 0
+			}
+		}
+		if len(combs) > 0 {
+			out[i] = wet / float64(len(combs))
+		}
 	}
-
+  
 	const wetMix = 0.08
 	const scatterRatio = 0.35
 	combMix := wetMix * (1 - scatterRatio)
@@ -524,6 +642,18 @@ func applyGameSoundReverb(samples []int32) {
 
 	var wetState float64
 
+func applySlapDelay(samples []float64, rate int, delaySec, feedback, mix float64) {
+	if rate <= 0 || len(samples) == 0 || delaySec <= 0 || mix <= 0 {
+		return
+	}
+	delay := int(math.Round(delaySec * float64(rate)))
+	if delay < 1 {
+		delay = 1
+	}
+	buf := make([]float64, delay)
+	coef := lowpassCoefficient(rate, 7000)
+	idx := 0
+	var state float64
 	for i := 0; i < len(samples); i++ {
 		input := float64(samples[i])
 
@@ -542,6 +672,75 @@ func applyGameSoundReverb(samples []int32) {
 			}
 			indices[idx] = pos
 		}
+	}
+	A := math.Pow(10, gainDB/40)
+	w0 := 2 * math.Pi * freq / fs
+	sinW0 := math.Sin(w0)
+	cosW0 := math.Cos(w0)
+	alpha := sinW0 / math.Sqrt2
+	sqrtA := math.Sqrt(A)
+	beta := 2 * sqrtA * alpha
+
+	b0 := A * ((A + 1) - (A-1)*cosW0 + beta)
+	b1 := 2 * A * ((A - 1) - (A+1)*cosW0)
+	b2 := A * ((A + 1) - (A-1)*cosW0 - beta)
+	a0 := (A + 1) + (A-1)*cosW0 + beta
+	a1 := -2 * ((A - 1) + (A+1)*cosW0)
+	a2 := (A + 1) + (A-1)*cosW0 - beta
+
+	return newBiquad(b0, b1, b2, a0, a1, a2)
+}
+
+func newHighShelf(fs, freq, gainDB float64) *biquad {
+	if fs <= 0 || freq <= 0 {
+		return nil
+	}
+	if freq >= fs/2 {
+		freq = fs/2 - 1
+		if freq <= 0 {
+			freq = fs / 4
+		}
+	}
+	A := math.Pow(10, gainDB/40)
+	w0 := 2 * math.Pi * freq / fs
+	sinW0 := math.Sin(w0)
+	cosW0 := math.Cos(w0)
+	alpha := sinW0 / math.Sqrt2
+	sqrtA := math.Sqrt(A)
+	beta := 2 * sqrtA * alpha
+
+	b0 := A * ((A + 1) + (A-1)*cosW0 + beta)
+	b1 := -2 * A * ((A - 1) + (A+1)*cosW0)
+	b2 := A * ((A + 1) + (A-1)*cosW0 - beta)
+	a0 := (A + 1) - (A-1)*cosW0 + beta
+	a1 := 2 * ((A - 1) - (A+1)*cosW0)
+	a2 := (A + 1) - (A-1)*cosW0 - beta
+
+	return newBiquad(b0, b1, b2, a0, a1, a2)
+}
+
+func applySaturation(samples []float64, drive, mix float64) {
+	if drive <= 0 || len(samples) == 0 {
+		return
+	}
+	if mix < 0 {
+		mix = 0
+	} else if mix > 1 {
+		mix = 1
+	}
+	const toFloat = 1.0 / 32768.0
+	const fromFloat = 32768.0
+	dryMix := 1 - mix
+	norm := math.Tanh(drive)
+	if norm == 0 {
+		norm = 1
+	}
+	for i := range samples {
+		x := samples[i] * toFloat
+		sat := math.Tanh(x*drive) / norm
+		samples[i] = ((dryMix * x) + (mix * sat)) * fromFloat
+	}
+}
 
 		if len(scatter) > 0 && scatterMix > 0 {
 			delayed := scatter[scatterIndex]
@@ -560,8 +759,12 @@ func applyGameSoundReverb(samples []int32) {
 		} else if val < minInt32 {
 			val = minInt32
 		}
-		samples[i] = int32(math.Round(val))
+		samples[i] = x * fromFloat
 	}
+}
+
+func dbToLinear(db float64) float64 {
+	return math.Pow(10, db/20)
 }
 
 // loadSound retrieves a sound by ID, resamples it to match the audio context's
@@ -617,17 +820,31 @@ func loadSound(id uint16) []byte {
 
 	// Decode the sound data into 16-bit samples.
 	var samples []int16
+	useHighQuality := gs.HighQualityResampling
 	switch s.Bits {
 	case 8:
-		if s.Channels > 1 {
-			frames := len(s.Data) / int(s.Channels)
-			mono := make([]byte, frames)
-			for i := 0; i < frames; i++ {
-				mono[i] = s.Data[i*int(s.Channels)]
+		if useHighQuality {
+			if s.Channels > 1 {
+				frames := len(s.Data) / int(s.Channels)
+				mono := make([]byte, frames)
+				for i := 0; i < frames; i++ {
+					mono[i] = s.Data[i*int(s.Channels)]
+				}
+				samples = u8ToS16TPDF(mono, 0xC0FFEE)
+			} else {
+				samples = u8ToS16TPDF(s.Data, 0xC0FFEE)
 			}
-			samples = u8ToS16TPDF(mono, 0xC0FFEE)
 		} else {
-			samples = u8ToS16TPDF(s.Data, 0xC0FFEE)
+			if s.Channels > 1 {
+				frames := len(s.Data) / int(s.Channels)
+				mono := make([]byte, frames)
+				for i := 0; i < frames; i++ {
+					mono[i] = s.Data[i*int(s.Channels)]
+				}
+				samples = u8ToS16Fast(mono)
+			} else {
+				samples = u8ToS16Fast(s.Data)
+			}
 		}
 	case 16:
 		if len(s.Data)%2 != 0 {
@@ -652,7 +869,12 @@ func loadSound(id uint16) []byte {
 	}
 
 	if srcRate != dstRate {
-		samples = ResampleLanczosInt16PadDB(samples, srcRate, dstRate, dbPad)
+		if useHighQuality {
+			samples = ResampleLanczosInt16PadDB(samples, srcRate, dstRate, dbPad)
+		} else {
+			samples = ResampleLinearInt16(samples, srcRate, dstRate)
+			samples = PadDB(samples, dbPad)
+		}
 	} else {
 		samples = PadDB(samples, dbPad)
 	}

@@ -96,6 +96,7 @@ var gsdef settings = settings{
 	GameSound:            true,
 	Mute:                 false,
 	GameScale:            2.0,
+	SpriteUpscale:        2,
 	BarPlacement:         BarPlacementBottom,
 	MaxNightLevel:        100,
 	MessagesToConsole:    false,
@@ -147,11 +148,12 @@ var gsdef settings = settings{
 	ShaderLightStrength: 1.0,
 	ShaderGlowStrength:  1.0,
 
-	PotatoGPU:       false,
-	BarColorByValue: false,
-	ThrottleSounds:  true,
-	SoundReverb:     true,
-	MusicReverb:     true,
+	PotatoGPU:             false,
+	BarColorByValue:       false,
+	ThrottleSounds:        true,
+	SoundEnhancement:      true,
+	MusicEnhancement:      true,
+	HighQualityResampling: true,
 
 	NightEffect:    true,
 	ShaderLighting: true,
@@ -240,6 +242,7 @@ type settings struct {
 	GameSound            bool
 	Mute                 bool
 	GameScale            float64
+	SpriteUpscale        int
 	BarPlacement         BarPlacement
 	MaxNightLevel        int
 	forceNightLevel      int
@@ -301,12 +304,13 @@ type settings struct {
 	ShaderLightStrength float64
 	ShaderGlowStrength  float64
 
-	PotatoGPU       bool
-	EnabledPlugins  map[string]any
-	BarColorByValue bool
-	ThrottleSounds  bool
-	SoundReverb     bool
-	MusicReverb     bool
+	PotatoGPU             bool
+	EnabledPlugins        map[string]any
+	BarColorByValue       bool
+	ThrottleSounds        bool
+	SoundEnhancement      bool
+	MusicEnhancement      bool
+	HighQualityResampling bool
 
 	imgPlanesDebug    bool
 	smoothingDebug    bool
@@ -370,7 +374,9 @@ func loadSettings() bool {
 
 	type settingsFile struct {
 		settings
-		EnabledPlugins map[string]any `json:"EnabledPlugins"`
+		EnabledPlugins    map[string]any `json:"EnabledPlugins"`
+		LegacySoundReverb *bool          `json:"SoundReverb"`
+		LegacyMusicReverb *bool          `json:"MusicReverb"`
 	}
 
 	tmp := settingsFile{settings: gsdef}
@@ -381,6 +387,12 @@ func loadSettings() bool {
 	}
 
 	if tmp.settings.Version == SETTINGS_VERSION {
+		if tmp.LegacySoundReverb != nil {
+			tmp.settings.SoundEnhancement = *tmp.LegacySoundReverb
+		}
+		if tmp.LegacyMusicReverb != nil {
+			tmp.settings.MusicEnhancement = *tmp.LegacyMusicReverb
+		}
 		gs = tmp.settings
 		// Normalize and retain whatever was in the file; migrate into runtime scope map.
 		gs.EnabledPlugins = make(map[string]any)
@@ -444,6 +456,10 @@ func loadSettings() bool {
 	// Clamp BubbleScale to 1.0–8.0
 	if gs.BubbleScale < 1.0 || gs.BubbleScale > 8.0 {
 		gs.BubbleScale = gsdef.BubbleScale
+	}
+
+	if gs.SpriteUpscale != 0 && gs.SpriteUpscale != 2 && gs.SpriteUpscale != 3 {
+		gs.SpriteUpscale = gsdef.SpriteUpscale
 	}
 
 	if gs.WindowWidth > 0 && gs.WindowHeight > 0 {
@@ -744,9 +760,11 @@ var (
 
 func applyQualityPreset(name string) {
 	var p qualityPreset
+	spriteUpscale := gsdef.SpriteUpscale
 	switch name {
 	case "Ultra Low":
 		p = ultraLowPreset
+		spriteUpscale = 0
 	case "Low":
 		p = lowPreset
 	case "Standard":
@@ -762,6 +780,7 @@ func applyQualityPreset(name string) {
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
 	gs.ShaderLighting = p.ShaderLighting
+	gs.SpriteUpscale = spriteUpscale
 
 	if denoiseCB != nil {
 		denoiseCB.Checked = gs.DenoiseImages
@@ -774,6 +793,9 @@ func applyQualityPreset(name string) {
 	}
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
+	}
+	if spriteUpscaleDD != nil {
+		spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
 	}
 
 	applySettings()

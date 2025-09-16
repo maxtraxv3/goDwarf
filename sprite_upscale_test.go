@@ -1,0 +1,67 @@
+package main
+
+import (
+	"image"
+	"image/color"
+	"testing"
+)
+
+func TestScale2xRGBAProducesExpectedEdges(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	blue := color.RGBA{0, 0, 255, 255}
+	red := color.RGBA{255, 0, 0, 255}
+	green := color.RGBA{0, 255, 0, 255}
+	white := color.RGBA{255, 255, 255, 255}
+
+	src.SetRGBA(1, 0, blue)  // B
+	src.SetRGBA(0, 1, blue)  // D
+	src.SetRGBA(1, 1, white) // E
+	src.SetRGBA(2, 1, red)   // F
+	src.SetRGBA(1, 2, green) // H
+
+	dst := scale2xRGBA(src)
+	if dst.Bounds().Dx() != 6 || dst.Bounds().Dy() != 6 {
+		t.Fatalf("unexpected size: %v", dst.Bounds())
+	}
+
+	// Center pixel block starts at (2,2) in the scaled image.
+	topLeft := dst.RGBAAt(2, 2)
+	if topLeft != blue {
+		t.Fatalf("expected top-left pixel to match left/top neighbor, got %#v", topLeft)
+	}
+	topRight := dst.RGBAAt(3, 2)
+	if topRight != white {
+		t.Fatalf("expected top-right pixel to stay center color, got %#v", topRight)
+	}
+}
+
+func TestScale3xRGBAProducesExpectedEdges(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	blue := color.RGBA{0, 0, 255, 255}
+	red := color.RGBA{200, 0, 0, 255}
+	green := color.RGBA{0, 255, 0, 255}
+	white := color.RGBA{255, 255, 255, 255}
+	black := color.RGBA{0, 0, 0, 255}
+
+	src.SetRGBA(1, 0, red)   // B
+	src.SetRGBA(0, 1, blue)  // D
+	src.SetRGBA(1, 1, white) // E
+	src.SetRGBA(2, 1, red)   // F
+	src.SetRGBA(1, 2, green) // H
+	src.SetRGBA(2, 2, black) // I
+
+	dst := scale3xRGBA(src)
+	if dst.Bounds().Dx() != 9 || dst.Bounds().Dy() != 9 {
+		t.Fatalf("unexpected size: %v", dst.Bounds())
+	}
+
+	// Center block origin at (3,3). Verify E2 (top-right) and E5 (middle-right).
+	topRight := dst.RGBAAt(5, 3)
+	if topRight != red {
+		t.Fatalf("expected top-right pixel to adopt right neighbor, got %#v", topRight)
+	}
+	middleRight := dst.RGBAAt(5, 4)
+	if middleRight != red {
+		t.Fatalf("expected middle-right pixel to adopt right neighbor, got %#v", middleRight)
+	}
+}
