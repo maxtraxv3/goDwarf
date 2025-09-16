@@ -2148,10 +2148,10 @@ func makeAddCharacterWindow() {
 				if strings.EqualFold(characters[i].Name, addCharName) {
 					// Preserve canonical case from the stored character
 					addCharName = characters[i].Name
+					characters[i].passHash = hash
+					characters[i].DontRemember = !addCharRemember
 					exists = true
-					// Inform the user and keep the Add window open
-					makeErrorWindow("Character already exists")
-					return
+					break
 				}
 			}
 			if !exists {
