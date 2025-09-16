@@ -245,81 +245,147 @@ type musicReverbTap struct {
 	feedback float64
 }
 
+type musicAllpassTap struct {
+	seconds float64
+	gain    float64
+}
+
 func applyMusicReverb(left, right []float32, rate int) {
 	if len(left) == 0 || len(right) == 0 || len(left) != len(right) || rate <= 0 {
 		return
 	}
 
 	tapsLeft := []musicReverbTap{
-		{seconds: 0.045, feedback: 0.54},
-		{seconds: 0.057, feedback: 0.5},
-		{seconds: 0.068, feedback: 0.47},
-		{seconds: 0.083, feedback: 0.45},
+		{seconds: 0.0297, feedback: 0.82},
+		{seconds: 0.0371, feedback: 0.8},
+		{seconds: 0.0411, feedback: 0.78},
+		{seconds: 0.0531, feedback: 0.76},
+		{seconds: 0.0617, feedback: 0.74},
 	}
 	tapsRight := []musicReverbTap{
-		{seconds: 0.048, feedback: 0.54},
-		{seconds: 0.060, feedback: 0.5},
-		{seconds: 0.071, feedback: 0.47},
-		{seconds: 0.086, feedback: 0.45},
+		{seconds: 0.0311, feedback: 0.82},
+		{seconds: 0.0387, feedback: 0.8},
+		{seconds: 0.0433, feedback: 0.78},
+		{seconds: 0.0551, feedback: 0.76},
+		{seconds: 0.0647, feedback: 0.74},
 	}
 
-	applyMusicReverbMono(left, rate, tapsLeft)
-	applyMusicReverbMono(right, rate, tapsRight)
+	diffLeft := []musicAllpassTap{
+		{seconds: 0.0053, gain: 0.63},
+		{seconds: 0.0127, gain: 0.52},
+		{seconds: 0.0017, gain: 0.6},
+	}
+	diffRight := []musicAllpassTap{
+		{seconds: 0.0047, gain: 0.63},
+		{seconds: 0.0119, gain: 0.52},
+		{seconds: 0.0019, gain: 0.6},
+	}
+
+	applyMusicReverbMono(left, rate, tapsLeft, diffLeft, 0.022)
+	applyMusicReverbMono(right, rate, tapsRight, diffRight, 0.028)
 }
 
-func applyMusicReverbMono(samples []float32, rate int, taps []musicReverbTap) {
+func applyMusicReverbMono(samples []float32, rate int, taps []musicReverbTap, diffusers []musicAllpassTap, preDelaySeconds float64) {
 	if len(samples) == 0 || rate <= 0 || len(taps) == 0 {
 		return
 	}
 
-	type comb struct {
-		delay    int
+	type combState struct {
+		buf      []float64
+		idx      int
 		feedback float64
+		filter   float64
 	}
 
-	combs := make([]comb, 0, len(taps))
+	combs := make([]combState, 0, len(taps))
 	for _, t := range taps {
-		delay := int(float64(rate) * t.seconds)
+		delay := int(math.Round(t.seconds * float64(rate)))
 		if delay < 1 {
 			continue
 		}
-		combs = append(combs, comb{delay: delay, feedback: t.feedback})
+		combs = append(combs, combState{
+			buf:      make([]float64, delay),
+			feedback: t.feedback,
+		})
 	}
 	if len(combs) == 0 {
 		return
 	}
 
-	buffers := make([][]float64, len(combs))
-	indices := make([]int, len(combs))
-	last := make([]float64, len(combs))
-	for i, c := range combs {
-		buffers[i] = make([]float64, c.delay)
+	type allpassState struct {
+		buf  []float64
+		idx  int
+		gain float64
 	}
 
-	const wetMix = 0.27
+	allpasses := make([]allpassState, 0, len(diffusers))
+	for _, d := range diffusers {
+		delay := int(math.Round(d.seconds * float64(rate)))
+		if delay < 1 {
+			continue
+		}
+		allpasses = append(allpasses, allpassState{
+			buf:  make([]float64, delay),
+			gain: d.gain,
+		})
+	}
+
+	var preDelay []float64
+	if preSamples := int(math.Round(preDelaySeconds * float64(rate))); preSamples > 0 {
+		preDelay = make([]float64, preSamples)
+	}
+
+	preIdx := 0
+
+	const damping = 0.35
+	const wetMix = 0.34
 	const dryMix = 1 - wetMix
-	const damping = 0.24
-	mixScale := wetMix / float64(len(combs))
+	const wetLowpass = 0.25
+
+	mixScale := 1 / float64(len(combs))
+	wetState := 0.0
 
 	for i := range samples {
-		input := float64(samples[i])
-		wet := 0.0
-		for idx := range combs {
-			buf := buffers[idx]
-			pos := indices[idx]
-			delayed := buf[pos]
-			damped := delayed*(1-damping) + last[idx]*damping
-			wet += damped
-			buf[pos] = input + damped*combs[idx].feedback
-			last[idx] = damped
-			pos++
-			if pos >= len(buf) {
-				pos = 0
+		dry := float64(samples[i])
+		input := dry
+		if len(preDelay) > 0 {
+			input = preDelay[preIdx]
+			preDelay[preIdx] = dry
+			preIdx++
+			if preIdx >= len(preDelay) {
+				preIdx = 0
 			}
-			indices[idx] = pos
 		}
 
-		val := input*dryMix + wet*mixScale
+		wet := 0.0
+		for idx := range combs {
+			c := &combs[idx]
+			delayed := c.buf[c.idx]
+			c.filter += (delayed - c.filter) * damping
+			wet += c.filter
+			c.buf[c.idx] = input + c.filter*c.feedback
+			c.idx++
+			if c.idx >= len(c.buf) {
+				c.idx = 0
+			}
+		}
+		wet *= mixScale
+
+		for idx := range allpasses {
+			ap := &allpasses[idx]
+			bufVal := ap.buf[ap.idx]
+			y := bufVal - ap.gain*wet
+			ap.buf[ap.idx] = wet + y*ap.gain
+			wet = y
+			ap.idx++
+			if ap.idx >= len(ap.buf) {
+				ap.idx = 0
+			}
+		}
+
+		wetState += (wet - wetState) * wetLowpass
+
+		val := dry*dryMix + wetState*wetMix
 		if val > 1 {
 			val = 1
 		} else if val < -1 {
