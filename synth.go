@@ -26,10 +26,9 @@ const (
 	// Keep a small base tail to capture synth effect decays even without fade.
 	tailSamples = sampleRate // ~1.0s base tail
 
-	// fadeOutSamples adds additional render time that we will fade to silence.
-	// This ensures a smooth 2s fade at the end of the song and gives effects
-	// time to decay while the fade is applied.
-	fadeOutSamples = 2 * sampleRate // 2 seconds
+	// fadeOutSamples controls the length of the final fade applied within the
+	// rendered tail to guarantee a smooth 1s ramp to silence.
+	fadeOutSamples = sampleRate // 1 second
 )
 
 // Note represents a single MIDI note with a duration and start time.
@@ -185,7 +184,7 @@ func renderSong(program int, notes []Note) ([]float32, []float32, error) {
 	}
 
 	// Render extra frames for decay
-	totalSamples := maxEnd + tailSamples + fadeOutSamples
+	totalSamples := maxEnd + tailSamples
 
 	leftAll := make([]float32, 0, totalSamples)
 	rightAll := make([]float32, 0, totalSamples)
@@ -333,9 +332,9 @@ func applyMusicReverbMono(samples []float32, rate int, taps []musicReverbTap) {
 // mixPCM normalizes the provided samples and returns interleaved 16-bit PCM
 // data suitable for audio playback.
 func mixPCM(leftAll, rightAll []float32) []byte {
-	// Apply a 2s fade-out at the end to ensure smooth endings.
+	// Apply a 1s fade-out at the end to ensure smooth endings.
 	if len(leftAll) == len(rightAll) && len(leftAll) > 0 {
-		fadeSamples := 2 * sampleRate
+		fadeSamples := fadeOutSamples
 		n := len(leftAll)
 		if fadeSamples > n {
 			fadeSamples = n
