@@ -568,9 +568,31 @@ func applyGameSoundReverb(samples []int32) {
 		applyBiquad(wetBuffer, shelf)
 	}
 
-	applySlapDelay(wetBuffer, rate, 0.085, 0.42, 0.58)
+	amount := clampSoundEnhancementAmount(gs.SoundEnhancementAmount)
+	mixScale := math.Sqrt(amount)
 
-	const wetMix = 0.14
+	delayFeedback := 0.42 * mixScale
+	if delayFeedback > 0.9 {
+		delayFeedback = 0.9
+	} else if delayFeedback < 0 {
+		delayFeedback = 0
+	}
+
+	delayMix := 0.58 * mixScale
+	if delayMix > 0.95 {
+		delayMix = 0.95
+	} else if delayMix < 0 {
+		delayMix = 0
+	}
+
+	applySlapDelay(wetBuffer, rate, 0.085, delayFeedback, delayMix)
+
+	wetMix := 0.14 * amount
+	if wetMix > 0.85 {
+		wetMix = 0.85
+	} else if wetMix < 0 {
+		wetMix = 0
+	}
 	const scatterRatio = 0.4
 	combMix := wetMix * (1 - scatterRatio)
 	if combMix < 0 {
@@ -580,9 +602,17 @@ func applyGameSoundReverb(samples []int32) {
 	if scatterMix < 0 {
 		scatterMix = 0
 	}
-	const dryMix = 1 - wetMix
+	dryMix := 1 - wetMix
+	if dryMix < 0 {
+		dryMix = 0
+	}
 	const wetLowpass = 0.3
-	const scatterFeedback = 0.1
+	scatterFeedback := 0.1 * amount
+	if scatterFeedback > 0.9 {
+		scatterFeedback = 0.9
+	} else if scatterFeedback < 0 {
+		scatterFeedback = 0
+	}
 	const maxInt32 = float64(1<<31 - 1)
 	const minInt32 = -float64(1 << 31)
 
