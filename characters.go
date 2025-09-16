@@ -167,3 +167,23 @@ func removeCharacter(name string) {
 		}
 	}
 }
+
+// setCharacterPassHash updates the stored password hash and remember flag for the
+// given character name and persists the change to disk.
+func setCharacterPassHash(charName, hash string, remember bool) {
+	if charName == "" {
+		return
+	}
+	for i := range characters {
+		if characters[i].Name != charName {
+			continue
+		}
+		characters[i].passHash = hash
+		characters[i].DontRemember = !remember
+		if !remember {
+			characters[i].Key = ""
+		}
+		saveCharacters()
+		return
+	}
+}
