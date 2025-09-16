@@ -2106,13 +2106,13 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 	x := roundToInt((h + float64(fieldCenterX)) * gs.GameScale)
 	y := roundToInt((v + float64(fieldCenterY)) * gs.GameScale)
 	if d, ok := snap.descriptors[m.Index]; ok {
-		// Option: hide name-tags unless hovered
-		if gs.NameTagsOnHoverOnly {
+		showName := d.Name != ""
+		if showName && gs.NameTagsOnHoverOnly {
 			lastHoverMu.Lock()
 			hovered := lastHover.OnMobile && lastHover.Mobile.Index == m.Index
 			lastHoverMu.Unlock()
 			if !hovered {
-				return
+				showName = false
 			}
 		}
 		nameAlpha := uint8(gs.NameBgOpacity*255 + 0.5)
@@ -2121,7 +2121,27 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 			size = 40
 		}
 		offset := float64(size) * gs.GameScale / 2
-		if d.Name != "" {
+		drawGenericBar := func() {
+			back := int((m.Colors >> 4) & 0x0f)
+			if back != kColorCodeBackWhite && back != kColorCodeBackBlue && !(back == kColorCodeBackBlack && d.Type == kDescMonster) {
+				if back >= len(nameBackColors) {
+					back = 0
+				}
+				barClr := nameBackColors[back]
+				barClr.A = nameAlpha
+				top := y + int(offset+2*gs.GameScale)
+				left := x - int(6*gs.GameScale)
+				op := acquireDrawOpts()
+				op.Filter = ebiten.FilterNearest
+				op.DisableMipmaps = true
+				op.GeoM.Scale(12*gs.GameScale, 2*gs.GameScale)
+				op.GeoM.Translate(float64(left), float64(top))
+				op.ColorScale.ScaleWithColor(barClr)
+				screen.DrawImage(whiteImage, op)
+				releaseDrawOpts(op)
+			}
+		}
+		if showName {
 			style := styleRegular
 			playersMu.RLock()
 			if p, ok := players[d.Name]; ok {
@@ -2180,24 +2200,7 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 				}
 			}
 		} else {
-			back := int((m.Colors >> 4) & 0x0f)
-			if back != kColorCodeBackWhite && back != kColorCodeBackBlue && !(back == kColorCodeBackBlack && d.Type == kDescMonster) {
-				if back >= len(nameBackColors) {
-					back = 0
-				}
-				barClr := nameBackColors[back]
-				barClr.A = nameAlpha
-				top := y + int(offset+2*gs.GameScale)
-				left := x - int(6*gs.GameScale)
-				op := acquireDrawOpts()
-				op.Filter = ebiten.FilterNearest
-				op.DisableMipmaps = true
-				op.GeoM.Scale(12*gs.GameScale, 2*gs.GameScale)
-				op.GeoM.Translate(float64(left), float64(top))
-				op.ColorScale.ScaleWithColor(barClr)
-				screen.DrawImage(whiteImage, op)
-				releaseDrawOpts(op)
-			}
+			drawGenericBar()
 		}
 	}
 }
