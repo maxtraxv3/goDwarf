@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	maxSounds = 64
-	dbPad     = -3
+	maxSounds         = 64
+	dbPad             = -3
+	reverbTailSeconds = 0.28 // allow time for the reverb tail to decay
 )
 
 var (
@@ -119,21 +120,34 @@ func playSound(ids []uint16) {
 			return
 		}
 
-		mixed := make([]int32, maxSamples)
+		mixSamples := maxSamples
+		if mixSamples == 0 {
+			return
+		}
+
+		tailSamples := 0
+		if enableReverb {
+			tailSamples = int(float64(audioContext.SampleRate()) * reverbTailSeconds)
+		}
+		totalSamples := mixSamples + tailSamples
+		mixed := make([]int32, totalSamples)
 
 		chunks := runtime.NumCPU()
-		if chunks > maxSamples {
-			chunks = maxSamples
+		if chunks > mixSamples {
+			chunks = mixSamples
 		}
-		chunkSize := (maxSamples + chunks - 1) / chunks
+		if chunks < 1 {
+			chunks = 1
+		}
+		chunkSize := (mixSamples + chunks - 1) / chunks
 
 		var wg sync.WaitGroup
 		maxCh := make(chan int32, chunks)
 
-		for start := 0; start < maxSamples; start += chunkSize {
+		for start := 0; start < mixSamples; start += chunkSize {
 			end := start + chunkSize
-			if end > maxSamples {
-				end = maxSamples
+			if end > mixSamples {
+				end = mixSamples
 			}
 			wg.Add(1)
 			go func(start, end int) {
@@ -448,10 +462,10 @@ func applyGameSoundReverb(samples []int32, rate int) {
 		seconds  float64
 		feedback float64
 	}{
-		{seconds: 0.085, feedback: 0.62},
-		{seconds: 0.119, feedback: 0.57},
-		{seconds: 0.161, feedback: 0.52},
-		{seconds: 0.203, feedback: 0.48},
+		{seconds: 0.057, feedback: 0.43},
+		{seconds: 0.093, feedback: 0.39},
+		{seconds: 0.137, feedback: 0.36},
+		{seconds: 0.181, feedback: 0.33},
 	}
 
 	combs := make([]comb, 0, len(base))
@@ -480,10 +494,10 @@ func applyGameSoundReverb(samples []int32, rate int) {
 	}
 	preIndex := 0
 
-	const wetMix = 0.48
+	const wetMix = 0.34
 	const dryMix = 1 - wetMix
-	const damping = 0.6
-	const dryAirDamping = 0.35
+	const damping = 0.45
+	const dryAirDamping = 0.5
 	const maxInt32 = float64(1<<31 - 1)
 	const minInt32 = -float64(1 << 31)
 	mixScale := wetMix / float64(len(combs))
