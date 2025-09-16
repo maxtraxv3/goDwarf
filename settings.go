@@ -105,10 +105,10 @@ var gsdef settings = settings{
 	ChatTTSVoice:         "en_US-hfc_female-medium",
 	Notifications:        true,
 	NotifyWhenBackground: false,
-	// Power saving defaults: limit FPS in background at 30fps
+	// Power saving defaults: limit FPS in background
 	PowerSaveBackground:   true,
 	PowerSaveAlways:       false,
-	PowerSaveFPS:          30,
+	PowerSaveFPS:          15,
 	MuteWhenUnfocused:     false,
 	NotifyFallen:          true,
 	NotifyNotFallen:       true,
