@@ -241,6 +241,95 @@ func safeRender(s synthesizer, left, right []float32) (err error) {
 	return nil
 }
 
+type musicReverbTap struct {
+	seconds  float64
+	feedback float64
+}
+
+func applyMusicReverb(left, right []float32, rate int) {
+	if len(left) == 0 || len(right) == 0 || len(left) != len(right) || rate <= 0 {
+		return
+	}
+
+	tapsLeft := []musicReverbTap{
+		{seconds: 0.045, feedback: 0.54},
+		{seconds: 0.057, feedback: 0.5},
+		{seconds: 0.068, feedback: 0.47},
+		{seconds: 0.083, feedback: 0.45},
+	}
+	tapsRight := []musicReverbTap{
+		{seconds: 0.048, feedback: 0.54},
+		{seconds: 0.060, feedback: 0.5},
+		{seconds: 0.071, feedback: 0.47},
+		{seconds: 0.086, feedback: 0.45},
+	}
+
+	applyMusicReverbMono(left, rate, tapsLeft)
+	applyMusicReverbMono(right, rate, tapsRight)
+}
+
+func applyMusicReverbMono(samples []float32, rate int, taps []musicReverbTap) {
+	if len(samples) == 0 || rate <= 0 || len(taps) == 0 {
+		return
+	}
+
+	type comb struct {
+		delay    int
+		feedback float64
+	}
+
+	combs := make([]comb, 0, len(taps))
+	for _, t := range taps {
+		delay := int(float64(rate) * t.seconds)
+		if delay < 1 {
+			continue
+		}
+		combs = append(combs, comb{delay: delay, feedback: t.feedback})
+	}
+	if len(combs) == 0 {
+		return
+	}
+
+	buffers := make([][]float64, len(combs))
+	indices := make([]int, len(combs))
+	last := make([]float64, len(combs))
+	for i, c := range combs {
+		buffers[i] = make([]float64, c.delay)
+	}
+
+	const wetMix = 0.27
+	const dryMix = 1 - wetMix
+	const damping = 0.24
+	mixScale := wetMix / float64(len(combs))
+
+	for i := range samples {
+		input := float64(samples[i])
+		wet := 0.0
+		for idx := range combs {
+			buf := buffers[idx]
+			pos := indices[idx]
+			delayed := buf[pos]
+			damped := delayed*(1-damping) + last[idx]*damping
+			wet += damped
+			buf[pos] = input + damped*combs[idx].feedback
+			last[idx] = damped
+			pos++
+			if pos >= len(buf) {
+				pos = 0
+			}
+			indices[idx] = pos
+		}
+
+		val := input*dryMix + wet*mixScale
+		if val > 1 {
+			val = 1
+		} else if val < -1 {
+			val = -1
+		}
+		samples[i] = float32(val)
+	}
+}
+
 // mixPCM normalizes the provided samples and returns interleaved 16-bit PCM
 // data suitable for audio playback.
 func mixPCM(leftAll, rightAll []float32) []byte {
@@ -313,6 +402,10 @@ func Play(ctx *audio.Context, program int, notes []Note) error {
 	leftAll, rightAll, err := renderSong(program, notes)
 	if err != nil {
 		return err
+	}
+
+	if gs.MusicReverb {
+		applyMusicReverb(leftAll, rightAll, sampleRate)
 	}
 
 	pcm := mixPCM(leftAll, rightAll)

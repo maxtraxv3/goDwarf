@@ -150,6 +150,8 @@ var gsdef settings = settings{
 	PotatoGPU:       false,
 	BarColorByValue: false,
 	ThrottleSounds:  true,
+	SoundReverb:     true,
+	MusicReverb:     true,
 
 	NightEffect:    true,
 	ShaderLighting: true,
@@ -303,6 +305,8 @@ type settings struct {
 	EnabledPlugins  map[string]any
 	BarColorByValue bool
 	ThrottleSounds  bool
+	SoundReverb     bool
+	MusicReverb     bool
 
 	imgPlanesDebug    bool
 	smoothingDebug    bool
