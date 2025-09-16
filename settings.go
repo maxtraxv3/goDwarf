@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -34,6 +35,21 @@ var settingsLoaded bool
 // current UI scale. Initialization defers restoration until the first layout
 // provides a final screen size.
 var windowsRestored bool
+
+func spriteUpscaleFactorFromScale(scale float64) int {
+	factor := int(math.Round(scale))
+	if factor < 1 {
+		factor = 1
+	}
+	if factor > 4 {
+		factor = 4
+	}
+	return factor
+}
+
+func spriteUpscaleFactor() int {
+	return spriteUpscaleFactorFromScale(gs.GameScale)
+}
 
 var gsdef settings = settings{
 	Version: SETTINGS_VERSION,
@@ -458,9 +474,7 @@ func loadSettings() bool {
 		gs.BubbleScale = gsdef.BubbleScale
 	}
 
-	if gs.SpriteUpscale != 0 && gs.SpriteUpscale != 2 && gs.SpriteUpscale != 3 && gs.SpriteUpscale != 4 {
-		gs.SpriteUpscale = gsdef.SpriteUpscale
-	}
+	gs.SpriteUpscale = spriteUpscaleFactor()
 
 	if gs.WindowWidth > 0 && gs.WindowHeight > 0 {
 		eui.SetScreenSize(gs.WindowWidth, gs.WindowHeight)
@@ -760,11 +774,9 @@ var (
 
 func applyQualityPreset(name string) {
 	var p qualityPreset
-	spriteUpscale := gsdef.SpriteUpscale
 	switch name {
 	case "Ultra Low":
 		p = ultraLowPreset
-		spriteUpscale = 0
 	case "Low":
 		p = lowPreset
 	case "Standard":
@@ -780,7 +792,7 @@ func applyQualityPreset(name string) {
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
 	gs.ShaderLighting = p.ShaderLighting
-	gs.SpriteUpscale = spriteUpscale
+	gs.SpriteUpscale = spriteUpscaleFactor()
 
 	if denoiseCB != nil {
 		denoiseCB.Checked = gs.DenoiseImages
@@ -794,10 +806,6 @@ func applyQualityPreset(name string) {
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
 	}
-	if spriteUpscaleDD != nil {
-		spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
-	}
-
 	applySettings()
 	clearCaches()
 	settingsDirty = true

@@ -75,32 +75,6 @@ func applyBoldFace(it *eui.ItemData) {
 	}
 }
 
-func spriteUpscaleIndex(val int) int {
-	switch val {
-	case 2:
-		return 1
-	case 3:
-		return 2
-	case 4:
-		return 3
-	default:
-		return 0
-	}
-}
-
-func spriteUpscaleValue(idx int) int {
-	switch idx {
-	case 1:
-		return 2
-	case 2:
-		return 3
-	case 3:
-		return 4
-	default:
-		return 0
-	}
-}
-
 var changelogList *eui.ItemData
 var changelogPrevBtn *eui.ItemData
 var changelogNextBtn *eui.ItemData
@@ -147,7 +121,6 @@ var (
 	recordStatus      *eui.ItemData
 	recordPath        string
 	qualityPresetDD   *eui.ItemData
-	spriteUpscaleDD   *eui.ItemData
 	shaderLightSlider *eui.ItemData
 	shaderGlowSlider  *eui.ItemData
 	denoiseCB         *eui.ItemData
@@ -4345,6 +4318,7 @@ func makeQualityWindow() {
 	renderScale.SetTooltip("Game render resolution (1x - 4x). Higher will be shaper on higher-res displays.")
 	renderScaleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
+			prevUpscale := gs.SpriteUpscale
 			v := math.Round(float64(ev.Value))
 			if v < 1 {
 				v = 1
@@ -4353,6 +4327,10 @@ func makeQualityWindow() {
 				v = 10
 			}
 			gs.GameScale = v
+			gs.SpriteUpscale = spriteUpscaleFactor()
+			if gs.SpriteUpscale != prevUpscale {
+				clearCaches()
+			}
 			renderScale.Value = float32(v)
 			settingsDirty = true
 			initFont()
@@ -4363,41 +4341,19 @@ func makeQualityWindow() {
 	}
 	left.AddItem(renderScale)
 
-	dd, spriteUpscaleEvents := eui.NewDropdown()
-	spriteUpscaleDD = dd
-	spriteUpscaleDD.Label = "Sprite Upscaling"
-	spriteUpscaleDD.Options = []string{"Off", "2x Smart Upscale", "3x Smart Upscale", "4x Smart Upscale"}
-	spriteUpscaleDD.Size = eui.Point{X: width - 10, Y: 24}
-	spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
-	spriteUpscaleDD.SetTooltip("Edge-aware upscaling for world sprites (higher values increase VRAM use)")
-	spriteUpscaleEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventDropdownSelected {
-			newVal := spriteUpscaleValue(ev.Index)
-			if newVal != gs.SpriteUpscale {
-				gs.SpriteUpscale = newVal
-				settingsDirty = true
-				clearCaches()
-				if qualityPresetDD != nil {
-					qualityPresetDD.Selected = detectQualityPreset()
-				}
-			}
-		}
-	}
-	left.AddItem(spriteUpscaleDD)
-
 	/*
-		                showFPSCB, showFPSEvents := eui.NewCheckbox()
-		                showFPSCB.Text = "Show FPS + UPS"
-				showFPSCB.Size = eui.Point{X: width, Y: 24}
-				showFPSCB.Checked = gs.ShowFPS
-				showFPSCB.SetTooltip("Display frames per second, and updates per second")
-				showFPSEvents.Handle = func(ev eui.UIEvent) {
-					if ev.Type == eui.EventCheckboxChanged {
-						gs.ShowFPS = ev.Checked
-						settingsDirty = true
+	                                showFPSCB, showFPSEvents := eui.NewCheckbox()
+	                                showFPSCB.Text = "Show FPS + UPS"
+					showFPSCB.Size = eui.Point{X: width, Y: 24}
+					showFPSCB.Checked = gs.ShowFPS
+					showFPSCB.SetTooltip("Display frames per second, and updates per second")
+					showFPSEvents.Handle = func(ev eui.UIEvent) {
+						if ev.Type == eui.EventCheckboxChanged {
+							gs.ShowFPS = ev.Checked
+							settingsDirty = true
+						}
 					}
-				}
-				flow.AddItem(showFPSCB)
+					flow.AddItem(showFPSCB)
 	*/
 
 	psCB, precacheSoundEvents := eui.NewCheckbox()
