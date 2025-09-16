@@ -430,9 +430,10 @@ func applyFadeInOut(samples []int16, rate int) {
 	}
 }
 
-// applyGameSoundReverb adds a small multi-tap feedback reverb to the mixed
-// game sound samples. The processing works on 32-bit intermediate samples so
-// the later normalization step still keeps the output within 16-bit range.
+// applyGameSoundReverb adds a feedback reverb tuned to mimic hearing a source
+// in an open field a short distance away. The processing works on 32-bit
+// intermediate samples so the later normalization step still keeps the output
+// within 16-bit range.
 func applyGameSoundReverb(samples []int32, rate int) {
 	if len(samples) == 0 || rate <= 0 {
 		return
@@ -447,9 +448,10 @@ func applyGameSoundReverb(samples []int32, rate int) {
 		seconds  float64
 		feedback float64
 	}{
-		{seconds: 0.0297, feedback: 0.38},
-		{seconds: 0.0371, feedback: 0.34},
-		{seconds: 0.0411, feedback: 0.32},
+		{seconds: 0.085, feedback: 0.62},
+		{seconds: 0.119, feedback: 0.57},
+		{seconds: 0.161, feedback: 0.52},
+		{seconds: 0.203, feedback: 0.48},
 	}
 
 	combs := make([]comb, 0, len(base))
@@ -471,15 +473,34 @@ func applyGameSoundReverb(samples []int32, rate int) {
 		buffers[i] = make([]float64, c.delay)
 	}
 
-	const wetMix = 0.33
+	preDelaySamples := int(float64(rate) * 0.011)
+	var preDelay []float64
+	if preDelaySamples > 0 {
+		preDelay = make([]float64, preDelaySamples)
+	}
+	preIndex := 0
+
+	const wetMix = 0.48
 	const dryMix = 1 - wetMix
-	const damping = 0.25
+	const damping = 0.6
+	const dryAirDamping = 0.35
 	const maxInt32 = float64(1<<31 - 1)
 	const minInt32 = -float64(1 << 31)
 	mixScale := wetMix / float64(len(combs))
 
+	var dryState float64
+
 	for i := 0; i < len(samples); i++ {
 		input := float64(samples[i])
+		source := input
+		if len(preDelay) > 0 {
+			source = preDelay[preIndex]
+			preDelay[preIndex] = input
+			preIndex++
+			if preIndex >= len(preDelay) {
+				preIndex = 0
+			}
+		}
 		wet := 0.0
 		for idx := range combs {
 			buf := buffers[idx]
@@ -487,7 +508,7 @@ func applyGameSoundReverb(samples []int32, rate int) {
 			delayed := buf[pos]
 			damped := delayed*(1-damping) + last[idx]*damping
 			wet += damped
-			buf[pos] = input + damped*combs[idx].feedback
+			buf[pos] = source + damped*combs[idx].feedback
 			last[idx] = damped
 			pos++
 			if pos >= len(buf) {
@@ -496,7 +517,8 @@ func applyGameSoundReverb(samples []int32, rate int) {
 			indices[idx] = pos
 		}
 
-		val := input*dryMix + wet*mixScale
+		dryState += (input - dryState) * dryAirDamping
+		val := dryState*dryMix + wet*mixScale
 		if val > maxInt32 {
 			val = maxInt32
 		} else if val < minInt32 {
