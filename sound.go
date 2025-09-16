@@ -168,9 +168,22 @@ func playSound(ids []uint16) {
 		}
 		wg.Wait()
 		close(maxCh)
-    
+
+		enableReverb := enableEnhancement
+		var left []int32
+		var right []int32
+
 		if enableReverb {
 			applyGameSoundReverb(mixed)
+		}
+
+		if enableEnhancement {
+			left = make([]int32, len(mixed))
+			copy(left, mixed)
+			right = make([]int32, len(mixed))
+			copy(right, mixed)
+		} else {
+			left = mixed
 		}
 
 		maxVal := int32(0)
@@ -538,34 +551,110 @@ func applyGameSoundReverb(samples []int32) {
 	if rate <= 0 {
 		return
 	}
-	if gain >= 0.999 {
-		gain = 0.999
-	} else if gain <= -0.999 {
-		gain = -0.999
+
+	floatSamples := make([]float64, len(samples))
+	for i, v := range samples {
+		floatSamples[i] = float64(v)
 	}
-	buf := make([]float64, delay)
-	idx := 0
-	for i := 0; i < len(samples); i++ {
-		input := samples[i]
-		delayed := buf[idx]
-		output := -gain*input + delayed
-		buf[idx] = input + gain*output
-		samples[i] = output
-		idx++
-		if idx >= delay {
-			idx = 0
+
+	ambienceA := buildMicroAmbience(floatSamples, rate, 0)
+	offsetSamples := int(math.Round(float64(rate) * 0.0025))
+	ambienceB := buildMicroAmbience(floatSamples, rate, offsetSamples)
+
+	wetBuffer := make([]float64, len(floatSamples))
+	for i := range wetBuffer {
+		var wet float64
+		if i < len(ambienceA) {
+			wet += ambienceA[i]
 		}
+		if i < len(ambienceB) {
+			wet += ambienceB[i]
+		}
+		wetBuffer[i] = wet
+	}
+
+	if shelf := newHighShelf(float64(rate), 3800, -3); shelf != nil {
+		applyBiquad(wetBuffer, shelf)
+	}
+
+	applySlapDelay(wetBuffer, rate, 0.085, 0.35, 0.45)
+
+	const wetMix = 0.08
+	const scatterRatio = 0.35
+	combMix := wetMix * (1 - scatterRatio)
+	if combMix < 0 {
+		combMix = 0
+	}
+	scatterMix := wetMix - combMix
+	if scatterMix < 0 {
+		scatterMix = 0
+	}
+	const dryMix = 1 - wetMix
+	const wetLowpass = 0.25
+	const scatterFeedback = 0.07
+	const maxInt32 = float64(1<<31 - 1)
+	const minInt32 = -float64(1 << 31)
+
+	scatterDelay := int(math.Round(float64(rate) * 0.03))
+	var scatter []float64
+	if scatterDelay > 0 && scatterMix > 0 {
+		scatter = make([]float64, scatterDelay)
+	}
+
+	scatterIdx := 0
+	var wetState float64
+	for i, dry := range floatSamples {
+		wet := 0.0
+		if combMix > 0 && i < len(wetBuffer) {
+			wet += wetBuffer[i] * combMix
+		}
+		if len(scatter) > 0 {
+			delayed := scatter[scatterIdx]
+			wet += delayed * scatterMix
+			scatter[scatterIdx] = dry + delayed*scatterFeedback
+			scatterIdx++
+			if scatterIdx >= len(scatter) {
+				scatterIdx = 0
+			}
+		}
+
+		wetState += (wet - wetState) * wetLowpass
+		val := dry*dryMix + wetState
+		if val > maxInt32 {
+			val = maxInt32
+		} else if val < minInt32 {
+			val = minInt32
+		}
+		floatSamples[i] = val
+	}
+
+	applySaturation(floatSamples, 1.15, 0.2)
+
+	for i, v := range floatSamples {
+		if v > maxInt32 {
+			v = maxInt32
+		} else if v < minInt32 {
+			v = minInt32
+		}
+		samples[i] = int32(math.Round(v))
 	}
 }
 
-func buildMicroAmbience(input []float64, rate int, offset int) []float64 {
+type microComb struct {
+	buf   []float64
+	idx   int
+	fb    float64
+	state float64
+}
+
+func buildMicroAmbience(input []float64, rate int, offsetSamples int) []float64 {
 	n := len(input)
 	out := make([]float64, n)
 	if n == 0 || rate <= 0 {
 		return out
 	}
 
-	base := []struct {
+	taps := []struct {
 		seconds  float64
 		feedback float64
 	}{
@@ -574,29 +663,28 @@ func buildMicroAmbience(input []float64, rate int, offset int) []float64 {
 		{seconds: 0.044, feedback: 0.13},
 	}
 
-	combs := make([]comb, 0, len(baseDelays))
-	for i, base := range baseDelays {
-		adj := base
-		if offset != 0 && i%2 == 1 {
-			adj += offset
+	const dampingHz = 3200.0
+	lpCoef := lowpassCoefficient(rate, dampingHz)
+
+	combs := make([]microComb, 0, len(taps))
+	for i, tap := range taps {
+		delay := int(math.Round(tap.seconds * float64(rate)))
+		if offsetSamples != 0 && i%2 == 1 {
+			delay += offsetSamples
 		}
-		delay := scaleDelaySamples(adj, rate)
 		if delay < 1 {
 			continue
 		}
-		combs = append(combs, comb{delay: delay, feedback: c.feedback})
+		combs = append(combs, microComb{
+			buf: make([]float64, delay),
+			fb:  tap.feedback,
+		})
+	}
+	if len(combs) == 0 {
+		return out
 	}
 
-	scatterDelay := int(float64(rate) * 0.03)
-	var scatter []float64
-	if scatterDelay > 0 {
-		scatter = make([]float64, scatterDelay)
-	}
-
-	if len(combs) == 0 && len(scatter) == 0 {
-		return
-	}
-
+	invCount := 1 / float64(len(combs))
 	for i := 0; i < n; i++ {
 		in := input[i]
 		wet := 0.0
@@ -611,40 +699,38 @@ func buildMicroAmbience(input []float64, rate int, offset int) []float64 {
 				c.idx = 0
 			}
 		}
-		if len(combs) > 0 {
-			out[i] = wet / float64(len(combs))
-		}
+		out[i] = wet * invCount
 	}
-  
-	const wetMix = 0.08
-	const scatterRatio = 0.35
-	combMix := wetMix * (1 - scatterRatio)
-	if combMix < 0 {
-		combMix = 0
-	}
-	scatterMix := wetMix - combMix
-	if scatterMix < 0 {
-		scatterMix = 0
-	}
-	const dryMix = 1 - wetMix
-	const damping = 0.22
-	const wetLowpass = 0.25
-	const scatterFeedback = 0.07
-	const maxInt32 = float64(1<<31 - 1)
-	const minInt32 = -float64(1 << 31)
+	return out
+}
 
-	var perComb float64
-	if len(combs) > 0 && combMix > 0 {
-		perComb = combMix / float64(len(combs))
+func lowpassCoefficient(rate int, cutoff float64) float64 {
+	if rate <= 0 || cutoff <= 0 {
+		return 0
 	}
-
-	scatterIndex := 0
-
-	var wetState float64
+	rc := 1.0 / (2 * math.Pi * cutoff)
+	dt := 1.0 / float64(rate)
+	alpha := dt / (rc + dt)
+	if alpha < 0 {
+		return 0
+	}
+	if alpha > 1 {
+		return 1
+	}
+	return alpha
+}
 
 func applySlapDelay(samples []float64, rate int, delaySec, feedback, mix float64) {
 	if rate <= 0 || len(samples) == 0 || delaySec <= 0 || mix <= 0 {
 		return
+	}
+	if mix > 1 {
+		mix = 1
+	}
+	if feedback < 0 {
+		feedback = 0
+	} else if feedback > 0.95 {
+		feedback = 0.95
 	}
 	delay := int(math.Round(delaySec * float64(rate)))
 	if delay < 1 {
@@ -652,43 +738,60 @@ func applySlapDelay(samples []float64, rate int, delaySec, feedback, mix float64
 	}
 	buf := make([]float64, delay)
 	coef := lowpassCoefficient(rate, 7000)
+	dryMix := 1 - mix
 	idx := 0
 	var state float64
-	for i := 0; i < len(samples); i++ {
-		input := float64(samples[i])
-
-		wet := 0.0
-		for idx := range combs {
-			buf := buffers[idx]
-			pos := indices[idx]
-			delayed := buf[pos]
-			filtered := delayed + (last[idx]-delayed)*damping
-			wet += filtered * perComb
-			buf[pos] = input + filtered*combs[idx].feedback
-			last[idx] = filtered
-			pos++
-			if pos >= len(buf) {
-				pos = 0
-			}
-			indices[idx] = pos
+	for i := range samples {
+		input := samples[i]
+		delayed := buf[idx]
+		state += coef * (delayed - state)
+		wet := state
+		buf[idx] = input + state*feedback
+		idx++
+		if idx >= delay {
+			idx = 0
 		}
+		samples[i] = input*dryMix + wet*mix
 	}
-	A := math.Pow(10, gainDB/40)
-	w0 := 2 * math.Pi * freq / fs
-	sinW0 := math.Sin(w0)
-	cosW0 := math.Cos(w0)
-	alpha := sinW0 / math.Sqrt2
-	sqrtA := math.Sqrt(A)
-	beta := 2 * sqrtA * alpha
+}
 
-	b0 := A * ((A + 1) - (A-1)*cosW0 + beta)
-	b1 := 2 * A * ((A - 1) - (A+1)*cosW0)
-	b2 := A * ((A + 1) - (A-1)*cosW0 - beta)
-	a0 := (A + 1) + (A-1)*cosW0 + beta
-	a1 := -2 * ((A - 1) + (A+1)*cosW0)
-	a2 := (A + 1) + (A-1)*cosW0 - beta
+type biquad struct {
+	b0, b1, b2 float64
+	a1, a2     float64
+	z1, z2     float64
+}
 
-	return newBiquad(b0, b1, b2, a0, a1, a2)
+func newBiquad(b0, b1, b2, a0, a1, a2 float64) *biquad {
+	if a0 == 0 {
+		return nil
+	}
+	invA0 := 1 / a0
+	return &biquad{
+		b0: b0 * invA0,
+		b1: b1 * invA0,
+		b2: b2 * invA0,
+		a1: a1 * invA0,
+		a2: a2 * invA0,
+	}
+}
+
+func (b *biquad) Process(x float64) float64 {
+	if b == nil {
+		return x
+	}
+	y := b.b0*x + b.z1
+	b.z1 = b.b1*x - b.a1*y + b.z2
+	b.z2 = b.b2*x - b.a2*y
+	return y
+}
+
+func applyBiquad(samples []float64, b *biquad) {
+	if b == nil {
+		return
+	}
+	for i := range samples {
+		samples[i] = b.Process(samples[i])
+	}
 }
 
 func newHighShelf(fs, freq, gainDB float64) *biquad {
@@ -735,34 +838,12 @@ func applySaturation(samples []float64, drive, mix float64) {
 	if norm == 0 {
 		norm = 1
 	}
-	for i := range samples {
-		x := samples[i] * toFloat
-		sat := math.Tanh(x*drive) / norm
-		samples[i] = ((dryMix * x) + (mix * sat)) * fromFloat
+	for i, x := range samples {
+		xf := x * toFloat
+		sat := math.Tanh(xf*drive) / norm
+		samples[i] = ((dryMix * xf) + (mix * sat)) * fromFloat
 	}
 }
-
-		if len(scatter) > 0 && scatterMix > 0 {
-			delayed := scatter[scatterIndex]
-			wet += delayed * scatterMix
-			scatter[scatterIndex] = input + delayed*scatterFeedback
-			scatterIndex++
-			if scatterIndex >= len(scatter) {
-				scatterIndex = 0
-			}
-		}
-
-		wetState += (wet - wetState) * wetLowpass
-		val := input*dryMix + wetState
-		if val > maxInt32 {
-			val = maxInt32
-		} else if val < minInt32 {
-			val = minInt32
-		}
-		samples[i] = x * fromFloat
-	}
-}
-
 func dbToLinear(db float64) float64 {
 	return math.Pow(10, db/20)
 }
