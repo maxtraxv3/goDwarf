@@ -1,6 +1,15 @@
 package main
 
-import "image"
+import (
+	"image"
+	"math"
+)
+
+const (
+	spriteUpscaleHueThreshold        = 6.0
+	spriteUpscaleSaturationThreshold = 0.08
+	spriteUpscaleBrightnessThreshold = 0.08
+)
 
 type rgbaPixel struct {
 	r uint8
@@ -45,6 +54,69 @@ func setRGBA(dst *image.RGBA, x, y int, c rgbaPixel) {
 	pix[i+3] = c.a
 }
 
+func similarColor(a, b rgbaPixel) bool {
+	if a == b {
+		return true
+	}
+	if a.a == 0 && b.a == 0 {
+		return true
+	}
+	if a.a != b.a {
+		return false
+	}
+
+	ah, as, av := rgbaToHSV(a)
+	bh, bs, bv := rgbaToHSV(b)
+
+	if math.Abs(av-bv) > spriteUpscaleBrightnessThreshold {
+		return false
+	}
+	if math.Abs(as-bs) > spriteUpscaleSaturationThreshold {
+		return false
+	}
+
+	if as < 1e-6 && bs < 1e-6 {
+		return true
+	}
+
+	dh := math.Abs(ah - bh)
+	if dh > 180 {
+		dh = 360 - dh
+	}
+	return dh <= spriteUpscaleHueThreshold
+}
+
+func rgbaToHSV(p rgbaPixel) (h, s, v float64) {
+	r := float64(p.r) / 255
+	g := float64(p.g) / 255
+	b := float64(p.b) / 255
+
+	max := math.Max(r, math.Max(g, b))
+	min := math.Min(r, math.Min(g, b))
+	v = max
+
+	d := max - min
+	if max != 0 {
+		s = d / max
+	}
+	if d == 0 {
+		return 0, s, v
+	}
+
+	switch max {
+	case r:
+		h = math.Mod((g-b)/d, 6) * 60
+	case g:
+		h = ((b-r)/d + 2) * 60
+	default:
+		h = ((r-g)/d + 4) * 60
+	}
+	if h < 0 {
+		h += 360
+	}
+	return
+}
+
 func scale2xRGBA(src *image.RGBA) *image.RGBA {
 	b := src.Bounds()
 	w := b.Dx()
@@ -62,17 +134,17 @@ func scale2xRGBA(src *image.RGBA) *image.RGBA {
 			hPix := sampleRGBA(src, x, y+1)
 
 			e0, e1, e2, e3 := e, e, e, e
-			if bPix != hPix && d != f {
-				if d == bPix {
+			if !similarColor(bPix, hPix) && !similarColor(d, f) {
+				if similarColor(d, bPix) {
 					e0 = d
 				}
-				if bPix == f {
+				if similarColor(bPix, f) {
 					e1 = f
 				}
-				if d == hPix {
+				if similarColor(d, hPix) {
 					e2 = d
 				}
-				if hPix == f {
+				if similarColor(hPix, f) {
 					e3 = f
 				}
 			}
@@ -106,29 +178,29 @@ func scale3xRGBA(src *image.RGBA) *image.RGBA {
 			i := sampleRGBA(src, x+1, y+1)
 
 			e0, e1, e2, e3, e4, e5, e6, e7, e8 := e, e, e, e, e, e, e, e, e
-			if bPix != hPix && d != f {
-				if d == bPix {
+			if !similarColor(bPix, hPix) && !similarColor(d, f) {
+				if similarColor(d, bPix) {
 					e0 = d
 				}
-				if (d == bPix && e != c) || (bPix == f && e != a) {
+				if (similarColor(d, bPix) && !similarColor(e, c)) || (similarColor(bPix, f) && !similarColor(e, a)) {
 					e1 = bPix
 				}
-				if bPix == f {
+				if similarColor(bPix, f) {
 					e2 = f
 				}
-				if (d == bPix && e != g) || (d == hPix && e != a) {
+				if (similarColor(d, bPix) && !similarColor(e, g)) || (similarColor(d, hPix) && !similarColor(e, a)) {
 					e3 = d
 				}
-				if (bPix == f && e != i) || (hPix == f && e != c) {
+				if (similarColor(bPix, f) && !similarColor(e, i)) || (similarColor(hPix, f) && !similarColor(e, c)) {
 					e5 = f
 				}
-				if d == hPix {
+				if similarColor(d, hPix) {
 					e6 = d
 				}
-				if (d == hPix && e != i) || (hPix == f && e != g) {
+				if (similarColor(d, hPix) && !similarColor(e, i)) || (similarColor(hPix, f) && !similarColor(e, g)) {
 					e7 = hPix
 				}
-				if hPix == f {
+				if similarColor(hPix, f) {
 					e8 = f
 				}
 			}

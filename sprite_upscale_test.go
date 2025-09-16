@@ -98,3 +98,37 @@ func TestScale4xRGBAChainsTwoScale2xPasses(t *testing.T) {
 		t.Fatalf("expected center pixel to remain white, got %#v", center)
 	}
 }
+
+func TestSpriteUpscaleColorSimilarityThresholds(t *testing.T) {
+	base := rgbaPixel{r: 120, g: 100, b: 90, a: 255}
+	slight := rgbaPixel{r: 121, g: 101, b: 89, a: 255}
+	if !similarColor(base, slight) {
+		t.Fatalf("expected colours within threshold to be similar")
+	}
+
+	brightnessShift := rgbaPixel{r: 180, g: 160, b: 150, a: 255}
+	if similarColor(base, brightnessShift) {
+		t.Fatalf("expected large brightness change to exceed threshold")
+	}
+
+	hueShift := rgbaPixel{r: 90, g: 170, b: 100, a: 255}
+	if similarColor(base, hueShift) {
+		t.Fatalf("expected large hue change to exceed threshold")
+	}
+
+	saturationShift := rgbaPixel{r: 120, g: 120, b: 120, a: 255}
+	if similarColor(base, saturationShift) {
+		t.Fatalf("expected large saturation change to exceed threshold")
+	}
+
+	alphaChange := rgbaPixel{r: 120, g: 100, b: 90, a: 200}
+	if similarColor(base, alphaChange) {
+		t.Fatalf("pixels with different alpha should not be similar")
+	}
+
+	transparentA := rgbaPixel{r: 10, g: 10, b: 10, a: 0}
+	transparentB := rgbaPixel{r: 200, g: 200, b: 200, a: 0}
+	if !similarColor(transparentA, transparentB) {
+		t.Fatalf("fully transparent pixels should be treated as similar")
+	}
+}
