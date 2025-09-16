@@ -96,6 +96,8 @@ func setupSynth() {
 		return
 	}
 	settings := meltysynth.NewSynthesizerSettings(sampleRate)
+	// Disable the built-in reverb/chorus effect to match the desired dry output.
+	settings.EnableReverbAndChorus = false
 	// Align meltysynth internal block size with our render loop to reduce
 	// chances of effect buffers overrunning on odd boundaries.
 	settings.BlockSize = block
