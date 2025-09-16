@@ -81,6 +81,8 @@ func spriteUpscaleIndex(val int) int {
 		return 1
 	case 3:
 		return 2
+	case 4:
+		return 3
 	default:
 		return 0
 	}
@@ -92,6 +94,8 @@ func spriteUpscaleValue(idx int) int {
 		return 2
 	case 2:
 		return 3
+	case 3:
+		return 4
 	default:
 		return 0
 	}
@@ -4362,7 +4366,7 @@ func makeQualityWindow() {
 	dd, spriteUpscaleEvents := eui.NewDropdown()
 	spriteUpscaleDD = dd
 	spriteUpscaleDD.Label = "Sprite Upscaling"
-	spriteUpscaleDD.Options = []string{"Off", "2x XBR-like", "3x XBR-like"}
+	spriteUpscaleDD.Options = []string{"Off", "2x XBR-like", "3x XBR-like", "4x XBR-like"}
 	spriteUpscaleDD.Size = eui.Point{X: width - 10, Y: 24}
 	spriteUpscaleDD.Selected = spriteUpscaleIndex(gs.SpriteUpscale)
 	spriteUpscaleDD.SetTooltip("Edge-aware upscaling for world sprites (higher values increase VRAM use)")
@@ -4382,18 +4386,18 @@ func makeQualityWindow() {
 	left.AddItem(spriteUpscaleDD)
 
 	/*
-	                showFPSCB, showFPSEvents := eui.NewCheckbox()
-	                showFPSCB.Text = "Show FPS + UPS"
-			showFPSCB.Size = eui.Point{X: width, Y: 24}
-			showFPSCB.Checked = gs.ShowFPS
-			showFPSCB.SetTooltip("Display frames per second, and updates per second")
-			showFPSEvents.Handle = func(ev eui.UIEvent) {
-				if ev.Type == eui.EventCheckboxChanged {
-					gs.ShowFPS = ev.Checked
-					settingsDirty = true
+		                showFPSCB, showFPSEvents := eui.NewCheckbox()
+		                showFPSCB.Text = "Show FPS + UPS"
+				showFPSCB.Size = eui.Point{X: width, Y: 24}
+				showFPSCB.Checked = gs.ShowFPS
+				showFPSCB.SetTooltip("Display frames per second, and updates per second")
+				showFPSEvents.Handle = func(ev eui.UIEvent) {
+					if ev.Type == eui.EventCheckboxChanged {
+						gs.ShowFPS = ev.Checked
+						settingsDirty = true
+					}
 				}
-			}
-			flow.AddItem(showFPSCB)
+				flow.AddItem(showFPSCB)
 	*/
 
 	psCB, precacheSoundEvents := eui.NewCheckbox()
