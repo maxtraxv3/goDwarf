@@ -10,6 +10,19 @@ import (
 // Keep a handle to the default splash so we can restore it
 var defaultSplashImg *ebiten.Image
 
+// When the sprite upscaler is requested before Ebiten starts (e.g. during
+// initial asset load), defer rebuilding the splash until the game loop runs.
+var classicSplashFilterPending bool
+
+func gameHasStarted() bool {
+	select {
+	case <-gameStarted:
+		return true
+	default:
+		return false
+	}
+}
+
 // prepareClassicSplash builds an opaque, 2x-nearest version of CL_Images id 4
 // cropped to the classic field box and assigns it to splashImg if enabled.
 // If disabled or unavailable, restores the default splash image.
@@ -20,6 +33,7 @@ func prepareClassicSplash() {
 	}
 
 	if !gs.ShowClanLordSplashImage || clImages == nil {
+		classicSplashFilterPending = false
 		if defaultSplashImg != nil {
 			splashImg = defaultSplashImg
 		}
@@ -29,6 +43,7 @@ func prepareClassicSplash() {
 	// Load CL_Images id 4 and crop the classic field area.
 	src := loadImage(4)
 	if src == nil {
+		classicSplashFilterPending = false
 		if defaultSplashImg != nil {
 			splashImg = defaultSplashImg
 		}
@@ -54,11 +69,25 @@ func prepareClassicSplash() {
 	op.GeoM.Translate(float64(-r.Min.X), float64(-r.Min.Y))
 	flat.DrawImage(src, op)
 
-	// 2) Scale 2x with nearest-neighbor for crisp pixels
-	scaled := newImage(r.Dx()*2, r.Dy()*2)
-	sop := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: false}
-	sop.GeoM.Scale(2, 2)
-	scaled.DrawImage(flat, sop)
+	// 2) Scale 2x, using the pixel-art upscaler when enabled for consistency.
+	useFilter := gs.SpriteUpscaleFilter && gameHasStarted()
+	if gs.SpriteUpscaleFilter && !useFilter {
+		classicSplashFilterPending = true
+	}
+	var scaled *ebiten.Image
+	if useFilter {
+		rgba := ebitenImageToRGBA(flat)
+		scaled = newImageFromImage(scale2xRGBA(rgba))
+		classicSplashFilterPending = false
+	} else {
+		scaled = newImage(r.Dx()*2, r.Dy()*2)
+		sop := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: false}
+		sop.GeoM.Scale(2, 2)
+		scaled.DrawImage(flat, sop)
+		if !gs.SpriteUpscaleFilter {
+			classicSplashFilterPending = false
+		}
+	}
 
 	// Hand the processed image to the splash drawer
 	splashImg = scaled

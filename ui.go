@@ -127,6 +127,7 @@ var (
 	motionCB          *eui.ItemData
 	animCB            *eui.ItemData
 	pictBlendCB       *eui.ItemData
+	upscaleFilterCB   *eui.ItemData
 	throttleSoundCB   *eui.ItemData
 	precacheSoundCB   *eui.ItemData
 	precacheImageCB   *eui.ItemData
@@ -4360,7 +4361,8 @@ func makeQualityWindow() {
 	}
 	left.AddItem(renderScale)
 
-	upscaleFilterCB, upscaleFilterEvents := eui.NewCheckbox()
+	uCB, upscaleFilterEvents := eui.NewCheckbox()
+	upscaleFilterCB = uCB
 	upscaleFilterCB.Text = "Artwork upscale filter"
 	upscaleFilterCB.Size = eui.Point{X: width, Y: 24}
 	upscaleFilterCB.Checked = gs.SpriteUpscaleFilter

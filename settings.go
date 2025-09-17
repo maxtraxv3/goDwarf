@@ -753,42 +753,47 @@ func restoreWindowsAfterScale() {
 }
 
 type qualityPreset struct {
-	DenoiseImages   bool
-	MotionSmoothing bool
-	BlendMobiles    bool
-	BlendPicts      bool
-	NoCaching       bool
-	ShaderLighting  bool
+	DenoiseImages       bool
+	MotionSmoothing     bool
+	BlendMobiles        bool
+	BlendPicts          bool
+	NoCaching           bool
+	ShaderLighting      bool
+	SpriteUpscaleFilter bool
 }
 
 var (
 	ultraLowPreset = qualityPreset{
-		DenoiseImages:   false,
-		MotionSmoothing: false,
-		BlendMobiles:    false,
-		BlendPicts:      false,
-		ShaderLighting:  false,
+		DenoiseImages:       false,
+		MotionSmoothing:     false,
+		BlendMobiles:        false,
+		BlendPicts:          false,
+		ShaderLighting:      false,
+		SpriteUpscaleFilter: false,
 	}
 	lowPreset = qualityPreset{
-		DenoiseImages:   false,
-		MotionSmoothing: true,
-		BlendMobiles:    false,
-		BlendPicts:      false,
-		ShaderLighting:  false,
+		DenoiseImages:       false,
+		MotionSmoothing:     true,
+		BlendMobiles:        false,
+		BlendPicts:          false,
+		ShaderLighting:      false,
+		SpriteUpscaleFilter: false,
 	}
 	standardPreset = qualityPreset{
-		DenoiseImages:   true,
-		MotionSmoothing: true,
-		BlendMobiles:    false,
-		BlendPicts:      true,
-		ShaderLighting:  false,
+		DenoiseImages:       true,
+		MotionSmoothing:     true,
+		BlendMobiles:        false,
+		BlendPicts:          true,
+		ShaderLighting:      false,
+		SpriteUpscaleFilter: true,
 	}
 	highPreset = qualityPreset{
-		DenoiseImages:   true,
-		MotionSmoothing: true,
-		BlendMobiles:    false,
-		BlendPicts:      true,
-		ShaderLighting:  true,
+		DenoiseImages:       true,
+		MotionSmoothing:     true,
+		BlendMobiles:        false,
+		BlendPicts:          true,
+		ShaderLighting:      true,
+		SpriteUpscaleFilter: true,
 	}
 )
 
@@ -812,6 +817,7 @@ func applyQualityPreset(name string) {
 	gs.BlendMobiles = p.BlendMobiles
 	gs.BlendPicts = p.BlendPicts
 	gs.ShaderLighting = p.ShaderLighting
+	gs.SpriteUpscaleFilter = p.SpriteUpscaleFilter
 	gs.SpriteUpscale = spriteUpscaleFactor()
 
 	if denoiseCB != nil {
@@ -825,6 +831,9 @@ func applyQualityPreset(name string) {
 	}
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
+	}
+	if upscaleFilterCB != nil {
+		upscaleFilterCB.Checked = gs.SpriteUpscaleFilter
 	}
 	applySettings()
 	clearCaches()
@@ -851,7 +860,8 @@ func matchesPreset(p qualityPreset) bool {
 		gs.MotionSmoothing == p.MotionSmoothing &&
 		gs.BlendMobiles == p.BlendMobiles &&
 		gs.BlendPicts == p.BlendPicts &&
-		gs.ShaderLighting == p.ShaderLighting
+		gs.ShaderLighting == p.ShaderLighting &&
+		gs.SpriteUpscaleFilter == p.SpriteUpscaleFilter
 }
 
 func detectQualityPreset() int {

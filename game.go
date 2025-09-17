@@ -620,6 +620,10 @@ func (g *Game) Update() error {
 		initGame()
 	})
 
+	if classicSplashFilterPending && gs.ShowClanLordSplashImage {
+		prepareClassicSplash()
+	}
+
 	if inputFlow != nil && len(inputFlow.Contents) > 0 {
 		eui.ClearFocus(inputFlow.Contents[0])
 		inputFlow.Contents[0].Focused = false
