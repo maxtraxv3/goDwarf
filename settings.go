@@ -179,7 +179,7 @@ var gsdef settings = settings{
 	BarColorByValue:        false,
 	ThrottleSounds:         true,
 	SoundEnhancement:       true,
-	SoundEnhancementAmount: 1.25,
+	SoundEnhancementAmount: 1.5,
 	MusicEnhancement:       true,
 	HighQualityResampling:  true,
 
