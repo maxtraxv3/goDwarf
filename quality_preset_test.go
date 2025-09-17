@@ -8,10 +8,12 @@ func TestQualityPresetPersisted(t *testing.T) {
 	t.Cleanup(func() { dataDirPath = origDir })
 
 	gs = gsdef
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
 	applyQualityPreset("Low")
 	saveSettings()
 
 	gs = gsdef
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
 	loadSettings()
 
 	if gs.ShaderLighting {

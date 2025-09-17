@@ -3667,6 +3667,7 @@ func makeSettingsWindow() {
 	resampleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.HighQualityResampling = ev.Checked
+			setHighQualityResamplingEnabled(ev.Checked)
 			clearCaches()
 			settingsDirty = true
 		}
@@ -3966,6 +3967,7 @@ func makeSettingsWindow() {
 // resetAllSettings restores gs to defaults, reapplies, and refreshes windows.
 func resetAllSettings() {
 	gs = gsdef
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
 	clampWindowSettings()
 	applySettings()
 	updateGameWindowSize()

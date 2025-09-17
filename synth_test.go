@@ -157,7 +157,10 @@ func TestPlayMuted(t *testing.T) {
 	gs.Music = false
 	gs.MasterVolume = 1
 	gs.MusicVolume = 1
-	t.Cleanup(func() { gs = orig })
+	t.Cleanup(func() {
+		gs = orig
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
+	})
 	if err := Play(ctx, 0, nil); err == nil || err.Error() != "music muted" {
 		t.Fatalf("expected music muted error, got %v", err)
 	}

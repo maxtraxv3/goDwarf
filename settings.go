@@ -396,6 +396,7 @@ func loadSettings() bool {
 	if err != nil {
 		gs = gsdef
 		applyQualityPreset("High")
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
 		return false
 	}
@@ -410,6 +411,7 @@ func loadSettings() bool {
 	tmp := settingsFile{settings: gsdef}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		gs = gsdef
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
 		return false
 	}
@@ -422,6 +424,7 @@ func loadSettings() bool {
 			tmp.settings.MusicEnhancement = *tmp.LegacyMusicReverb
 		}
 		gs = tmp.settings
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		// Normalize and retain whatever was in the file; migrate into runtime scope map.
 		gs.EnabledPlugins = make(map[string]any)
 		for k, v := range tmp.EnabledPlugins {
@@ -437,6 +440,7 @@ func loadSettings() bool {
 	} else {
 		gs = gsdef
 		applyQualityPreset("High")
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
 		return false
 	}
