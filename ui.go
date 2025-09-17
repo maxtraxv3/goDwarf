@@ -117,34 +117,38 @@ var (
 	totalCacheLabel        *eui.ItemData
 	pingLabel              *eui.ItemData
 
-	recordBtn         *eui.ItemData
-	recordStatus      *eui.ItemData
-	recordPath        string
-	qualityPresetDD   *eui.ItemData
-	shaderLightSlider *eui.ItemData
-	shaderGlowSlider  *eui.ItemData
-	denoiseCB         *eui.ItemData
-	motionCB          *eui.ItemData
-	animCB            *eui.ItemData
-	pictBlendCB       *eui.ItemData
-	upscaleFilterCB   *eui.ItemData
-	throttleSoundCB   *eui.ItemData
-	precacheSoundCB   *eui.ItemData
-	precacheImageCB   *eui.ItemData
-	noCacheCB         *eui.ItemData
-	potatoCB          *eui.ItemData
-	volumeSlider      *eui.ItemData
-	muteBtn           *eui.ItemData
-	mixerWin          *eui.WindowData
-	gameMixSlider     *eui.ItemData
-	musicMixSlider    *eui.ItemData
-	ttsMixSlider      *eui.ItemData
-	notifMixSlider    *eui.ItemData
-	mixMuteBtn        *eui.ItemData
-	gameMixCB         *eui.ItemData
-	musicMixCB        *eui.ItemData
-	ttsMixCB          *eui.ItemData
-	notifMixCB        *eui.ItemData
+	recordBtn          *eui.ItemData
+	recordStatus       *eui.ItemData
+	recordPath         string
+	qualityPresetDD    *eui.ItemData
+	shaderLightSlider  *eui.ItemData
+	shaderGlowSlider   *eui.ItemData
+	denoiseCB          *eui.ItemData
+	motionCB           *eui.ItemData
+	animCB             *eui.ItemData
+	pictBlendCB        *eui.ItemData
+	upscaleFilterCB    *eui.ItemData
+	throttleSoundCB    *eui.ItemData
+	soundEnhanceCB     *eui.ItemData
+	soundEnhanceSlider *eui.ItemData
+	musicEnhanceCB     *eui.ItemData
+	resampleAudioCB    *eui.ItemData
+	precacheSoundCB    *eui.ItemData
+	precacheImageCB    *eui.ItemData
+	noCacheCB          *eui.ItemData
+	potatoCB           *eui.ItemData
+	volumeSlider       *eui.ItemData
+	muteBtn            *eui.ItemData
+	mixerWin           *eui.WindowData
+	gameMixSlider      *eui.ItemData
+	musicMixSlider     *eui.ItemData
+	ttsMixSlider       *eui.ItemData
+	notifMixSlider     *eui.ItemData
+	mixMuteBtn         *eui.ItemData
+	gameMixCB          *eui.ItemData
+	musicMixCB         *eui.ItemData
+	ttsMixCB           *eui.ItemData
+	notifMixCB         *eui.ItemData
 )
 
 var ttsTestPhrase = "The quick brown fox jumps over the lazy dog"
@@ -3093,7 +3097,7 @@ func makeSettingsWindow() {
 	left.AddItem(label)
 
 	qualityPresetDD, qpEvents := eui.NewDropdown()
-	qualityPresetDD.Options = []string{"Potato", "Low", "Standard", "High", "Custom"}
+	qualityPresetDD.Options = []string{"Classic", "Low", "Medium", "High", "Custom"}
 	qualityPresetDD.Size = eui.Point{X: panelWidth, Y: 24}
 	qualityPresetDD.Selected = detectQualityPreset()
 	qualityPresetDD.FontSize = 12
@@ -3631,11 +3635,13 @@ func makeSettingsWindow() {
 	center.AddItem(throttleSoundCB)
 
 	enhancementCB, enhancementEvents := eui.NewCheckbox()
+	soundEnhanceCB = enhancementCB
 	enhancementCB.Text = "Audio enhancement for sound effects"
 	enhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
 	enhancementCB.Checked = gs.SoundEnhancement
 	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
 	enhancementStrengthSlider, enhancementStrengthEvents := eui.NewSlider()
+	soundEnhanceSlider = enhancementStrengthSlider
 	enhancementStrengthSlider.Label = "Enhancement Strength"
 	enhancementStrengthSlider.MinValue = 0.1
 	enhancementStrengthSlider.MaxValue = 10
@@ -3661,6 +3667,7 @@ func makeSettingsWindow() {
 	center.AddItem(enhancementStrengthSlider)
 
 	resampleCB, resampleEvents := eui.NewCheckbox()
+	resampleAudioCB = resampleCB
 	resampleCB.Text = "High quality resampling"
 	resampleCB.Size = eui.Point{X: panelWidth, Y: 24}
 	resampleCB.Checked = gs.HighQualityResampling
@@ -3676,6 +3683,7 @@ func makeSettingsWindow() {
 	center.AddItem(resampleCB)
 
 	musicEnhancementCB, musicEnhancementEvents := eui.NewCheckbox()
+	musicEnhanceCB = musicEnhancementCB
 	musicEnhancementCB.Text = "Audio enhancement for music"
 	musicEnhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
 	musicEnhancementCB.Checked = gs.MusicEnhancement

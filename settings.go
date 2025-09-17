@@ -121,9 +121,9 @@ var gsdef settings = settings{
 	Music:                true,
 	GameSound:            true,
 	Mute:                 false,
-	GameScale:            3.0,
-	SpriteUpscale:        3,
-	SpriteUpscaleFilter:  true,
+	GameScale:            2.0,
+	SpriteUpscale:        2,
+	SpriteUpscaleFilter:  false,
 	BarPlacement:         BarPlacementBottom,
 	MaxNightLevel:        100,
 	MessagesToConsole:    false,
@@ -178,13 +178,13 @@ var gsdef settings = settings{
 	PotatoGPU:              false,
 	BarColorByValue:        false,
 	ThrottleSounds:         true,
-	SoundEnhancement:       true,
+	SoundEnhancement:       false,
 	SoundEnhancementAmount: 1.5,
 	MusicEnhancement:       true,
-	HighQualityResampling:  true,
+	HighQualityResampling:  false,
 
 	NightEffect:    true,
-	ShaderLighting: true,
+	ShaderLighting: false,
 
 	// Window behavior
 	ShowClanLordSplashImage: true,
@@ -753,47 +753,67 @@ func restoreWindowsAfterScale() {
 }
 
 type qualityPreset struct {
-	DenoiseImages       bool
-	MotionSmoothing     bool
-	BlendMobiles        bool
-	BlendPicts          bool
-	NoCaching           bool
-	ShaderLighting      bool
-	SpriteUpscaleFilter bool
+	DenoiseImages          bool
+	MotionSmoothing        bool
+	BlendMobiles           bool
+	BlendPicts             bool
+	NoCaching              bool
+	ShaderLighting         bool
+	SpriteUpscaleFilter    bool
+	HighQualityResampling  bool
+	SoundEnhancement       bool
+	SoundEnhancementAmount float64
+	MusicEnhancement       bool
 }
 
 var (
 	ultraLowPreset = qualityPreset{
-		DenoiseImages:       false,
-		MotionSmoothing:     false,
-		BlendMobiles:        false,
-		BlendPicts:          false,
-		ShaderLighting:      false,
-		SpriteUpscaleFilter: false,
+		DenoiseImages:          false,
+		MotionSmoothing:        false,
+		BlendMobiles:           false,
+		BlendPicts:             false,
+		ShaderLighting:         false,
+		SpriteUpscaleFilter:    false,
+		HighQualityResampling:  false,
+		SoundEnhancement:       false,
+		SoundEnhancementAmount: 1.0,
+		MusicEnhancement:       false,
 	}
 	lowPreset = qualityPreset{
-		DenoiseImages:       false,
-		MotionSmoothing:     true,
-		BlendMobiles:        false,
-		BlendPicts:          false,
-		ShaderLighting:      false,
-		SpriteUpscaleFilter: false,
+		DenoiseImages:          false,
+		MotionSmoothing:        true,
+		BlendMobiles:           false,
+		BlendPicts:             false,
+		ShaderLighting:         false,
+		SpriteUpscaleFilter:    false,
+		HighQualityResampling:  false,
+		SoundEnhancement:       false,
+		SoundEnhancementAmount: 1.0,
+		MusicEnhancement:       false,
 	}
 	standardPreset = qualityPreset{
-		DenoiseImages:       true,
-		MotionSmoothing:     true,
-		BlendMobiles:        false,
-		BlendPicts:          true,
-		ShaderLighting:      false,
-		SpriteUpscaleFilter: true,
+		DenoiseImages:          true,
+		MotionSmoothing:        true,
+		BlendMobiles:           false,
+		BlendPicts:             true,
+		ShaderLighting:         false,
+		SpriteUpscaleFilter:    false,
+		HighQualityResampling:  false,
+		SoundEnhancement:       false,
+		SoundEnhancementAmount: 1.25,
+		MusicEnhancement:       true,
 	}
 	highPreset = qualityPreset{
-		DenoiseImages:       true,
-		MotionSmoothing:     true,
-		BlendMobiles:        false,
-		BlendPicts:          true,
-		ShaderLighting:      true,
-		SpriteUpscaleFilter: true,
+		DenoiseImages:          true,
+		MotionSmoothing:        true,
+		BlendMobiles:           true,
+		BlendPicts:             true,
+		ShaderLighting:         true,
+		SpriteUpscaleFilter:    true,
+		HighQualityResampling:  true,
+		SoundEnhancement:       true,
+		SoundEnhancementAmount: 1.25,
+		MusicEnhancement:       true,
 	}
 )
 
@@ -818,6 +838,11 @@ func applyQualityPreset(name string) {
 	gs.BlendPicts = p.BlendPicts
 	gs.ShaderLighting = p.ShaderLighting
 	gs.SpriteUpscaleFilter = p.SpriteUpscaleFilter
+	gs.HighQualityResampling = p.HighQualityResampling
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
+	gs.SoundEnhancement = p.SoundEnhancement
+	gs.SoundEnhancementAmount = clampSoundEnhancementAmount(p.SoundEnhancementAmount)
+	gs.MusicEnhancement = p.MusicEnhancement
 	gs.SpriteUpscale = spriteUpscaleFactor()
 
 	if denoiseCB != nil {
@@ -834,6 +859,19 @@ func applyQualityPreset(name string) {
 	}
 	if upscaleFilterCB != nil {
 		upscaleFilterCB.Checked = gs.SpriteUpscaleFilter
+	}
+	if soundEnhanceCB != nil {
+		soundEnhanceCB.Checked = gs.SoundEnhancement
+	}
+	if soundEnhanceSlider != nil {
+		soundEnhanceSlider.Value = float32(gs.SoundEnhancementAmount)
+		soundEnhanceSlider.Disabled = !gs.SoundEnhancement
+	}
+	if resampleAudioCB != nil {
+		resampleAudioCB.Checked = gs.HighQualityResampling
+	}
+	if musicEnhanceCB != nil {
+		musicEnhanceCB.Checked = gs.MusicEnhancement
 	}
 	applySettings()
 	clearCaches()
@@ -856,12 +894,23 @@ func applyQualityPreset(name string) {
 }
 
 func matchesPreset(p qualityPreset) bool {
-	return gs.DenoiseImages == p.DenoiseImages &&
-		gs.MotionSmoothing == p.MotionSmoothing &&
-		gs.BlendMobiles == p.BlendMobiles &&
-		gs.BlendPicts == p.BlendPicts &&
-		gs.ShaderLighting == p.ShaderLighting &&
-		gs.SpriteUpscaleFilter == p.SpriteUpscaleFilter
+	if gs.DenoiseImages != p.DenoiseImages ||
+		gs.MotionSmoothing != p.MotionSmoothing ||
+		gs.BlendMobiles != p.BlendMobiles ||
+		gs.BlendPicts != p.BlendPicts ||
+		gs.ShaderLighting != p.ShaderLighting ||
+		gs.SpriteUpscaleFilter != p.SpriteUpscaleFilter ||
+		gs.HighQualityResampling != p.HighQualityResampling ||
+		gs.SoundEnhancement != p.SoundEnhancement ||
+		gs.MusicEnhancement != p.MusicEnhancement {
+		return false
+	}
+	if p.SoundEnhancement {
+		if math.Abs(gs.SoundEnhancementAmount-p.SoundEnhancementAmount) > 0.05 {
+			return false
+		}
+	}
+	return true
 }
 
 func detectQualityPreset() int {
