@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -37,7 +38,17 @@ var (
 	sndDumpMu     sync.Mutex
 	dumpedSndIDs  = make(map[uint16]struct{})
 	sndMetaWriter *csv.Writer
+
+	highQualityResampling atomic.Bool
 )
+
+func init() {
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
+}
+
+func setHighQualityResamplingEnabled(enabled bool) {
+	highQualityResampling.Store(enabled)
+}
 
 // stopAllSounds halts and disposes all currently playing audio players.
 func stopAllSounds() {
@@ -892,7 +903,7 @@ func loadSound(id uint16) []byte {
 
 	// Decode the sound data into 16-bit samples.
 	var samples []int16
-	useHighQuality := gs.HighQualityResampling
+	useHighQuality := highQualityResampling.Load()
 	switch s.Bits {
 	case 8:
 		if useHighQuality {

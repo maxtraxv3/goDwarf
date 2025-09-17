@@ -14,7 +14,11 @@ func TestNoTTSBlocklist(t *testing.T) {
 	blockTTS = false
 	gs.ChatTTSBlocklist = []string{"blocked"}
 	syncTTSBlocklist()
-	defer func() { gs = origGS; syncTTSBlocklist() }()
+	defer func() {
+		gs = origGS
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
+		syncTTSBlocklist()
+	}()
 
 	stopAllTTS()
 

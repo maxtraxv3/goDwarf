@@ -3650,6 +3650,7 @@ func makeSettingsWindow() {
 	resampleEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.HighQualityResampling = ev.Checked
+			setHighQualityResamplingEnabled(ev.Checked)
 			clearCaches()
 			settingsDirty = true
 		}
@@ -3949,6 +3950,7 @@ func makeSettingsWindow() {
 // resetAllSettings restores gs to defaults, reapplies, and refreshes windows.
 func resetAllSettings() {
 	gs = gsdef
+	setHighQualityResamplingEnabled(gs.HighQualityResampling)
 	clampWindowSettings()
 	applySettings()
 	updateGameWindowSize()
@@ -4342,18 +4344,18 @@ func makeQualityWindow() {
 	left.AddItem(renderScale)
 
 	/*
-	                                showFPSCB, showFPSEvents := eui.NewCheckbox()
-	                                showFPSCB.Text = "Show FPS + UPS"
-					showFPSCB.Size = eui.Point{X: width, Y: 24}
-					showFPSCB.Checked = gs.ShowFPS
-					showFPSCB.SetTooltip("Display frames per second, and updates per second")
-					showFPSEvents.Handle = func(ev eui.UIEvent) {
-						if ev.Type == eui.EventCheckboxChanged {
-							gs.ShowFPS = ev.Checked
-							settingsDirty = true
+		                                showFPSCB, showFPSEvents := eui.NewCheckbox()
+		                                showFPSCB.Text = "Show FPS + UPS"
+						showFPSCB.Size = eui.Point{X: width, Y: 24}
+						showFPSCB.Checked = gs.ShowFPS
+						showFPSCB.SetTooltip("Display frames per second, and updates per second")
+						showFPSEvents.Handle = func(ev eui.UIEvent) {
+							if ev.Type == eui.EventCheckboxChanged {
+								gs.ShowFPS = ev.Checked
+								settingsDirty = true
+							}
 						}
-					}
-					flow.AddItem(showFPSCB)
+						flow.AddItem(showFPSCB)
 	*/
 
 	psCB, precacheSoundEvents := eui.NewCheckbox()

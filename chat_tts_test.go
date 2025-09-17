@@ -67,7 +67,10 @@ func TestChatTTSPendingLimit(t *testing.T) {
 	gs.ChatTTS = true
 	gs.Mute = false
 	blockTTS = false
-	defer func() { gs = origGS }()
+	defer func() {
+		gs = origGS
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
+	}()
 
 	stopAllTTS()
 
@@ -100,7 +103,10 @@ func TestChatTTSDisableDropsQueued(t *testing.T) {
 	gs.ChatTTS = true
 	gs.Mute = false
 	blockTTS = false
-	defer func() { gs = origGS }()
+	defer func() {
+		gs = origGS
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
+	}()
 
 	stopAllTTS()
 
@@ -163,7 +169,10 @@ func TestChatTTSSameSpeakerCondenses(t *testing.T) {
 	gs.ChatTTS = true
 	gs.Mute = false
 	blockTTS = false
-	defer func() { gs = origGS }()
+	defer func() {
+		gs = origGS
+		setHighQualityResamplingEnabled(gs.HighQualityResampling)
+	}()
 
 	stopAllTTS()
 	lastTTSSpeaker = ""
