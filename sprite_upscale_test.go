@@ -132,3 +132,36 @@ func TestSpriteUpscaleColorSimilarityThresholds(t *testing.T) {
 		t.Fatalf("fully transparent pixels should be treated as similar")
 	}
 }
+
+func TestScale2xRGBAIsolatedPixelSmoothing(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	white := color.RGBA{255, 255, 255, 255}
+	src.SetRGBA(1, 1, white)
+
+	dst := scale2xRGBA(src)
+	if dst.Bounds().Dx() != 6 || dst.Bounds().Dy() != 6 {
+		t.Fatalf("unexpected size: %v", dst.Bounds())
+	}
+
+	corner := dst.RGBAAt(2, 2)
+	if corner.A >= white.A {
+		t.Fatalf("expected softened alpha below source alpha, got %d", corner.A)
+	}
+	if corner.A < 180 {
+		t.Fatalf("expected softened alpha to stay visible, got %d", corner.A)
+	}
+	if corner.R != corner.G || corner.G != corner.B {
+		t.Fatalf("expected greyscale smoothing, got %#v", corner)
+	}
+
+	other := []color.RGBA{
+		dst.RGBAAt(3, 2),
+		dst.RGBAAt(2, 3),
+		dst.RGBAAt(3, 3),
+	}
+	for idx, pix := range other {
+		if pix != corner {
+			t.Fatalf("expected symmetrical smoothing, mismatch at index %d: %#v vs %#v", idx, pix, corner)
+		}
+	}
+}
