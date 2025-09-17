@@ -22,6 +22,8 @@ const (
 
 	spriteUpscaleIsolatedCornerWeight = 0.25
 	spriteUpscaleIsolatedEdgeWeight   = 0.20
+
+	spriteUpscaleAntiAliasWeight = 1.0
 )
 
 var (
@@ -296,6 +298,29 @@ func averageThreePixels(a, b, c rgbaPixel) rgbaPixel {
 	}
 }
 
+func averagePixelsSlice(pixels []rgbaPixel) rgbaPixel {
+	if len(pixels) == 0 {
+		return rgbaPixel{}
+	}
+	if len(pixels) == 1 {
+		return pixels[0]
+	}
+	sumR, sumG, sumB, sumA := 0, 0, 0, 0
+	for _, p := range pixels {
+		sumR += int(p.r)
+		sumG += int(p.g)
+		sumB += int(p.b)
+		sumA += int(p.a)
+	}
+	count := len(pixels)
+	return rgbaPixel{
+		r: uint8((sumR + count/2) / count),
+		g: uint8((sumG + count/2) / count),
+		b: uint8((sumB + count/2) / count),
+		a: uint8((sumA + count/2) / count),
+	}
+}
+
 func blendTowards(src, target rgbaPixel, weight float64) rgbaPixel {
 	if weight <= 0 {
 		return src
@@ -367,6 +392,53 @@ func softenIsolated3x(center, tl, top, tr, left, right, bl, bottom, br rgbaPixel
 	block[7] = blendTowards(center, bottom, spriteUpscaleIsolatedEdgeWeight)
 	block[8] = blendTowards(center, averageThreePixels(br, bottom, right), spriteUpscaleIsolatedCornerWeight)
 	return block, true
+}
+
+func applyUpscaleAntialias(src *image.RGBA) *image.RGBA {
+	if src == nil {
+		return nil
+	}
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return src
+	}
+	dst := image.NewRGBA(b)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			center := sampleRGBA(src, x, y)
+			if center.a == 0 {
+				setRGBA(dst, x, y, center)
+				continue
+			}
+			top := sampleRGBA(src, x, y-1)
+			bottom := sampleRGBA(src, x, y+1)
+			left := sampleRGBA(src, x-1, y)
+			right := sampleRGBA(src, x+1, y)
+			topLeft := sampleRGBA(src, x-1, y-1)
+			topRight := sampleRGBA(src, x+1, y-1)
+			bottomLeft := sampleRGBA(src, x-1, y+1)
+			bottomRight := sampleRGBA(src, x+1, y+1)
+
+			targets := make([]rgbaPixel, 0, 4)
+			addPair := func(a, b rgbaPixel) {
+				if colorsEdgeSimilar(a, b) && colorsSignificantlyDifferent(center, a) {
+					targets = append(targets, averagePixels(a, b))
+				}
+			}
+			addPair(top, bottom)
+			addPair(left, right)
+			addPair(topLeft, bottomRight)
+			addPair(topRight, bottomLeft)
+
+			if len(targets) > 0 {
+				blendTarget := averagePixelsSlice(targets)
+				center = blendTowards(center, blendTarget, spriteUpscaleAntiAliasWeight)
+			}
+			setRGBA(dst, x, y, center)
+		}
+	}
+	return dst
 }
 
 func scale4xRGBA(src *image.RGBA) *image.RGBA {

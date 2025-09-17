@@ -165,3 +165,31 @@ func TestScale2xRGBAIsolatedPixelSmoothing(t *testing.T) {
 		}
 	}
 }
+
+func TestApplyUpscaleAntialiasSmoothsEdges(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 3, 3))
+	black := color.RGBA{0, 0, 0, 255}
+	white := color.RGBA{255, 255, 255, 255}
+	for y := 0; y < 3; y++ {
+		for x := 0; x < 3; x++ {
+			img.SetRGBA(x, y, black)
+		}
+	}
+	img.SetRGBA(1, 0, white)
+	img.SetRGBA(1, 2, white)
+	aa := applyUpscaleAntialias(img)
+
+	if aa == nil {
+		t.Fatalf("expected anti-aliased image, got nil")
+	}
+	center := aa.RGBAAt(1, 1)
+	if center.R <= 40 {
+		t.Fatalf("expected center pixel to blend towards neighbours, got %#v", center)
+	}
+	if aa.RGBAAt(1, 0) != white {
+		t.Fatalf("expected top pixel to remain white")
+	}
+	if aa.RGBAAt(0, 1) != black {
+		t.Fatalf("expected adjacent black pixel to remain black")
+	}
+}
