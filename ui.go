@@ -4360,6 +4360,25 @@ func makeQualityWindow() {
 	}
 	left.AddItem(renderScale)
 
+	upscaleFilterCB, upscaleFilterEvents := eui.NewCheckbox()
+	upscaleFilterCB.Text = "Artwork upscale filter"
+	upscaleFilterCB.Size = eui.Point{X: width, Y: 24}
+	upscaleFilterCB.Checked = gs.SpriteUpscaleFilter
+	upscaleFilterCB.SetTooltip("Toggle scale-aware filtering when enlarging sprites")
+	upscaleFilterEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			if gs.SpriteUpscaleFilter != ev.Checked {
+				gs.SpriteUpscaleFilter = ev.Checked
+				clearCaches()
+				settingsDirty = true
+				if gameWin != nil {
+					gameWin.Refresh()
+				}
+			}
+		}
+	}
+	left.AddItem(upscaleFilterCB)
+
 	/*
 		                                showFPSCB, showFPSEvents := eui.NewCheckbox()
 		                                showFPSCB.Text = "Show FPS + UPS"

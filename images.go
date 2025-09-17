@@ -375,7 +375,7 @@ func upscaleSpriteImage(img *ebiten.Image, factor int) *ebiten.Image {
 
 func getScaledPictureFrame(id uint16, frame int, img *ebiten.Image) *ebiten.Image {
 	factor := spriteUpscaleFactor()
-	if factor <= 1 || img == nil {
+	if factor <= 1 || img == nil || !gs.SpriteUpscaleFilter {
 		return img
 	}
 	key := scaledImageKey{imageKey: makeImageKey(id, frame), scale: uint8(factor)}
@@ -394,7 +394,7 @@ func getScaledPictureFrame(id uint16, frame int, img *ebiten.Image) *ebiten.Imag
 
 func getScaledMobileFrame(key mobileKey, img *ebiten.Image) *ebiten.Image {
 	factor := spriteUpscaleFactor()
-	if factor <= 1 || img == nil {
+	if factor <= 1 || img == nil || !gs.SpriteUpscaleFilter {
 		return img
 	}
 	sKey := scaledMobileKey{mobileKey: key, scale: uint8(factor)}

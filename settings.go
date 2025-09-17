@@ -115,19 +115,20 @@ var gsdef settings = settings{
 	UIScale:              1.0,
 	Fullscreen:           false,
 	AlwaysOnTop:          false,
-	MasterVolume:         0.5,
-	GameVolume:           0.66,
-	MusicVolume:          0.8,
+	MasterVolume:         1.0,
+	GameVolume:           0.6,
+	MusicVolume:          1.0,
 	Music:                true,
 	GameSound:            true,
 	Mute:                 false,
 	GameScale:            2.0,
 	SpriteUpscale:        2,
+	SpriteUpscaleFilter:  true,
 	BarPlacement:         BarPlacementBottom,
 	MaxNightLevel:        100,
 	MessagesToConsole:    false,
 	ChatTTS:              false,
-	ChatTTSVolume:        1.0,
+	ChatTTSVolume:        0.33,
 	ChatTTSSpeed:         1.25,
 	ChatTTSVoice:         "en_US-hfc_female-medium",
 	Notifications:        true,
@@ -178,7 +179,7 @@ var gsdef settings = settings{
 	BarColorByValue:        false,
 	ThrottleSounds:         true,
 	SoundEnhancement:       true,
-	SoundEnhancementAmount: 1.0,
+	SoundEnhancementAmount: 1.25,
 	MusicEnhancement:       true,
 	HighQualityResampling:  true,
 
@@ -270,6 +271,7 @@ type settings struct {
 	Mute                 bool
 	GameScale            float64
 	SpriteUpscale        int
+	SpriteUpscaleFilter  bool
 	BarPlacement         BarPlacement
 	MaxNightLevel        int
 	forceNightLevel      int
