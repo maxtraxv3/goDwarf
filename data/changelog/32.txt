@@ -1,0 +1,12 @@
+Adjusted sprite edge and size requirement, virtually eliminating black pop-out effects on tailing edges while walking.
+Added option (default on) for Clan Lord splash image.
+Made login window larger, with scrollable list of characters. Now gives error if you attempt to add a character name that is already in the list.
+Added EUI window opacity setting per-window.
+Set login window to 90% opacity.
+Added "Show name-tags only on hover" option. 
+Some settings window cleanup
+Accent color selection now adjusts theme accent color as well as originally intended. 
+Fixed bug preventing login panel from being able to update passwords in some cases.
+If a password is invalid it is now cleared so you will be prompted to enter password again. Added checkbox for "remember password" when prompting for password at login.
+When the "Show name-tags only on hover" option is chosen, standard health bars are drawn instead.
+Added a smart sprite upscaler
