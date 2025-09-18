@@ -194,7 +194,7 @@ func main() {
 	}
 
 	sndStart := time.Now()
-	clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
+	clSounds, err = clsnd.Load(filepath.Join(dataDirPath, CL_SoundsFile))
 	if err != nil {
 		logError("failed to load CL_Sounds: %v", err)
 		// Do not exit; allow UI to open download window.
