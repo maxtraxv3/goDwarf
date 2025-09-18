@@ -4774,7 +4774,7 @@ func makeQualityWindow() {
 
 	sgSlider, spriteGammaEvents := eui.NewSlider()
 	spriteGammaSlider = sgSlider
-	spriteGammaSlider.Label = "Sprite Gamma"
+	spriteGammaSlider.Label = "Sprite Gamma: Old Classic Macintosh OS used a gamma of 1.8, and most modern systems use 2.2 or 2.4."
 	spriteGammaSlider.MinValue = float32(gammaOptions[0])
 	spriteGammaSlider.MaxValue = float32(gammaOptions[len(gammaOptions)-1])
 	spriteGammaSlider.Value = float32(gs.SpriteGamma)
