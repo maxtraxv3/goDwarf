@@ -290,7 +290,7 @@ func initUI() {
 	}
 
 	if !settingsLoaded {
-		openSettingsWizard(true)
+		//openSettingsWizard(true)
 	}
 }
 
