@@ -4668,6 +4668,20 @@ func makeQualityWindow() {
 	}
 	left.AddItem(potatoCB)
 
+	vsyncCB, vsyncEvents := eui.NewCheckbox()
+	vsyncCB.Text = "VSync - Limit FPS"
+	vsyncCB.Size = eui.Point{X: width, Y: 24}
+	vsyncCB.Checked = gs.vsync
+	vsyncCB.SetTooltip("Limit framerate to monitor Hz. OFF can improve speed")
+	vsyncEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.vsync = ev.Checked
+			ebiten.SetVsyncEnabled(gs.vsync)
+			settingsDirty = true
+		}
+	}
+	left.AddItem(vsyncCB)
+
 	// Shader lighting toggle in the Quality window
 	shaderQualityCB, shaderQualityEv := eui.NewCheckbox()
 	shaderQualityCB.Text = "Shader Lighting Effects"
@@ -4829,20 +4843,6 @@ func makeQualityWindow() {
 		}
 	}
 	left.AddItem(monitorGammaSlider)
-
-	vsyncCB, vsyncEvents := eui.NewCheckbox()
-	vsyncCB.Text = "VSync - Limit FPS"
-	vsyncCB.Size = eui.Point{X: width, Y: 24}
-	vsyncCB.Checked = gs.vsync
-	vsyncCB.SetTooltip("Limit framerate to monitor Hz. OFF can improve speed")
-	vsyncEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.vsync = ev.Checked
-			ebiten.SetVsyncEnabled(gs.vsync)
-			settingsDirty = true
-		}
-	}
-	left.AddItem(vsyncCB)
 
 	// (moved) Background behavior options are placed under Audio/Notifications
 
