@@ -28,6 +28,8 @@ const (
 
 var gs settings = gsdef
 
+var gammaOptions = []float64{1.8, 2.0, 2.2, 2.4}
+
 // settingsLoaded reports whether settings were successfully loaded from disk.
 var settingsLoaded bool
 
@@ -59,6 +61,22 @@ func clampSoundEnhancementAmount(v float64) float64 {
 		return 10
 	}
 	return v
+}
+
+func normalizeGamma(v, fallback float64) float64 {
+	if math.IsNaN(v) || v <= 0 {
+		return fallback
+	}
+	best := fallback
+	bestDist := math.Abs(v - best)
+	for _, opt := range gammaOptions {
+		d := math.Abs(v - opt)
+		if d < bestDist {
+			best = opt
+			bestDist = d
+		}
+	}
+	return best
 }
 
 var gsdef settings = settings{
@@ -100,39 +118,42 @@ var gsdef settings = settings{
 	BubbleMonsters:          true,
 	BubbleNarration:         true,
 
-	MotionSmoothing:      true,
-	ObjectPinning:        true,
-	BlendMobiles:         false,
-	BlendPicts:           true,
-	BlendAmount:          1.0,
-	MobileBlendAmount:    0.25,
-	MobileBlendFrames:    10,
-	PictBlendFrames:      10,
-	DenoiseImages:        true,
-	DenoiseSharpness:     4,
-	DenoiseAmount:        0.33,
-	ShowFPS:              true,
-	UIScale:              1.0,
-	Fullscreen:           false,
-	AlwaysOnTop:          false,
-	MasterVolume:         1.0,
-	GameVolume:           0.6,
-	MusicVolume:          1.0,
-	Music:                true,
-	GameSound:            true,
-	Mute:                 false,
-	GameScale:            2.0,
-	SpriteUpscale:        2,
-	SpriteUpscaleFilter:  false,
-	BarPlacement:         BarPlacementBottom,
-	MaxNightLevel:        100,
-	MessagesToConsole:    false,
-	ChatTTS:              false,
-	ChatTTSVolume:        0.33,
-	ChatTTSSpeed:         1.25,
-	ChatTTSVoice:         "en_US-hfc_female-medium",
-	Notifications:        true,
-	NotifyWhenBackground: false,
+	MotionSmoothing:       true,
+	ObjectPinning:         true,
+	BlendMobiles:          false,
+	BlendPicts:            true,
+	BlendAmount:           1.0,
+	MobileBlendAmount:     0.25,
+	MobileBlendFrames:     10,
+	PictBlendFrames:       10,
+	DenoiseImages:         true,
+	DenoiseSharpness:      4,
+	DenoiseAmount:         0.33,
+	ShowFPS:               true,
+	UIScale:               1.0,
+	Fullscreen:            false,
+	AlwaysOnTop:           false,
+	MasterVolume:          1.0,
+	GameVolume:            0.6,
+	MusicVolume:           1.0,
+	Music:                 true,
+	GameSound:             true,
+	Mute:                  false,
+	GameScale:             2.0,
+	SpriteUpscale:         2,
+	SpriteUpscaleFilter:   false,
+	SpriteGammaCorrection: true,
+	SpriteGamma:           1.8,
+	MonitorGamma:          2.2,
+	BarPlacement:          BarPlacementBottom,
+	MaxNightLevel:         100,
+	MessagesToConsole:     false,
+	ChatTTS:               false,
+	ChatTTSVolume:         0.33,
+	ChatTTSSpeed:          1.25,
+	ChatTTSVoice:          "en_US-hfc_female-medium",
+	Notifications:         true,
+	NotifyWhenBackground:  false,
 	// Power saving defaults: limit FPS in background
 	PowerSaveBackground:   true,
 	PowerSaveAlways:       false,
@@ -248,43 +269,46 @@ type settings struct {
 	BubbleMonsters          bool
 	BubbleNarration         bool
 
-	MotionSmoothing      bool
-	ObjectPinning        bool
-	BlendMobiles         bool
-	BlendPicts           bool
-	BlendAmount          float64
-	MobileBlendAmount    float64
-	MobileBlendFrames    int
-	PictBlendFrames      int
-	DenoiseImages        bool
-	DenoiseSharpness     float64
-	DenoiseAmount        float64
-	ShowFPS              bool
-	UIScale              float64
-	Fullscreen           bool
-	AlwaysOnTop          bool
-	MasterVolume         float64
-	GameVolume           float64
-	MusicVolume          float64
-	Music                bool
-	GameSound            bool
-	Mute                 bool
-	GameScale            float64
-	SpriteUpscale        int
-	SpriteUpscaleFilter  bool
-	BarPlacement         BarPlacement
-	MaxNightLevel        int
-	forceNightLevel      int
-	Theme                string
-	Style                string
-	MessagesToConsole    bool
-	ChatTTS              bool
-	ChatTTSVolume        float64
-	ChatTTSSpeed         float64
-	ChatTTSVoice         string
-	ChatTTSBlocklist     []string
-	Notifications        bool
-	NotifyWhenBackground bool
+	MotionSmoothing       bool
+	ObjectPinning         bool
+	BlendMobiles          bool
+	BlendPicts            bool
+	BlendAmount           float64
+	MobileBlendAmount     float64
+	MobileBlendFrames     int
+	PictBlendFrames       int
+	DenoiseImages         bool
+	DenoiseSharpness      float64
+	DenoiseAmount         float64
+	ShowFPS               bool
+	UIScale               float64
+	Fullscreen            bool
+	AlwaysOnTop           bool
+	MasterVolume          float64
+	GameVolume            float64
+	MusicVolume           float64
+	Music                 bool
+	GameSound             bool
+	Mute                  bool
+	GameScale             float64
+	SpriteUpscale         int
+	SpriteUpscaleFilter   bool
+	SpriteGammaCorrection bool
+	SpriteGamma           float64
+	MonitorGamma          float64
+	BarPlacement          BarPlacement
+	MaxNightLevel         int
+	forceNightLevel       int
+	Theme                 string
+	Style                 string
+	MessagesToConsole     bool
+	ChatTTS               bool
+	ChatTTSVolume         float64
+	ChatTTSSpeed          float64
+	ChatTTSVoice          string
+	ChatTTSBlocklist      []string
+	Notifications         bool
+	NotifyWhenBackground  bool
 	// PowerSaveBackground reduces FPS when window is unfocused.
 	PowerSaveBackground bool
 	// PowerSaveAlways reduces FPS even when focused (e.g., laptops).
@@ -473,6 +497,9 @@ func loadSettings() bool {
 		gs.DenoiseSharpness = gsdef.DenoiseSharpness
 	}
 
+	gs.SpriteGamma = normalizeGamma(gs.SpriteGamma, gsdef.SpriteGamma)
+	gs.MonitorGamma = normalizeGamma(gs.MonitorGamma, gsdef.MonitorGamma)
+
 	if gs.ChatTTSSpeed <= 0 {
 		gs.ChatTTSSpeed = gsdef.ChatTTSSpeed
 	}
@@ -523,6 +550,7 @@ func applySettings() {
 		clImages.Denoise = gs.DenoiseImages
 		clImages.DenoiseSharpness = gs.DenoiseSharpness
 		clImages.DenoiseAmount = gs.DenoiseAmount
+		clImages.SetGammaCorrection(gs.SpriteGammaCorrection, gs.SpriteGamma, gs.MonitorGamma)
 	}
 	ebiten.SetVsyncEnabled(gs.vsync)
 	ebiten.SetFullscreen(gs.Fullscreen)

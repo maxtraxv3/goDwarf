@@ -48,20 +48,20 @@ var (
 	dumpMusic    bool
 	imgDump      bool
 	sndDump      bool
-    dumpBEPPTags bool
-    musicDebug   bool
-    experimental bool
-    showUIScale  bool
-    measureLoads bool
+	dumpBEPPTags bool
+	musicDebug   bool
+	experimental bool
+	showUIScale  bool
+	measureLoads bool
 )
 
 func main() {
-    // Ensure any active recording is finalized on exit.
-    defer func() {
-        if recorder != nil {
-            stopRecording()
-        }
-    }()
+	// Ensure any active recording is finalized on exit.
+	defer func() {
+		if recorder != nil {
+			stopRecording()
+		}
+	}()
 	dumpTune := flag.String("dumpTune", "", "dump parsed note timings for the given tune string and exit")
 	dumpTempo := flag.Int("dumpTempo", 120, "tempo for -dumpTune (BPM)")
 	dumpInst := flag.Int("dumpInst", defaultInstrument, "instrument index for -dumpTune")
@@ -74,10 +74,10 @@ func main() {
 	flag.BoolVar(&imgDump, "imgDump", false, "dump images to dump/img as PNG")
 	flag.BoolVar(&sndDump, "sndDump", false, "dump sounds to dump/snd as WAV")
 	flag.BoolVar(&dumpBEPPTags, "dumpBEPPTags", false, "log BEPP tags seen (for empirical analysis)")
-    flag.BoolVar(&musicDebug, "musicDebug", false, "show bard music messages in chat")
-    flag.BoolVar(&experimental, "experimental", false, "enable experimental features like CL_Images/CL_Sounds patching")
-    flag.BoolVar(&showUIScale, "uiscale", false, "show UI scaling options")
-    flag.BoolVar(&measureLoads, "measure", false, "report asset load times and metadata (sounds/images)")
+	flag.BoolVar(&musicDebug, "musicDebug", false, "show bard music messages in chat")
+	flag.BoolVar(&experimental, "experimental", false, "enable experimental features like CL_Images/CL_Sounds patching")
+	flag.BoolVar(&showUIScale, "uiscale", false, "show UI scaling options")
+	flag.BoolVar(&measureLoads, "measure", false, "report asset load times and metadata (sounds/images)")
 	genPGO := flag.Bool("pgo", false, "create default.pgo using test.clMov at 30 fps for 30s")
 	verifyPath := flag.String("verifyClmov", "", "verify a .clMov file by re-encoding and comparing")
 	flag.Parse()
@@ -175,32 +175,33 @@ func main() {
 
 	initDiscordRPC(ctx)
 
-    imgStart := time.Now()
-    clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
-    if err != nil {
-        logError("failed to load CL_Images: %v", err)
-        // Do not exit; allow UI to open download window.
-    } else {
-        clImages.Denoise = gs.DenoiseImages
-        clImages.DenoiseSharpness = gs.DenoiseSharpness
-        clImages.DenoiseAmount = gs.DenoiseAmount
-        if measureLoads {
-            dtms := float64(time.Since(imgStart).Nanoseconds()) / 1e6
-            log.Printf("measure: CL_Images archive loaded in %.2fms frame=%d", dtms, frameCounter)
-        }
-        // Build/restore the splash image according to settings.
-        prepareClassicSplash()
-    }
+	imgStart := time.Now()
+	clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+	if err != nil {
+		logError("failed to load CL_Images: %v", err)
+		// Do not exit; allow UI to open download window.
+	} else {
+		clImages.Denoise = gs.DenoiseImages
+		clImages.DenoiseSharpness = gs.DenoiseSharpness
+		clImages.DenoiseAmount = gs.DenoiseAmount
+		clImages.SetGammaCorrection(gs.SpriteGammaCorrection, gs.SpriteGamma, gs.MonitorGamma)
+		if measureLoads {
+			dtms := float64(time.Since(imgStart).Nanoseconds()) / 1e6
+			log.Printf("measure: CL_Images archive loaded in %.2fms frame=%d", dtms, frameCounter)
+		}
+		// Build/restore the splash image according to settings.
+		prepareClassicSplash()
+	}
 
-    sndStart := time.Now()
-    clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
-    if err != nil {
-        logError("failed to load CL_Sounds: %v", err)
-        // Do not exit; allow UI to open download window.
-    } else if measureLoads {
-        dtms := float64(time.Since(sndStart).Nanoseconds()) / 1e6
-        log.Printf("measure: CL_Sounds archive loaded in %.2fms frame=%d", dtms, frameCounter)
-    }
+	sndStart := time.Now()
+	clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
+	if err != nil {
+		logError("failed to load CL_Sounds: %v", err)
+		// Do not exit; allow UI to open download window.
+	} else if measureLoads {
+		dtms := float64(time.Since(sndStart).Nanoseconds()) / 1e6
+		log.Printf("measure: CL_Sounds archive loaded in %.2fms frame=%d", dtms, frameCounter)
+	}
 
 	if gs.precacheSounds || gs.precacheImages {
 		go precacheAssets()

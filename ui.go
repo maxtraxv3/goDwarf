@@ -123,6 +123,9 @@ var (
 	qualityPresetDD    *eui.ItemData
 	shaderLightSlider  *eui.ItemData
 	shaderGlowSlider   *eui.ItemData
+	gammaCorrectionCB  *eui.ItemData
+	spriteGammaSlider  *eui.ItemData
+	monitorGammaSlider *eui.ItemData
 	denoiseCB          *eui.ItemData
 	motionCB           *eui.ItemData
 	animCB             *eui.ItemData
@@ -284,6 +287,10 @@ func initUI() {
 	uiReady = true
 	if !windowsRestored {
 		restoreWindowSettings()
+	}
+
+	if !settingsLoaded {
+		openSettingsWizard(true)
 	}
 }
 
@@ -2733,6 +2740,173 @@ func makeErrorWindow(msg string) {
 
 var SettingsLock sync.Mutex
 
+const settingsWizardWidth float32 = 420
+
+type settingsWizardPage struct {
+	Title string
+	Body  string
+}
+
+var (
+	settingsWizardWin       *eui.WindowData
+	settingsWizardContent   *eui.ItemData
+	settingsWizardPageIndex int
+)
+
+var settingsWizardPages = []settingsWizardPage{
+	{
+		Title: "Welcome",
+		Body:  "This guided tour walks through every Settings group so you know what each control does before you change it.\n\n- Use Next and Back to move between sections; the wizard stays open alongside the Settings window so you can test changes immediately.\n- Close the wizard at any time. You can relaunch it from Settings -> Rerun Settings Wizard whenever you want a refresher.",
+	},
+	{
+		Title: "Window Behavior & Appearance",
+		Body:  "- \"Show Clan Lord splash image\" toggles the classic login art on startup.\n- \"UI Scaling\" resizes every panel; move the slider then press Apply to commit the new scale.\n- \"Fullscreen (F12)\" switches to borderless fullscreen, and \"Always on top\" keeps the window above others when you are multitasking.\n- \"Show pin-to locations\" reveals docking guides when you drag windows so layouts are easier to align.\n- The \"Color Theme\" and \"Style Theme\" selectors restyle the interface instantly, and the Accent Color wheel lets you pick a custom highlight.",
+	},
+	{
+		Title: "Controls",
+		Body:  "- \"Click-to-toggle movement\" lets one click start walking and the next click stop it, matching the classic client option.\n- \"Middle-click moves windows\" turns the middle mouse button into a drag handle anywhere on a window.\n- \"Input bar always open\" keeps the command entry active after sending so you can type again without pressing Return.\n- \"Keyboard Walk Speed\" adjusts how quickly held movement keys advance your exile.\n- Use the \"Gamepad\" button to open the dedicated controller window for binding buttons and tuning deadzones.",
+	},
+	{
+		Title: "Quality Options",
+		Body:  "- The Quality Preset menu loads tuned profiles (Classic, Low, Medium, High) so you can start from a known baseline.\n- After selecting a preset, the \"Quality Settings\" button opens the full graphics window with shader lighting, denoising, smoothing, and GPU options.\n- Revisit this group whenever you want to balance clarity against performance; presets update instantly so you can compare looks.",
+	},
+	{
+		Title: "Chat & Notifications",
+		Body:  "- \"Combine chat + console\" merges both panes into one log; leave it unchecked for separate chat and console windows.\n- Individual timestamp toggles add time metadata to chat or console lines.\n- \"Game Notifications\" governs the toast popups for events; turn it off if you want a quieter view.\n- \"Timestamp format\" accepts Go time patterns (01, 02, 15, 04, 05) so you can format stamps exactly how you like.\n- Use the \"Notification Settings\" and \"Message Bubbles\" buttons for deeper control over alerts and bubble styling.",
+	},
+	{
+		Title: "Status Bar & HUD",
+		Body:  "- Pick a status bar placement to move the health, mana, and balance bars to the bottom or cluster them in screen corners.\n- Enable \"Color bars by value\" to fade bar colors toward red as you run low, or leave it off for the classic static look.",
+	},
+	{
+		Title: "Opacity & Bubble Visibility",
+		Body:  "- \"Max Night Level\" caps how dark night scenes become; lowering it keeps areas brighter.\n- Sliders control name tag backgrounds, bubble opacity, lifetimes, and scale so you can match readability to taste.\n- \"Name Tag Label Colors\" and \"Show name-tags only on hover\" toggle extra context or reduce clutter around characters.\n- \"Fade objects obscuring mobiles\" and its opacity slider adjust how strongly scenery fades when it blocks players.\n- \"Status bar opacity\" sets how solid the HUD bars appear.",
+	},
+	{
+		Title: "Text Sizes",
+		Body:  "- Each font slider targets a specific window: names, inventory, players list, console, chat window, and chat bubbles.\n- Changes take effect immediately; larger fonts may trigger automatic window refreshes so the layout stays aligned.\n- Use this group to keep the UI legible on high-DPI displays without altering overall UI scale.",
+	},
+	{
+		Title: "Audio & Speech",
+		Body:  "- \"Throttle Sounds\" prevents repeating effects from spamming every frame during busy scenes.\n- Audio enhancement toggles add stereo width and ambience for effects or music, with a strength slider for fine tuning.\n- \"High quality resampling\" enables Lanczos filtering and dithering for cleaner playback at the cost of extra CPU.\n- TTS controls cover speed, voice selection, and a test phrase so you can preview Piper voices; \"Edit TTS corrections\" opens the files you can tweak.\n- These options work together with the Mixer window so you can balance output without leaving the game.",
+	},
+	{
+		Title: "Advanced & Maintenance",
+		Body:  "- Power-save options reduce the frame rate when the client is unfocused or even while active, which helps on laptops.\n- \"Auto-kill spammy scripts\" stops plugins that flood output, and \"Auto-record sessions\" starts and ends game recordings automatically.\n- The \"Debug Settings\" button opens diagnostic toggles, and \"Download Files\" rechecks optional art, sound, and movie archives.\n- \"Reset All Settings\" restores every value to defaults, rebuilds windows, and reapplies them immediately.\n- You can reopen this wizard any time with the \"Rerun Settings Wizard\" button at the top of the main Settings panel.",
+	},
+}
+
+func makeSettingsWizardWindow() {
+	if settingsWizardWin != nil {
+		return
+	}
+	settingsWizardWin = eui.NewWindow()
+	settingsWizardWin.Title = "Settings Wizard"
+	settingsWizardWin.Closable = true
+	settingsWizardWin.Resizable = false
+	settingsWizardWin.AutoSize = true
+	settingsWizardWin.Movable = true
+	settingsWizardWin.Padding = 14
+	settingsWizardWin.Margin = 12
+	settingsWizardWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
+}
+
+func rebuildSettingsWizardPage() {
+	if settingsWizardWin == nil || len(settingsWizardPages) == 0 {
+		return
+	}
+	if settingsWizardPageIndex < 0 {
+		settingsWizardPageIndex = 0
+	}
+	if settingsWizardPageIndex >= len(settingsWizardPages) {
+		settingsWizardPageIndex = len(settingsWizardPages) - 1
+	}
+	if settingsWizardContent != nil {
+		settingsWizardWin.RemoveItem(settingsWizardContent)
+		settingsWizardContent = nil
+	}
+
+	page := settingsWizardPages[settingsWizardPageIndex]
+	container := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	container.Size = eui.Point{X: settingsWizardWidth, Y: 0}
+
+	progress, _ := eui.NewText()
+	progress.FontSize = 12
+	progress.Text = fmt.Sprintf("Step %d of %d", settingsWizardPageIndex+1, len(settingsWizardPages))
+	progress.Size = eui.Point{X: settingsWizardWidth, Y: 18}
+	container.AddItem(progress)
+
+	title, _ := eui.NewText()
+	title.FontSize = 18
+	title.Text = page.Title
+	title.Size = eui.Point{X: settingsWizardWidth, Y: 28}
+	applyBoldFace(title)
+	container.AddItem(title)
+
+	body, _ := eui.NewText()
+	body.FontSize = 13
+	body.LineSpace = 1.2
+	body.Text = page.Body
+	body.Size = eui.Point{X: settingsWizardWidth, Y: 0}
+	container.AddItem(body)
+
+	buttons := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+	buttons.Size = eui.Point{X: settingsWizardWidth, Y: 30}
+
+	backBtn, backEvents := eui.NewButton()
+	backBtn.Text = "Back"
+	backBtn.Size = eui.Point{X: 80, Y: 24}
+	backBtn.Disabled = settingsWizardPageIndex == 0
+	backEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick && settingsWizardPageIndex > 0 {
+			settingsWizardPageIndex--
+			rebuildSettingsWizardPage()
+		}
+	}
+	buttons.AddItem(backBtn)
+
+	nextLabel := "Next"
+	if settingsWizardPageIndex == len(settingsWizardPages)-1 {
+		nextLabel = "Finish"
+	}
+
+	nextBtn, nextEvents := eui.NewButton()
+	nextBtn.Text = nextLabel
+	nextBtn.Size = eui.Point{X: 90, Y: 24}
+	nextEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type != eui.EventClick {
+			return
+		}
+		if settingsWizardPageIndex == len(settingsWizardPages)-1 {
+			settingsWizardWin.Close()
+			return
+		}
+		settingsWizardPageIndex++
+		rebuildSettingsWizardPage()
+	}
+	buttons.AddItem(nextBtn)
+
+	container.AddItem(buttons)
+	settingsWizardContent = container
+	settingsWizardWin.AddItem(container)
+	settingsWizardWin.DefaultButton = nextBtn
+	settingsWizardWin.Refresh()
+}
+
+func openSettingsWizard(reset bool) {
+	if len(settingsWizardPages) == 0 {
+		return
+	}
+	if settingsWizardWin == nil {
+		makeSettingsWizardWindow()
+	}
+	if reset || settingsWizardPageIndex >= len(settingsWizardPages) {
+		settingsWizardPageIndex = 0
+	}
+	rebuildSettingsWizardPage()
+	settingsWizardWin.MarkOpen()
+}
+
 func makeSettingsWindow() {
 	if settingsWin != nil {
 		return
@@ -2755,6 +2929,17 @@ func makeSettingsWindow() {
 	right.Size = eui.Point{X: panelWidth, Y: 10}
 
 	// (Reset button added at the bottom-right later)
+
+	wizardBtn, wizardEvents := eui.NewButton()
+	wizardBtn.Text = "Rerun Settings Wizard"
+	wizardBtn.Size = eui.Point{X: panelWidth, Y: 24}
+	wizardBtn.SetTooltip("Open a guided explanation of each settings group")
+	wizardEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			openSettingsWizard(true)
+		}
+	}
+	left.AddItem(wizardBtn)
 
 	label, _ := eui.NewText()
 	label.Text = "\nWindow Behavior:"
@@ -4550,6 +4735,100 @@ func makeQualityWindow() {
 		}
 	}
 	left.AddItem(shaderGlowSlider)
+
+	label, _ = eui.NewText()
+	label.Text = "\nSprite Gamma Correction:"
+	label.FontSize = 15
+	label.Size = eui.Point{X: width, Y: 50}
+	applyBoldFace(label)
+	left.AddItem(label)
+
+	gcCB, gammaEvents := eui.NewCheckbox()
+	gammaCorrectionCB = gcCB
+	gammaCorrectionCB.Text = "Enable Sprite Gamma Correction"
+	gammaCorrectionCB.Size = eui.Point{X: width, Y: 24}
+	gammaCorrectionCB.Checked = gs.SpriteGammaCorrection
+	gammaCorrectionCB.SetTooltip("Apply gamma compensation while decoding sprites")
+	gammaEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			if gs.SpriteGammaCorrection != ev.Checked {
+				gs.SpriteGammaCorrection = ev.Checked
+				if spriteGammaSlider != nil {
+					spriteGammaSlider.Disabled = !ev.Checked
+				}
+				if monitorGammaSlider != nil {
+					monitorGammaSlider.Disabled = !ev.Checked
+				}
+				if clImages != nil {
+					clImages.SetGammaCorrection(gs.SpriteGammaCorrection, gs.SpriteGamma, gs.MonitorGamma)
+				}
+				clearCaches()
+				settingsDirty = true
+				if qualityWin != nil {
+					qualityWin.Refresh()
+				}
+			}
+		}
+	}
+	left.AddItem(gammaCorrectionCB)
+
+	sgSlider, spriteGammaEvents := eui.NewSlider()
+	spriteGammaSlider = sgSlider
+	spriteGammaSlider.Label = "Sprite Gamma"
+	spriteGammaSlider.MinValue = float32(gammaOptions[0])
+	spriteGammaSlider.MaxValue = float32(gammaOptions[len(gammaOptions)-1])
+	spriteGammaSlider.Value = float32(gs.SpriteGamma)
+	spriteGammaSlider.Size = eui.Point{X: width - 10, Y: 24}
+	spriteGammaSlider.Disabled = !gs.SpriteGammaCorrection
+	spriteGammaSlider.SetTooltip("Expected gamma embedded in sprite artwork")
+	spriteGammaEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			target := normalizeGamma(float64(ev.Value), gs.SpriteGamma)
+			if math.Abs(float64(spriteGammaSlider.Value)-target) > 0.0001 {
+				spriteGammaSlider.Value = float32(target)
+			}
+			if math.Abs(gs.SpriteGamma-target) > 0.0001 {
+				gs.SpriteGamma = target
+				if clImages != nil {
+					clImages.SetGammaCorrection(gs.SpriteGammaCorrection, gs.SpriteGamma, gs.MonitorGamma)
+				}
+				if gs.SpriteGammaCorrection {
+					clearCaches()
+				}
+				settingsDirty = true
+			}
+		}
+	}
+	left.AddItem(spriteGammaSlider)
+
+	mgSlider, monitorGammaEvents := eui.NewSlider()
+	monitorGammaSlider = mgSlider
+	monitorGammaSlider.Label = "Monitor Gamma"
+	monitorGammaSlider.MinValue = float32(gammaOptions[0])
+	monitorGammaSlider.MaxValue = float32(gammaOptions[len(gammaOptions)-1])
+	monitorGammaSlider.Value = float32(gs.MonitorGamma)
+	monitorGammaSlider.Size = eui.Point{X: width - 10, Y: 24}
+	monitorGammaSlider.Disabled = !gs.SpriteGammaCorrection
+	monitorGammaSlider.SetTooltip("Target display gamma to compensate towards")
+	monitorGammaEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			target := normalizeGamma(float64(ev.Value), gs.MonitorGamma)
+			if math.Abs(float64(monitorGammaSlider.Value)-target) > 0.0001 {
+				monitorGammaSlider.Value = float32(target)
+			}
+			if math.Abs(gs.MonitorGamma-target) > 0.0001 {
+				gs.MonitorGamma = target
+				if clImages != nil {
+					clImages.SetGammaCorrection(gs.SpriteGammaCorrection, gs.SpriteGamma, gs.MonitorGamma)
+				}
+				if gs.SpriteGammaCorrection {
+					clearCaches()
+				}
+				settingsDirty = true
+			}
+		}
+	}
+	left.AddItem(monitorGammaSlider)
 
 	vsyncCB, vsyncEvents := eui.NewCheckbox()
 	vsyncCB.Text = "VSync - Limit FPS"

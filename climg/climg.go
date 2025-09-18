@@ -7,6 +7,7 @@ import (
 	"image"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sync"
 
@@ -48,6 +49,11 @@ type CLImages struct {
 	Denoise          bool
 	DenoiseSharpness float64
 	DenoiseAmount    float64
+	gammaMu          sync.RWMutex
+	gammaEnabled     bool
+	spriteGamma      float64
+	monitorGamma     float64
+	gammaLUT         []uint8
 }
 
 const (
@@ -622,6 +628,11 @@ func (c *CLImages) Get(id uint32, custom []byte, forceTransparent bool) *ebiten.
 	// allow callers to force this behavior.
 	alpha, _ := alphaTransparentForFlags(ref.flags)
 
+	c.gammaMu.RLock()
+	gammaEnabled := c.gammaEnabled
+	gammaLUT := c.gammaLUT
+	c.gammaMu.RUnlock()
+
 	pix := img.Pix
 	stride := img.Stride
 	for i := 0; i < pixelCount; i++ {
@@ -635,6 +646,11 @@ func (c *CLImages) Get(id uint32, custom []byte, forceTransparent bool) *ebiten.
 		// even on assets without the explicit transparent flag.
 		if idx == 0 {
 			a = 0
+		}
+		if gammaEnabled && len(gammaLUT) == 256 {
+			r = gammaLUT[r]
+			g = gammaLUT[g]
+			b = gammaLUT[b]
 		}
 		// Ebiten expects premultiplied alpha values.
 		r = uint8(int(r) * int(a) / 255)
@@ -675,6 +691,50 @@ func (c *CLImages) ClearCache() {
 	}
 	c.cache = make(map[string]*ebiten.Image)
 	c.mu.Unlock()
+}
+
+// SetGammaCorrection configures sprite gamma compensation.
+func (c *CLImages) SetGammaCorrection(enabled bool, spriteGamma, monitorGamma float64) {
+	appliedSprite := spriteGamma
+	if appliedSprite <= 0 {
+		appliedSprite = 2.2
+	}
+	appliedMonitor := monitorGamma
+	if appliedMonitor <= 0 {
+		appliedMonitor = 2.2
+	}
+	c.gammaMu.Lock()
+	c.gammaEnabled = enabled
+	c.spriteGamma = appliedSprite
+	c.monitorGamma = appliedMonitor
+	if !enabled {
+		c.gammaLUT = nil
+		c.gammaMu.Unlock()
+		return
+	}
+	lut := make([]uint8, 256)
+	invMonitor := 1.0 / appliedMonitor
+	for i := 0; i < 256; i++ {
+		x := float64(i) / 255.0
+		var y float64
+		switch {
+		case x <= 0:
+			y = 0
+		case x >= 1:
+			y = 1
+		default:
+			linear := math.Pow(x, appliedSprite)
+			y = math.Pow(linear, invMonitor)
+		}
+		if y < 0 {
+			y = 0
+		} else if y > 1 {
+			y = 1
+		}
+		lut[i] = uint8(math.Round(y * 255))
+	}
+	c.gammaLUT = lut
+	c.gammaMu.Unlock()
 }
 
 // FrameIndex returns the picture frame for the given global animation counter.
