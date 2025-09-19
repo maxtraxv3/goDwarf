@@ -2756,11 +2756,11 @@ var (
 var settingsWizardPages = []settingsWizardPage{
 	{
 		Title: "Welcome",
-		Body:  "This guided tour walks through every Settings group so you know what each control does before you change it.\n\n- Use Next and Back to move between sections; the wizard stays open alongside the Settings window so you can test changes immediately.\n- Close the wizard at any time. You can relaunch it from Settings -> Rerun Settings Wizard whenever you want a refresher.",
+		Body:  "This guided tour walks through some basic settings.\n\n- Use Next and Back to move between sections; the wizard stays open alongside the Settings window so you can test changes immediately.\n- Close the wizard at any time. You can relaunch it from Settings -> Rerun Settings Wizard.",
 	},
 	{
 		Title: "Window Behavior & Appearance",
-		Body:  "- \"Show Clan Lord splash image\" toggles the classic login art on startup.\n- \"UI Scaling\" resizes every panel; move the slider then press Apply to commit the new scale.\n- \"Fullscreen (F12)\" switches to borderless fullscreen, and \"Always on top\" keeps the window above others when you are multitasking.\n- \"Show pin-to locations\" reveals docking guides when you drag windows so layouts are easier to align.\n- The \"Color Theme\" and \"Style Theme\" selectors restyle the interface instantly, and the Accent Color wheel lets you pick a custom highlight.",
+		Body:  "- \"Fullscreen (F12)\" switches to borderless fullscreen, and \"Always on top\" keeps the window above others when you are multitasking.\n- \"Show pin-to locations\" reveals docking guides when you drag windows so layouts are easier to align.\n- The \"Color Theme\" and \"Style Theme\" selectors restyle the interface instantly, and the Accent Color wheel lets you pick a custom highlight.",
 	},
 	{
 		Title: "Controls",
