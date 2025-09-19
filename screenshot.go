@@ -12,6 +12,10 @@ import (
 )
 
 func takeScreenshot() {
+    if isWASM {
+        // Screenshots not supported in WASM; ignore.
+        return
+    }
 	var shot image.Image
 	if gameImage != nil {
 		rect := worldViewRect

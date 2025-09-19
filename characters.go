@@ -70,6 +70,10 @@ func loadCharacters() {
 }
 
 func saveCharacters() {
+    if isWASM {
+        // Skip persistence in WASM.
+        return
+    }
 	var persisted []Character
 	for i := range characters {
 		if characters[i].DontRemember || strings.HasPrefix(characters[i].Name, agratisPrefix) {

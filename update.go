@@ -312,10 +312,12 @@ func autoUpdate(resp []byte, dataDir string) (int, error) {
 	if len(resp) < 16 {
 		return 0, fmt.Errorf("short response for update")
 	}
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		logError("create %v: %v", dataDir, err)
-		return 0, err
-	}
+    if !isWASM {
+        if err := os.MkdirAll(dataDir, 0755); err != nil {
+            logError("create %v: %v", dataDir, err)
+            return 0, err
+        }
+    }
 	base := string(resp[16:])
 	if i := strings.IndexByte(base, 0); i >= 0 {
 		base = base[:i]
@@ -550,10 +552,11 @@ func downloadDataFiles(clientVer int, status dataFilesStatus, getSoundfont, getP
     if isWASM {
         // Restrict downloads to CL_Images/CL_Sounds only in WASM.
         getSoundfont, getPiper, getFem, getMale = false, false, false, false
-    }
-    if err := os.MkdirAll(dataDirPath, 0755); err != nil {
-        logError("create %v: %v", dataDirPath, err)
-        return err
+    } else {
+        if err := os.MkdirAll(dataDirPath, 0755); err != nil {
+            logError("create %v: %v", dataDirPath, err)
+            return err
+        }
     }
 	bases := []string{updateBase}
 	if updateBase != fallbackUpdateBase {

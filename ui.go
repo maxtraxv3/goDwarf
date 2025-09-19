@@ -1937,16 +1937,23 @@ func makeDownloadsWindow() {
 		}()
 	}
 
-	btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
-	dlBtn, dlEvents := eui.NewButton()
-	dlBtn.Text = "Download"
-	dlBtn.Size = eui.Point{X: 100, Y: 24}
-	dlEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			startDownload()
-		}
-	}
-	btnFlow.AddItem(dlBtn)
+    // Auto-start download in WASM to avoid extra click; keep window open for progress.
+    if isWASM {
+        startDownload()
+    }
+
+    btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+    if !isWASM {
+        dlBtn, dlEvents := eui.NewButton()
+        dlBtn.Text = "Download"
+        dlBtn.Size = eui.Point{X: 100, Y: 24}
+        dlEvents.Handle = func(ev eui.UIEvent) {
+            if ev.Type == eui.EventClick {
+                startDownload()
+            }
+        }
+        btnFlow.AddItem(dlBtn)
+    }
 
 	closeBtn, closeEvents := eui.NewButton()
 	closeBtn.Size = eui.Point{X: 100, Y: 24}

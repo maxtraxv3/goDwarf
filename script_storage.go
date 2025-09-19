@@ -85,6 +85,10 @@ func pluginStorageDelete(owner, key string) {
 }
 
 func savePluginStores() {
+    if isWASM {
+        // Skip persistence in WASM.
+        return
+    }
 	pluginStoreMu.Lock()
 	stores := make([]*pluginStore, 0, len(pluginStores))
 	for _, ps := range pluginStores {
