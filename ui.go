@@ -1875,8 +1875,14 @@ func makeDownloadsWindow() {
 				downloadWin.Refresh()
 				return
 			}
-			imgStart := time.Now()
-			img, err := climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+            imgStart := time.Now()
+            var img *climg.CLImages
+            var err error
+            if isWASM && len(wasmCLImagesData) > 0 {
+                img, err = climg.LoadBytes(wasmCLImagesData)
+            } else {
+                img, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+            }
 			if err != nil {
 				logError("failed to load CL_Images: %v", err)
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Images")
@@ -1897,8 +1903,12 @@ func makeDownloadsWindow() {
 				playersDirty = true
 			}
 
-			sndStart := time.Now()
-			clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
+            sndStart := time.Now()
+            if isWASM && len(wasmCLSoundsData) > 0 {
+                clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
+            } else {
+                clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
+            }
 			if err != nil {
 				logError("failed to load CL_Sounds: %v", err)
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Sounds")

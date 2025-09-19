@@ -174,8 +174,12 @@ func main() {
 
 	initDiscordRPC(ctx)
 
-	imgStart := time.Now()
-	clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+    imgStart := time.Now()
+    if isWASM && len(wasmCLImagesData) > 0 {
+        clImages, err = climg.LoadBytes(wasmCLImagesData)
+    } else {
+        clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+    }
 	if err != nil {
 		logError("failed to load CL_Images: %v", err)
 		// Do not exit; allow UI to open download window.
@@ -192,8 +196,12 @@ func main() {
 		prepareClassicSplash()
 	}
 
-	sndStart := time.Now()
-	clSounds, err = clsnd.Load(filepath.Join(dataDirPath, CL_SoundsFile))
+    sndStart := time.Now()
+    if isWASM && len(wasmCLSoundsData) > 0 {
+        clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
+    } else {
+        clSounds, err = clsnd.Load(filepath.Join(dataDirPath, CL_SoundsFile))
+    }
 	if err != nil {
 		logError("failed to load CL_Sounds: %v", err)
 		// Do not exit; allow UI to open download window.

@@ -1,11 +1,11 @@
 package clsnd
 
 import (
-	"encoding/binary"
-	"fmt"
-	"log"
-	"os"
-	"sync"
+    "encoding/binary"
+    "fmt"
+    "log"
+    "os"
+    "sync"
 )
 
 type entry struct {
@@ -37,39 +37,44 @@ const (
 
 // Load parses the CL_Sounds keyfile located at path.
 func Load(path string) (*CLSounds, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		log.Printf("CL_Sounds file missing.")
-		return nil, err
-	}
-	if len(data) < 12 {
-		log.Printf("CL_Sounds may be corrupt.")
-		return nil, fmt.Errorf("short file")
-	}
-	if binary.BigEndian.Uint16(data[:2]) != 0xffff {
-		log.Printf("CL_Sounds invalid.")
-		return nil, fmt.Errorf("bad header")
-	}
-	r := data[2:]
-	entryCount := binary.BigEndian.Uint32(r[:4])
-	r = r[4+4+2:] // skip pad1, pad2
+    data, err := os.ReadFile(path)
+    if err != nil {
+        log.Printf("CL_Sounds file missing.")
+        return nil, err
+    }
+    return LoadBytes(data)
+}
 
-	idx := make(map[uint32]entry, entryCount)
-	for i := uint32(0); i < entryCount; i++ {
-		if len(r) < 16 {
-			log.Printf("CL_Sounds may be corrupt.")
-			return nil, fmt.Errorf("truncated table")
-		}
-		off := binary.BigEndian.Uint32(r[0:4])
-		size := binary.BigEndian.Uint32(r[4:8])
-		typ := binary.BigEndian.Uint32(r[8:12])
-		id := binary.BigEndian.Uint32(r[12:16])
-		if typ == typeSound {
-			idx[id] = entry{offset: off, size: size}
-		}
-		r = r[16:]
-	}
-	return &CLSounds{data: data, index: idx, cache: make(map[uint32]*Sound)}, nil
+// LoadBytes parses the CL_Sounds keyfile from an in-memory byte slice.
+func LoadBytes(data []byte) (*CLSounds, error) {
+    if len(data) < 12 {
+        log.Printf("CL_Sounds may be corrupt.")
+        return nil, fmt.Errorf("short file")
+    }
+    if binary.BigEndian.Uint16(data[:2]) != 0xffff {
+        log.Printf("CL_Sounds invalid.")
+        return nil, fmt.Errorf("bad header")
+    }
+    r := data[2:]
+    entryCount := binary.BigEndian.Uint32(r[:4])
+    r = r[4+4+2:] // skip pad1, pad2
+
+    idx := make(map[uint32]entry, entryCount)
+    for i := uint32(0); i < entryCount; i++ {
+        if len(r) < 16 {
+            log.Printf("CL_Sounds may be corrupt.")
+            return nil, fmt.Errorf("truncated table")
+        }
+        off := binary.BigEndian.Uint32(r[0:4])
+        size := binary.BigEndian.Uint32(r[4:8])
+        typ := binary.BigEndian.Uint32(r[8:12])
+        id := binary.BigEndian.Uint32(r[12:16])
+        if typ == typeSound {
+            idx[id] = entry{offset: off, size: size}
+        }
+        r = r[16:]
+    }
+    return &CLSounds{data: data, index: idx, cache: make(map[uint32]*Sound)}, nil
 }
 
 // Get returns the decoded sound for the given id. The sound data is loaded

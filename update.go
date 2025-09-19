@@ -96,24 +96,52 @@ var downloadGZ = func(url, dest string) error {
 		downloadProgress(pc.name, 0, pc.size)
 	}
 	body := io.TeeReader(resp.Body, pc)
-	gz, err := gzip.NewReader(body)
-	if err != nil {
-		logError("gzip reader %v: %v", url, err)
-		if downloadStatus != nil {
-			downloadStatus(fmt.Sprintf("Error: %v", err))
-		}
-		return err
-	}
-	defer gz.Close()
-	tmp := dest + ".tmp"
-	f, err := os.Create(tmp)
-	if err != nil {
-		logError("create %v: %v", tmp, err)
-		if downloadStatus != nil {
-			downloadStatus(fmt.Sprintf("Error: %v", err))
-		}
-		return err
-	}
+    gz, err := gzip.NewReader(body)
+    if err != nil {
+        logError("gzip reader %v: %v", url, err)
+        if downloadStatus != nil {
+            downloadStatus(fmt.Sprintf("Error: %v", err))
+        }
+        return err
+    }
+    defer gz.Close()
+    // For WASM, keep CL_Images/CL_Sounds in-memory instead of writing to disk.
+    if isWASM {
+        base := filepath.Base(dest)
+        if base == CL_ImagesFile || base == CL_SoundsFile {
+            data, err := io.ReadAll(gz)
+            if err != nil {
+                if downloadStatus != nil {
+                    downloadStatus(fmt.Sprintf("Error: %v", err))
+                }
+                return err
+            }
+            if base == CL_ImagesFile {
+                wasmCLImagesData = data
+            } else {
+                wasmCLSoundsData = data
+            }
+            // Ensure a final 100% progress update when size is known.
+            if downloadProgress != nil && pc.size > 0 {
+                downloadProgress(pc.name, pc.size, pc.size)
+            }
+            consoleMessage("Download complete.")
+            if downloadStatus != nil {
+                downloadStatus(fmt.Sprintf("Download complete: %s", filepath.Base(dest)))
+            }
+            return nil
+        }
+    }
+
+    tmp := dest + ".tmp"
+    f, err := os.Create(tmp)
+    if err != nil {
+        logError("create %v: %v", tmp, err)
+        if downloadStatus != nil {
+            downloadStatus(fmt.Sprintf("Error: %v", err))
+        }
+        return err
+    }
 	removeTmp := true
 	defer func() {
 		if removeTmp {
@@ -380,7 +408,7 @@ type dataFilesStatus struct {
 }
 
 func checkDataFiles(clientVer int) (dataFilesStatus, error) {
-	var status dataFilesStatus
+    var status dataFilesStatus
 
 	imgPath := filepath.Join(dataDirPath, CL_ImagesFile)
 	if v, err := readKeyFileVersion(imgPath); err != nil {
@@ -422,20 +450,24 @@ func checkDataFiles(clientVer int) (dataFilesStatus, error) {
 		}
 		status.Files = append(status.Files, fileInfo{Name: name, Size: size})
 	}
-	if status.NeedSounds {
-		name := fmt.Sprintf("CL_Sounds.%d.gz", clientVer)
-		size := headSize(fmt.Sprintf("%v/data/%s", updateBase, name))
-		if size < 0 && updateBase != fallbackUpdateBase {
-			size = headSize(fmt.Sprintf("%v/data/%s", fallbackUpdateBase, name))
-		}
-		status.Files = append(status.Files, fileInfo{Name: name, Size: size})
-	}
+    if status.NeedSounds {
+        name := fmt.Sprintf("CL_Sounds.%d.gz", clientVer)
+        size := headSize(fmt.Sprintf("%v/data/%s", updateBase, name))
+        if size < 0 && updateBase != fallbackUpdateBase {
+            size = headSize(fmt.Sprintf("%v/data/%s", fallbackUpdateBase, name))
+        }
+        status.Files = append(status.Files, fileInfo{Name: name, Size: size})
+    }
+    // In WASM mode, only offer core assets (images/sounds) to save bandwidth.
+    if isWASM {
+        return status, nil
+    }
 
-	sfPath := filepath.Join(dataDirPath, soundFontFile)
-	if _, err := os.Stat(sfPath); errors.Is(err, os.ErrNotExist) {
-		status.NeedSoundfont = true
-		status.SoundfontSize = headSize(soundFontURL)
-	}
+    sfPath := filepath.Join(dataDirPath, soundFontFile)
+    if _, err := os.Stat(sfPath); errors.Is(err, os.ErrNotExist) {
+        status.NeedSoundfont = true
+        status.SoundfontSize = headSize(soundFontURL)
+    }
 
 	piperDir := filepath.Join(dataDirPath, "piper")
 	binDir := filepath.Join(piperDir, "bin")
@@ -515,10 +547,14 @@ func checkDataFiles(clientVer int) (dataFilesStatus, error) {
 }
 
 func downloadDataFiles(clientVer int, status dataFilesStatus, getSoundfont, getPiper, getFem, getMale bool) error {
-	if err := os.MkdirAll(dataDirPath, 0755); err != nil {
-		logError("create %v: %v", dataDirPath, err)
-		return err
-	}
+    if isWASM {
+        // Restrict downloads to CL_Images/CL_Sounds only in WASM.
+        getSoundfont, getPiper, getFem, getMale = false, false, false, false
+    }
+    if err := os.MkdirAll(dataDirPath, 0755); err != nil {
+        logError("create %v: %v", dataDirPath, err)
+        return err
+    }
 	bases := []string{updateBase}
 	if updateBase != fallbackUpdateBase {
 		bases = append(bases, fallbackUpdateBase)
@@ -701,10 +737,14 @@ func downloadDataFiles(clientVer int, status dataFilesStatus, getSoundfont, getP
 }
 
 func downloadPatch(url, dest string, apply func(string, []byte) error) error {
-	consoleMessage(fmt.Sprintf("Downloading: %v...", url))
-	if downloadStatus != nil {
-		downloadStatus(fmt.Sprintf("Connecting to %s...", url))
-	}
+    // Keep it simple: under WASM, skip patching and force full download path.
+    if isWASM {
+        return os.ErrNotExist
+    }
+    consoleMessage(fmt.Sprintf("Downloading: %v...", url))
+    if downloadStatus != nil {
+        downloadStatus(fmt.Sprintf("Connecting to %s...", url))
+    }
 	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return err

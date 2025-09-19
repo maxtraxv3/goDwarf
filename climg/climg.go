@@ -71,13 +71,20 @@ const (
 )
 
 func Load(path string) (*CLImages, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	r := bytes.NewReader(data)
-	var header uint16
-	var entryCount uint32
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, err
+    }
+    return parseCLImages(data)
+}
+
+// LoadBytes parses the CL_Images keyfile from an in-memory byte slice.
+func LoadBytes(data []byte) (*CLImages, error) { return parseCLImages(data) }
+
+func parseCLImages(data []byte) (*CLImages, error) {
+    r := bytes.NewReader(data)
+    var header uint16
+    var entryCount uint32
 	if err := binary.Read(r, binary.BigEndian, &header); err != nil {
 		return nil, err
 	}
@@ -410,7 +417,7 @@ func Load(path string) (*CLImages, error) {
 			c.colorBytes[i] = uint16(b)
 		}
 	}
-	return imgs, loadErr
+    return imgs, loadErr
 }
 
 // ClientItem describes per-item metadata stored in CL_Images (kTypeClientItem).
