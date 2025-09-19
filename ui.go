@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -23,7 +24,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/hajimehoshi/ebiten/v2"
 	open "github.com/skratchdot/open-golang/open"
-	"github.com/sqweek/dialog"
 
 	"gothoom/climg"
 	"gothoom/clsnd"
@@ -2526,13 +2526,14 @@ func makeLoginWindow() {
 	openBtn.Size = eui.Point{X: charWinWidth, Y: 24}
 	openEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
-			filename, err := dialog.File().Filter("clMov files", "clMov", "clmov", "zip", "ZIP").Load()
+			filename, err := pickMovieFile()
 			if err != nil {
-				if err != dialog.Cancelled {
-					logError("open clMov: %v", err)
-					// Keep popup on top of login
-					makeErrorWindow("Error: Open clMov: " + err.Error())
+				if errors.Is(err, errMovieDialogCancelled) {
+					return
 				}
+				logError("open clMov: %v", err)
+				// Keep popup on top of login
+				makeErrorWindow("Error: Open clMov: " + err.Error())
 				return
 			}
 			if filename == "" {
