@@ -608,10 +608,10 @@ func updateBubbleVisibility() {
 }
 
 func saveSettings() {
-    if isWASM {
-        // Skip disk writes in WASM; silently ignore.
-        return
-    }
+	if isWASM {
+		// Skip disk writes in WASM; silently ignore.
+		return
+	}
 	pluginMu.RLock()
 	// Rebuild the persisted map from the current scope set.
 	gs.EnabledPlugins = make(map[string]any, len(pluginEnabledFor))

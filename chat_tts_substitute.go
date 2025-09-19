@@ -24,13 +24,19 @@ func init() {
 
 func loadTTSSubstitutions() {
 	path := filepath.Join(dataDirPath, ttsSubstituteFile)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_ = os.WriteFile(path, defaultTTSSubstitute, 0o644)
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		logError("read tts_substitute: %v", err)
-		return
+	var b []byte
+	if isWASM {
+		b = append([]byte(nil), defaultTTSSubstitute...)
+	} else {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			_ = os.WriteFile(path, defaultTTSSubstitute, 0o644)
+		}
+		var err error
+		b, err = os.ReadFile(path)
+		if err != nil {
+			logError("read tts_substitute: %v", err)
+			return
+		}
 	}
 	m := make(map[string]string)
 	lines := strings.Split(string(b), "\n")

@@ -152,6 +152,9 @@ func loadHotkeys() {
 }
 
 func saveHotkeys() {
+	if isWASM {
+		return
+	}
 	path := filepath.Join(dataDirPath, hotkeysFile)
 	_ = os.MkdirAll(dataDirPath, 0o755)
 	// snapshot under read lock

@@ -110,10 +110,10 @@ func loadPlayersPersist() {
 }
 
 func savePlayersPersist() {
-    if isWASM {
-        // Skip persistence in WASM.
-        return
-    }
+	if isWASM {
+		// Skip persistence in WASM.
+		return
+	}
 	// Ensure data directory exists
 	_ = os.MkdirAll(dataDirPath, 0o755)
 	playersMu.RLock()

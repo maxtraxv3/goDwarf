@@ -75,6 +75,12 @@ func loadStats() {
 }
 
 func saveStats() {
+	if isWASM {
+		statsMu.Lock()
+		statsDirty = false
+		statsMu.Unlock()
+		return
+	}
 	statsMu.Lock()
 	if !statsDirty {
 		statsMu.Unlock()
