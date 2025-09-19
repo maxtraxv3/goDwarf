@@ -12,6 +12,7 @@ platforms=(
   "windows:amd64"
   "darwin:arm64"
   "darwin:amd64"
+  "js:wasm"
 )
 
 declare -A FRIENDLY_NAMES=(
@@ -19,7 +20,50 @@ declare -A FRIENDLY_NAMES=(
   ["windows:amd64"]="goThoom-Windows-x86_64"
   ["darwin:arm64"]="goThoom-macOS-AppleSilicon"
   ["darwin:amd64"]="goThoom-macOS-Intel"
+  ["js:wasm"]="goThoom-Web"
 )
+
+build_wasm() {
+  local friendly="${FRIENDLY_NAMES["js:wasm"]}"
+  local pkg_dir="${OUTPUT_DIR}/${friendly}"
+  local wasm_out="${pkg_dir}/gothoom.wasm"
+
+  rm -rf "$pkg_dir"
+  mkdir -p "$pkg_dir"
+
+  env \
+    GOOS=js GOARCH=wasm \
+    CGO_ENABLED=0 \
+    go build \
+      -trimpath \
+      -ldflags "-s -w" \
+      -o "$wasm_out" .
+
+  local goroot
+  goroot="$(go env GOROOT)"
+  local wasm_exec="${goroot}/misc/wasm/wasm_exec.js"
+  if [ ! -f "$wasm_exec" ]; then
+    echo "wasm_exec.js not found in ${wasm_exec}" >&2
+    exit 1
+  fi
+  cp "$wasm_exec" "$pkg_dir/"
+
+  local wasm_index="${SCRIPT_DIR}/../web/index.html"
+  if [ ! -f "$wasm_index" ]; then
+    echo "Missing web/index.html. Please create it before building the WASM bundle." >&2
+    exit 1
+  fi
+  cp "$wasm_index" "${pkg_dir}/index.html"
+
+  ensure_cmd brotli brotli
+  brotli -f -k "$wasm_out"
+
+  (
+    cd "$OUTPUT_DIR"
+    zip -q -r "${friendly}.zip" "$friendly"
+    rm -rf "$friendly"
+  )
+}
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -153,6 +197,12 @@ for platform in "${platforms[@]}"; do
   fi
 
   echo "Building ${GOOS}/${GOARCH}..."
+
+  if [ "$GOOS:$GOARCH" = "js:wasm" ]; then
+    build_wasm
+    continue
+  
+  fi
 
   # Default: disable cgo unless explicitly enabled
   CGO_ENABLED=0
