@@ -43,7 +43,11 @@ build_wasm() {
   goroot="$(go env GOROOT)"
   local wasm_exec="${goroot}/misc/wasm/wasm_exec.js"
   if [ ! -f "$wasm_exec" ]; then
-    echo "wasm_exec.js not found in ${wasm_exec}" >&2
+    # Fallback: search within GOROOT for wasm_exec.js in case layout differs.
+    wasm_exec="$(find "$goroot" -type f -name 'wasm_exec.js' 2>/dev/null | head -n1 || true)"
+  fi
+  if [ -z "${wasm_exec:-}" ] || [ ! -f "$wasm_exec" ]; then
+    echo "wasm_exec.js not found in GOROOT ($goroot)." >&2
     exit 1
   fi
   cp "$wasm_exec" "$pkg_dir/"
@@ -57,12 +61,7 @@ build_wasm() {
 
   ensure_cmd brotli brotli
   brotli -f -k "$wasm_out"
-
-  (
-    cd "$OUTPUT_DIR"
-    zip -q -r "${friendly}.zip" "$friendly"
-    rm -rf "$friendly"
-  )
+  echo "WASM bundle ready in ${pkg_dir} (gothoom.wasm and gothoom.wasm.br)"
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }

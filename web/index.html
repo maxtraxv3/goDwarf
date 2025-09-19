@@ -3,13 +3,41 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>goThoom (WASM)</title>
+    <meta name="theme-color" content="#0b0b0f">
+    <title>goThoom — Web Client</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0b0f;
+        --fg: #dfe4ea;
+        --muted: #94a3b8;
+        --accent: #7aa2f7;
+      }
+      html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+      .wrap { display: grid; place-items: center; height: 100%; }
+      .status { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--muted); }
+      .spinner { width: 18px; height: 18px; border: 3px solid transparent; border-top-color: var(--accent); border-right-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .hidden { display: none !important; }
+      noscript { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--fg); }
+      canvas { outline: none; }
+    </style>
   </head>
   <body>
+    <div id="boot" class="wrap">
+      <div class="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <div id="msg">Loading goThoom…</div>
+      </div>
+    </div>
     <noscript>JavaScript is required to run goThoom in the browser.</noscript>
     <script src="wasm_exec.js"></script>
     <script>
       (function () {
+        const boot = document.getElementById('boot');
+        const msg = document.getElementById('msg');
+        const setMsg = (t) => { if (msg) msg.textContent = t; };
+
         if (!WebAssembly.instantiateStreaming) {
           WebAssembly.instantiateStreaming = async (resp, importObject) => {
             const source = await resp.arrayBuffer();
@@ -18,24 +46,51 @@
         }
 
         const go = new Go();
-        fetch("gothoom.wasm")
-          .then((resp) => {
-            if (!resp.ok) {
-              throw new Error(`Failed to fetch goThoom WASM binary: ${resp.status} ${resp.statusText}`);
+        setMsg('Fetching core…');
+
+        // Prefer precompressed Brotli if available and supported, fallback to plain .wasm.
+        const tryBrotli = async () => {
+          try {
+            if (!('DecompressionStream' in window)) return null;
+            const br = await fetch('gothoom.wasm.br');
+            if (!br.ok) return null;
+            const ds = new DecompressionStream('brotli');
+            const decompressed = br.body.pipeThrough(ds);
+            const resp = new Response(decompressed, { headers: { 'Content-Type': 'application/wasm' } });
+            return await WebAssembly.instantiateStreaming(resp, go.importObject);
+          } catch (_) {
+            return null;
+          }
+        };
+
+        const start = async () => {
+          let inst = await tryBrotli();
+          if (!inst) {
+            const req = fetch('gothoom.wasm');
+            try {
+              // streaming path
+              inst = await WebAssembly.instantiateStreaming(req, go.importObject);
+            } catch (_) {
+              // arrayBuffer fallback for incorrect MIME
+              const resp = await req; if (!resp.ok) throw _;
+              const bytes = await resp.arrayBuffer();
+              inst = await WebAssembly.instantiate(bytes, go.importObject);
             }
-            return resp.arrayBuffer();
-          })
-          .then((bytes) => WebAssembly.instantiate(bytes, go.importObject))
-          .then((result) => {
-            go.run(result.instance);
-          })
-          .catch((err) => {
-            console.error(err);
-            const errorEl = document.createElement("pre");
-            errorEl.textContent = err.stack || err.message || String(err);
-            document.body.appendChild(errorEl);
-          });
+          }
+          setMsg('Starting…');
+          boot && boot.classList.add('hidden');
+          go.run(inst.instance);
+        };
+
+        start().catch((e) => {
+          console.error(e);
+          setMsg('Failed to start');
+          const pre = document.createElement('pre');
+          pre.textContent = (e && (e.stack || e.message)) || String(e);
+          document.body.appendChild(pre);
+        });
       })();
     </script>
   </body>
+  <!-- Note: build scripts also include gothoom.wasm.br for servers that serve precompressed assets. -->
 </html>
