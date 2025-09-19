@@ -52,12 +52,13 @@ build_wasm() {
   fi
   cp "$wasm_exec" "$pkg_dir/"
 
-  local wasm_index="${SCRIPT_DIR}/../web/index.html"
-  if [ ! -f "$wasm_index" ]; then
+  # Copy all web assets (index.html, sw.js, headers, etc.) into the bundle
+  local web_dir="${SCRIPT_DIR}/../web"
+  if [ ! -f "$web_dir/index.html" ]; then
     echo "Missing web/index.html. Please create it before building the WASM bundle." >&2
     exit 1
   fi
-  cp "$wasm_index" "${pkg_dir}/index.html"
+  cp -a "$web_dir/." "$pkg_dir/"
 
   ensure_cmd brotli brotli
   brotli -f -k "$wasm_out"
