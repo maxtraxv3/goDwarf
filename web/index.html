@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>goThoom (WASM)</title>
+  </head>
+  <body>
+    <noscript>JavaScript is required to run goThoom in the browser.</noscript>
+    <script src="wasm_exec.js"></script>
+    <script>
+      (function () {
+        if (!WebAssembly.instantiateStreaming) {
+          WebAssembly.instantiateStreaming = async (resp, importObject) => {
+            const source = await resp.arrayBuffer();
+            return await WebAssembly.instantiate(source, importObject);
+          };
+        }
+
+        const go = new Go();
+        fetch("gothoom.wasm")
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error(`Failed to fetch goThoom WASM binary: ${resp.status} ${resp.statusText}`);
+            }
+            return resp.arrayBuffer();
+          })
+          .then((bytes) => WebAssembly.instantiate(bytes, go.importObject))
+          .then((result) => {
+            go.run(result.instance);
+          })
+          .catch((err) => {
+            console.error(err);
+            const errorEl = document.createElement("pre");
+            errorEl.textContent = err.stack || err.message || String(err);
+            document.body.appendChild(errorEl);
+          });
+      })();
+    </script>
+  </body>
+</html>
