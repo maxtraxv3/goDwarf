@@ -39,34 +39,36 @@ type moviePlayer struct {
 	baseFPS int
 	cur     int // number of frames processed
 	playing bool
+	repeat  bool
 	ticker  *time.Ticker
 	cancel  context.CancelFunc
 
 	checkpoints []movieCheckpoint
 
-	slider     *eui.ItemData
-	curLabel   *eui.ItemData
-	totalLabel *eui.ItemData
-	fpsLabel   *eui.ItemData
-	playButton *eui.ItemData
+	slider       *eui.ItemData
+	curLabel     *eui.ItemData
+	totalLabel   *eui.ItemData
+	fpsLabel     *eui.ItemData
+	playButton   *eui.ItemData
+	repeatButton *eui.ItemData
 }
 
 func newMoviePlayer(frames []movieFrame, fps int, cancel context.CancelFunc) *moviePlayer {
-    setInterpFPS(fps)
-    serverFPS = float64(fps)
-    frameInterval = time.Second / time.Duration(fps)
-    playingMovie = true
-    movieMode = true
-    // Do not interpolate the very first frame of playback.
-    // Ensure prevTime == curTime and clear prior history so sprites
-    // don't lerp from zeroed positions on start.
-    resetInterpolation()
-    suppressInterpOnce = true
-    return &moviePlayer{
-        frames:      frames,
-        fps:         fps,
-        baseFPS:     fps,
-        playing:     true,
+	setInterpFPS(fps)
+	serverFPS = float64(fps)
+	frameInterval = time.Second / time.Duration(fps)
+	playingMovie = true
+	movieMode = true
+	// Do not interpolate the very first frame of playback.
+	// Ensure prevTime == curTime and clear prior history so sprites
+	// don't lerp from zeroed positions on start.
+	resetInterpolation()
+	suppressInterpOnce = true
+	return &moviePlayer{
+		frames:      frames,
+		fps:         fps,
+		baseFPS:     fps,
+		playing:     true,
 		ticker:      time.NewTicker(time.Second / time.Duration(fps)),
 		cancel:      cancel,
 		checkpoints: []movieCheckpoint{{idx: 0, state: cloneDrawState(initialState)}},
@@ -170,6 +172,20 @@ func (p *moviePlayer) makePlaybackWindow() {
 		}
 	}
 	bFlow.AddItem(play)
+
+	repeatBtn, repeatEv := eui.NewButton()
+	repeatBtn.Text = "repeat"
+	repeatBtn.SetTooltip("Loop playback when the movie ends")
+	repeatBtn.Size = eui.Point{X: 80, Y: 24}
+	p.repeatButton = repeatBtn
+	changeRepeatButton(p, p.repeatButton)
+	repeatEv.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			p.repeat = !p.repeat
+			changeRepeatButton(p, p.repeatButton)
+		}
+	}
+	bFlow.AddItem(repeatBtn)
 
 	forwardb, fwdbEv := eui.NewButton()
 	forwardb.Text = ">>"
@@ -292,7 +308,7 @@ func (p *moviePlayer) makePlaybackWindow() {
 
 	// When the movie controls window is closed, stop playback and return to
 	// the login window so a new movie can be selected.
-    win.OnClose = func() {
+	win.OnClose = func() {
 		// Pause and stop ticker
 		p.pause()
 		if p.ticker != nil {
@@ -305,9 +321,9 @@ func (p *moviePlayer) makePlaybackWindow() {
 		if p.cancel != nil {
 			p.cancel()
 		}
-        playingMovie = false
-        movieMode = false
-        updateRecordButton()
+		playingMovie = false
+		movieMode = false
+		updateRecordButton()
 		// Clear any players loaded during playback so GT_Players.json
 		// is unaffected.
 		playersMu.Lock()
@@ -322,11 +338,11 @@ func (p *moviePlayer) makePlaybackWindow() {
 		pcapPath = ""
 		if loginWin != nil {
 			loginWin.MarkOpen()
-    }
+		}
 	}
 
-    p.updateUI()
-    updateRecordButton()
+	p.updateUI()
+	updateRecordButton()
 }
 
 func changePlayButton(p *moviePlayer, play *eui.ItemData) {
@@ -335,6 +351,18 @@ func changePlayButton(p *moviePlayer, play *eui.ItemData) {
 	} else {
 		play.Text = "Play"
 	}
+}
+
+func changeRepeatButton(p *moviePlayer, repeat *eui.ItemData) {
+	if repeat == nil {
+		return
+	}
+	if p.repeat {
+		repeat.Text = "no repeat"
+	} else {
+		repeat.Text = "repeat"
+	}
+	repeat.Dirty = true
 }
 
 func (p *moviePlayer) run(ctx context.Context) {
@@ -355,12 +383,31 @@ func (p *moviePlayer) run(ctx context.Context) {
 }
 
 func (p *moviePlayer) step() {
-	if p.cur >= len(p.frames) {
+	if len(p.frames) == 0 {
 		p.playing = false
 		playingMovie = false
+		updateRecordButton()
 		p.updateUI()
-		//p.cancel()
 		return
+	}
+
+	if p.cur >= len(p.frames) {
+		if p.repeat {
+			p.seek(0)
+			if p.cur >= len(p.frames) {
+				p.playing = false
+				playingMovie = false
+				updateRecordButton()
+				p.updateUI()
+				return
+			}
+		} else {
+			p.playing = false
+			playingMovie = false
+			updateRecordButton()
+			p.updateUI()
+			return
+		}
 	}
 	m := p.frames[p.cur]
 	movieDropped = updateFrameCounters(m.index)
@@ -380,12 +427,16 @@ func (p *moviePlayer) step() {
 		stateMu.Unlock()
 		p.checkpoints = append(p.checkpoints, cp)
 	}
-    if p.cur >= len(p.frames) {
-        p.playing = false
-        playingMovie = false
-        updateRecordButton()
-    }
-    p.updateUI()
+	if p.cur >= len(p.frames) {
+		if p.repeat {
+			p.seek(0)
+		} else {
+			p.playing = false
+			playingMovie = false
+			updateRecordButton()
+		}
+	}
+	p.updateUI()
 }
 
 func (p *moviePlayer) updateUI() {
@@ -413,6 +464,10 @@ func (p *moviePlayer) updateUI() {
 
 	if p.playButton != nil {
 		changePlayButton(p, p.playButton)
+	}
+
+	if p.repeatButton != nil {
+		changeRepeatButton(p, p.repeatButton)
 	}
 }
 
@@ -461,8 +516,8 @@ func (p *moviePlayer) skipForwardMilli(milli int) {
 }
 
 func (p *moviePlayer) seek(idx int) {
-    seekingMov = true
-    defer func() { seekingMov = false }()
+	seekingMov = true
+	defer func() { seekingMov = false }()
 
 	// Stop any currently playing sounds so scrubbing is silent.
 	stopAllSounds()
@@ -533,13 +588,13 @@ func (p *moviePlayer) seek(idx int) {
 		stateMu.Unlock()
 		p.checkpoints = append(p.checkpoints, snap)
 	}
-    p.cur = idx
-    resetInterpolation()
-    // Avoid interpolation artifacts on the first frame after a seek.
-    suppressInterpOnce = true
-    setInterpFPS(p.fps)
-    p.updateUI()
-    p.playing = wasPlaying
+	p.cur = idx
+	resetInterpolation()
+	// Avoid interpolation artifacts on the first frame after a seek.
+	suppressInterpOnce = true
+	setInterpFPS(p.fps)
+	p.updateUI()
+	p.playing = wasPlaying
 }
 
 // maybeDecodeMessage applies a simple heuristic to determine whether a frame
