@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/twofish"
@@ -150,32 +153,32 @@ func nextCommand() {
 // It returns the number of frames missing between the previous and
 // current acknowledgement numbers.
 func updateFrameCounters(newFrame int32) int {
-    now := time.Now().Unix()
-    idx := int(now % 5)
-    if bucketTimes[idx] != now {
-        frameBuckets[idx] = 0
-        lostBuckets[idx] = 0
-        bucketTimes[idx] = now
-    }
-    // Ignore out-of-order or duplicate frames which can occur on UDP.
-    if lastAckFrame != 0 && newFrame <= lastAckFrame {
-        return 0
-    }
+	now := time.Now().Unix()
+	idx := int(now % 5)
+	if bucketTimes[idx] != now {
+		frameBuckets[idx] = 0
+		lostBuckets[idx] = 0
+		bucketTimes[idx] = now
+	}
+	// Ignore out-of-order or duplicate frames which can occur on UDP.
+	if lastAckFrame != 0 && newFrame <= lastAckFrame {
+		return 0
+	}
 
-    frameBuckets[idx]++
-    numFrames++
-    dropped := 0
-    if lastAckFrame != 0 {
-        lost := int(newFrame - lastAckFrame - 1)
-        if lost > 0 {
-            lostFrames += lost
-            dropped = lost
-            frameBuckets[idx] += lost
-            lostBuckets[idx] += lost
-        }
-    }
-    lastAckFrame = newFrame
-    return dropped
+	frameBuckets[idx]++
+	numFrames++
+	dropped := 0
+	if lastAckFrame != 0 {
+		lost := int(newFrame - lastAckFrame - 1)
+		if lost > 0 {
+			lostFrames += lost
+			dropped = lost
+			frameBuckets[idx] += lost
+			lostBuckets[idx] += lost
+		}
+	}
+	lastAckFrame = newFrame
+	return dropped
 }
 
 func droppedPercent() float64 {
@@ -306,21 +309,64 @@ const (
 )
 
 func readKeyFileVersion(path string) (uint32, error) {
-	f, err := os.Open(path)
+	rs, cleanup, err := openKeyFile(path)
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
+	if cleanup != nil {
+		defer cleanup()
+	}
+	v, err := keyFileVersionFromReader(rs)
+	if errors.Is(err, errKeyFileVersionNotFound) {
+		return 0, fmt.Errorf("version record not found in %v", path)
+	}
+	return v, err
+}
 
+var errKeyFileVersionNotFound = errors.New("version record not found")
+
+func openKeyFile(path string) (io.ReadSeeker, func(), error) {
+	if isWASM {
+		data, err := wasmKeyFileData(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		return bytes.NewReader(data), nil, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	return f, func() { f.Close() }, nil
+}
+
+func wasmKeyFileData(path string) ([]byte, error) {
+	switch filepath.Base(path) {
+	case CL_ImagesFile:
+		if len(wasmCLImagesData) == 0 {
+			return nil, os.ErrNotExist
+		}
+		return wasmCLImagesData, nil
+	case CL_SoundsFile:
+		if len(wasmCLSoundsData) == 0 {
+			return nil, os.ErrNotExist
+		}
+		return wasmCLSoundsData, nil
+	default:
+		return nil, os.ErrNotExist
+	}
+}
+
+func keyFileVersionFromReader(rs io.ReadSeeker) (uint32, error) {
 	var header [12]byte
-	if _, err := io.ReadFull(f, header[:]); err != nil {
+	if _, err := io.ReadFull(rs, header[:]); err != nil {
 		return 0, err
 	}
 	count := int(binary.BigEndian.Uint32(header[2:6]))
 
 	entry := make([]byte, 16)
 	for i := 0; i < count; i++ {
-		if _, err := io.ReadFull(f, entry); err != nil {
+		if _, err := io.ReadFull(rs, entry); err != nil {
 			return 0, err
 		}
 		pos := binary.BigEndian.Uint32(entry[0:4])
@@ -328,11 +374,11 @@ func readKeyFileVersion(path string) (uint32, error) {
 		typ := binary.BigEndian.Uint32(entry[8:12])
 		id := binary.BigEndian.Uint32(entry[12:16])
 		if typ == kTypeVersion && id == 0 {
-			if _, err := f.Seek(int64(pos), io.SeekStart); err != nil {
+			if _, err := rs.Seek(int64(pos), io.SeekStart); err != nil {
 				return 0, err
 			}
 			buf := make([]byte, size)
-			if _, err := io.ReadFull(f, buf); err != nil {
+			if _, err := io.ReadFull(rs, buf); err != nil {
 				return 0, err
 			}
 			v := binary.BigEndian.Uint32(buf)
@@ -342,7 +388,7 @@ func readKeyFileVersion(path string) (uint32, error) {
 			return v, nil
 		}
 	}
-	return 0, fmt.Errorf("version record not found in %v", path)
+	return 0, errKeyFileVersionNotFound
 }
 
 func answerChallenge(password string, challenge []byte) ([]byte, error) {

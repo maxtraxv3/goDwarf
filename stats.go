@@ -23,6 +23,9 @@ const statsFile = "stats.json"
 // to the executable so assets are placed alongside the binary regardless of the
 // current working directory.
 var dataDirPath = func() string {
+	if runtime.GOOS == "js" || runtime.GOARCH == "wasm" {
+		return "data"
+	}
 	if runtime.GOOS == "darwin" {
 		if home, err := os.UserHomeDir(); err == nil {
 			if filepath.Base(home) == "Data" && filepath.Base(filepath.Dir(home)) == "com.goThoom.client" {
