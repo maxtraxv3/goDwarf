@@ -1349,7 +1349,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	var snap drawSnapshot
 	var alpha float64
 	var haveSnap bool
-	if clmov == "" && tcpConn == nil && pcapPath == "" && !fake {
+	if clmov == "" && !playingMovie && tcpConn == nil && pcapPath == "" && !fake {
 		prev := gs.GameScale
 		gs.GameScale = float64(offIntScale)
 		drawSplash(worldView, 0, 0)
