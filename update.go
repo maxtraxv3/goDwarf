@@ -473,6 +473,13 @@ func checkDataFiles(clientVer int) (dataFilesStatus, error) {
 			status.NeedImages = true
 		}
 	}
+	if isWASM && status.NeedImages && (len(wasmCLImagesData) > 0 || clImages != nil) {
+		status.NeedImages = false
+		status.ImageVersion = clientVer
+		if status.Version < clientVer {
+			status.Version = clientVer
+		}
+	}
 
 	sndPath := filepath.Join(dataDirPath, CL_SoundsFile)
 	if v, err := readKeyFileVersion(sndPath); err != nil {
@@ -488,6 +495,15 @@ func checkDataFiles(clientVer int) (dataFilesStatus, error) {
 		}
 		if ver < clientVer {
 			status.NeedSounds = true
+		}
+	}
+	if isWASM && status.NeedSounds && (len(wasmCLSoundsData) > 0 || clSounds != nil) {
+		status.NeedSounds = false
+		if status.SoundVersion < clientVer {
+			status.SoundVersion = clientVer
+		}
+		if status.Version < clientVer {
+			status.Version = clientVer
 		}
 	}
 
