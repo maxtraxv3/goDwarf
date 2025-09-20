@@ -61,8 +61,8 @@ build_wasm() {
   cp -a "$web_dir/." "$pkg_dir/"
 
   ensure_cmd brotli brotli
-  brotli -f -k "$wasm_out"
-  echo "WASM bundle ready in ${pkg_dir} (gothoom.wasm and gothoom.wasm.br)"
+  brotli -f "$wasm_out"
+  echo "WASM bundle ready in ${pkg_dir} (gothoom.wasm.br only)"
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }

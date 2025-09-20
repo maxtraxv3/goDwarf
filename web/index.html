@@ -48,35 +48,31 @@
         const go = new Go();
         setMsg('Fetching core…');
 
-        // Prefer precompressed Brotli if available and supported, fallback to plain .wasm.
-        const tryBrotli = async () => {
-          try {
-            if (!('DecompressionStream' in window)) return null;
-            const br = await fetch('gothoom.wasm.br');
-            if (!br.ok) return null;
-            const ds = new DecompressionStream('brotli');
-            const decompressed = br.body.pipeThrough(ds);
-            const resp = new Response(decompressed, { headers: { 'Content-Type': 'application/wasm' } });
-            return await WebAssembly.instantiateStreaming(resp, go.importObject);
-          } catch (_) {
-            return null;
-          }
-        };
-
         const start = async () => {
-          let inst = await tryBrotli();
-          if (!inst) {
-            const req = fetch('gothoom.wasm');
-            try {
-              // streaming path
-              inst = await WebAssembly.instantiateStreaming(req, go.importObject);
-            } catch (_) {
-              // arrayBuffer fallback for incorrect MIME
-              const resp = await req; if (!resp.ok) throw _;
-              const bytes = await resp.arrayBuffer();
-              inst = await WebAssembly.instantiate(bytes, go.importObject);
-            }
+          if (!('DecompressionStream' in window)) {
+            throw new Error('Brotli decompression not supported in this browser. Please update to a modern release.');
           }
+
+          const br = await fetch('gothoom.wasm.br');
+          if (!br.ok) {
+            throw new Error(`Failed to fetch gothoom.wasm.br (${br.status})`);
+          }
+
+          let source = br.body;
+          if (!source) {
+            const bytes = await br.arrayBuffer();
+            source = new ReadableStream({
+              start(controller) {
+                controller.enqueue(new Uint8Array(bytes));
+                controller.close();
+              },
+            });
+          }
+
+          const ds = new DecompressionStream('brotli');
+          const decompressed = source.pipeThrough(ds);
+          const resp = new Response(decompressed, { headers: { 'Content-Type': 'application/wasm' } });
+          const inst = await WebAssembly.instantiateStreaming(resp, go.importObject);
           setMsg('Starting…');
           boot && boot.classList.add('hidden');
           go.run(inst.instance);
@@ -92,5 +88,5 @@
       })();
     </script>
   </body>
-  <!-- Note: build scripts also include gothoom.wasm.br for servers that serve precompressed assets. -->
+  <!-- Note: build scripts now bundle gothoom.wasm.br only; serve with application/wasm if precompression disabled. -->
 </html>
