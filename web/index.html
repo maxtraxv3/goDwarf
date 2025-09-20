@@ -32,8 +32,10 @@
     </div>
     <noscript>JavaScript is required to run goThoom in the browser.</noscript>
     <script src="wasm_exec.js"></script>
-    <script>
-      (function () {
+    <script type="module">
+      import brotliPromise from 'https://unpkg.com/brotli-dec-wasm@2.3.0/index.js?module';
+
+      (async () => {
         const boot = document.getElementById('boot');
         const msg = document.getElementById('msg');
         const setMsg = (t) => { if (msg) msg.textContent = t; };
@@ -48,45 +50,52 @@
         const go = new Go();
         setMsg('Fetching core…');
 
-        const start = async () => {
-          if (!('DecompressionStream' in window)) {
-            throw new Error('Brotli decompression not supported in this browser. Please update to a modern release.');
+        try {
+          const brotli = await brotliPromise;
+          const resp = await fetch('gothoom.wasm.br', { cache: 'no-cache' });
+          if (!resp.ok) {
+            throw new Error(`Failed to fetch gothoom.wasm.br (${resp.status})`);
           }
 
-          const br = await fetch('gothoom.wasm.br');
-          if (!br.ok) {
-            throw new Error(`Failed to fetch gothoom.wasm.br (${br.status})`);
+          let compressed;
+          if (resp.body && resp.body.getReader) {
+            const reader = resp.body.getReader();
+            const chunks = [];
+            let total = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                break;
+              }
+              chunks.push(value);
+              total += value.length;
+            }
+            compressed = new Uint8Array(total);
+            let offset = 0;
+            for (const chunk of chunks) {
+              compressed.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } else {
+            compressed = new Uint8Array(await resp.arrayBuffer());
           }
 
-          let source = br.body;
-          if (!source) {
-            const bytes = await br.arrayBuffer();
-            source = new ReadableStream({
-              start(controller) {
-                controller.enqueue(new Uint8Array(bytes));
-                controller.close();
-              },
-            });
-          }
+          setMsg('Decompressing…');
+          const decompressed = brotli.decompress(compressed);
 
-          const ds = new DecompressionStream('brotli');
-          const decompressed = source.pipeThrough(ds);
-          const resp = new Response(decompressed, { headers: { 'Content-Type': 'application/wasm' } });
-          const inst = await WebAssembly.instantiateStreaming(resp, go.importObject);
           setMsg('Starting…');
+          const { instance } = await WebAssembly.instantiate(decompressed, go.importObject);
           boot && boot.classList.add('hidden');
-          go.run(inst.instance);
-        };
-
-        start().catch((e) => {
+          go.run(instance);
+        } catch (e) {
           console.error(e);
           setMsg('Failed to start');
           const pre = document.createElement('pre');
           pre.textContent = (e && (e.stack || e.message)) || String(e);
           document.body.appendChild(pre);
-        });
+        }
       })();
     </script>
   </body>
-  <!-- Note: build scripts now bundle gothoom.wasm.br only; serve with application/wasm if precompression disabled. -->
+  <!-- Note: build scripts ship gothoom.wasm.br only; serve with Content-Type: application/wasm. -->
 </html>
