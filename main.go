@@ -172,7 +172,9 @@ func main() {
 		}()
 	}
 
-	initDiscordRPC(ctx)
+	if !isWASM {
+		initDiscordRPC(ctx)
+	}
 
 	imgStart := time.Now()
 	if isWASM && len(wasmCLImagesData) > 0 {
