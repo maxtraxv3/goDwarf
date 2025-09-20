@@ -2144,6 +2144,9 @@ func pictureMobileOffset(p framePicture, mobiles []frameMobile, prevMobiles map[
 // It respects motion smoothing and the native name tag setting based on the
 // current gs.GameScale.
 func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, alpha float64) {
+	if wasmPrivacyActive() {
+		return
+	}
 	h := float64(m.H)
 	v := float64(m.V)
 	if gs.MotionSmoothing {

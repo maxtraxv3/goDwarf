@@ -880,6 +880,9 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 			if d.Name == playerName {
 				playerIndex = d.Index
 			}
+			if wasmPrivacyActive() {
+				d.Name = ""
+			}
 		} else {
 			return ack, resend, errors.New(stage)
 		}

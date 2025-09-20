@@ -1935,7 +1935,7 @@ func makeDownloadsWindow() {
 			downloadStatus = nil
 			downloadProgress = nil
 			downloadWin.Close()
-			if name == "" && loginWin != nil {
+			if name == "" && loginWin != nil && clmov == "" && !playingMovie && pcapPath == "" && !fake {
 				loginWin.MarkOpen()
 			}
 		}()

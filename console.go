@@ -11,6 +11,9 @@ func consoleMessage(msg string) {
 	if msg == "" {
 		return
 	}
+	if wasmPrivacyActive() {
+		return
+	}
 	if msg == "You have been idle for too long." {
 		showNotification(msg)
 		playSound([]uint16{sndTink})

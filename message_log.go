@@ -21,6 +21,9 @@ func (l *messageLog) Add(msg string) {
 	if msg == "" {
 		return
 	}
+	if wasmPrivacyActive() {
+		return
+	}
 	l.mu.Lock()
 	l.entries = append(l.entries, timedMessage{Text: msg, Time: time.Now()})
 	if len(l.entries) > l.max {

@@ -216,6 +216,16 @@ func main() {
 
 	go func() {
 		if clmovPath != "" || (isWASM && len(wasmMovieZipData) > 0) {
+			if isWASM {
+				enterWasmPrivacyMode()
+				defer exitWasmPrivacyMode()
+			}
+			if !waitForMovieAssets(ctx) {
+				return
+			}
+			if loginWin != nil {
+				loginWin.Close()
+			}
 			drawStateEncrypted = false
 			var (
 				frames []movieFrame
@@ -231,6 +241,9 @@ func main() {
 			}
 
 			playerName = extractMoviePlayerName(frames)
+			if wasmPrivacyActive() {
+				playerName = ""
+			}
 			applyEnabledPlugins()
 
 			mp := newMoviePlayer(frames, clMovFPS, cancel)
@@ -281,6 +294,35 @@ func main() {
 	cancel()
 
 	<-ctx.Done()
+}
+
+func waitForMovieAssets(ctx context.Context) bool {
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		if ctx.Err() != nil {
+			return false
+		}
+
+		dlMutex.Lock()
+		needImages := status.NeedImages
+		needSounds := status.NeedSounds
+		dlMutex.Unlock()
+
+		imagesReady := clImages != nil
+		soundsReady := clSounds != nil
+
+		if imagesReady && soundsReady && !needImages && !needSounds {
+			return true
+		}
+
+		select {
+		case <-ctx.Done():
+			return false
+		case <-ticker.C:
+		}
+	}
 }
 
 func extractMoviePlayerName(frames []movieFrame) string {
