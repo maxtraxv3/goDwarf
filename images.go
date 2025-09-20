@@ -182,6 +182,9 @@ func loadSheet(id uint16, colors []byte, forceTransparent bool) *ebiten.Image {
 }
 
 func dumpImageSheet(id uint16, sheet *ebiten.Image) {
+	if isWASM {
+		return
+	}
 	dumpImgOnce.Do(func() {
 		os.MkdirAll(filepath.Join("dump", "img"), 0755)
 		if f, err := os.Create(filepath.Join("dump", "img", "metadata.csv")); err == nil {

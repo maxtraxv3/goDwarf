@@ -56,9 +56,6 @@ func assetBases(candidates ...string) []string {
 		if b == "" {
 			return
 		}
-		if isWASM {
-			b = b + "/webgt"
-		}
 		if _, ok := seen[b]; ok {
 			return
 		}
@@ -66,6 +63,13 @@ func assetBases(candidates ...string) []string {
 		bases = append(bases, b)
 	}
 	for _, c := range candidates {
+		c = strings.TrimRight(c, "/")
+		if c == "" {
+			continue
+		}
+		if isWASM {
+			add(c + "/webgt")
+		}
 		add(c)
 	}
 	return bases
@@ -367,7 +371,7 @@ func autoUpdate(resp []byte, dataDir string) (int, error) {
 	logDebug("Client version: %v", clientVer)
 	imgVer := int(binary.BigEndian.Uint32(resp[8:12]) >> 8)
 	sndVer := int(binary.BigEndian.Uint32(resp[12:16]) >> 8)
-	bases := assetBases(updateBase, base, fallbackUpdateBase)
+	bases := assetBases(base, updateBase, fallbackUpdateBase)
 	imgPath := filepath.Join(dataDir, CL_ImagesFile)
 	var imgOld int
 	if old, err := readKeyFileVersion(imgPath); err == nil {

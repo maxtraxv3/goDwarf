@@ -133,7 +133,7 @@ func ensurePiper() bool {
 }
 
 func playChatTTS(ctx context.Context, text string) {
-    if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
+	if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
 		return
 	}
 	select {
@@ -191,7 +191,7 @@ func playChatTTS(ctx context.Context, text string) {
 	ttsPlayersMu.Unlock()
 
 	vol := gs.MasterVolume * gs.ChatTTSVolume
-    if gs.Mute || focusMuted {
+	if gs.Mute || focusMuted {
 		vol = 0
 	}
 	p.SetVolume(vol)
@@ -216,14 +216,14 @@ func playChatTTS(ctx context.Context, text string) {
 }
 
 func speakChatMessage(msg string) {
-    if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
+	if audioContext == nil || blockTTS || gs.Mute || focusMuted || !gs.ChatTTS {
 		if audioContext == nil {
 			logError("chat tts: audio context is nil")
 		}
 		if blockTTS {
 			logDebug("chat tts: tts blocked")
 		}
-        if gs.Mute || focusMuted {
+		if gs.Mute || focusMuted {
 			logDebug("chat tts: client muted")
 		}
 		if !gs.ChatTTS {
@@ -266,6 +266,9 @@ func speakChatMessage(msg string) {
 }
 
 func preparePiper(dataDir string) (string, string, string, error) {
+	if isWASM {
+		return "", "", "", fmt.Errorf("chat tts unavailable in wasm")
+	}
 	piperDir := filepath.Join(dataDir, "piper")
 	binDir := filepath.Join(piperDir, "bin")
 	if err := os.MkdirAll(binDir, 0o755); err != nil {
@@ -385,6 +388,9 @@ func preparePiper(dataDir string) (string, string, string, error) {
 }
 
 func listPiperVoices() ([]string, error) {
+	if isWASM {
+		return nil, fmt.Errorf("chat tts unavailable in wasm")
+	}
 	voicesDir := filepath.Join(dataDirPath, "piper", "voices")
 	entries, err := os.ReadDir(voicesDir)
 	if err != nil {
@@ -429,6 +435,9 @@ func listPiperVoices() ([]string, error) {
 }
 
 func extractArchive(src, dst string) error {
+	if isWASM {
+		return fmt.Errorf("archive extraction unavailable in wasm")
+	}
 	clean := func(base, name string) (string, error) {
 		target := filepath.Join(base, name)
 		target = filepath.Clean(target)

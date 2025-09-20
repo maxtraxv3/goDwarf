@@ -1017,6 +1017,9 @@ func loadSound(id uint16) []byte {
 }
 
 func dumpSound(id uint16, s *clsnd.Sound, pcm []byte, rate int) {
+	if isWASM {
+		return
+	}
 	sndDumpOnce.Do(func() {
 		os.MkdirAll(filepath.Join("dump", "snd"), 0755)
 		if f, err := os.Create(filepath.Join("dump", "snd", "metadata.csv")); err == nil {

@@ -1379,6 +1379,10 @@ func confirmExitSession() {
 }
 
 func startRecording() {
+	if isWASM {
+		consoleMessage("movie recording unavailable in browser build")
+		return
+	}
 	dir := filepath.Join(dataDirPath, "Movies")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		logError("record movie: %v", err)
@@ -1875,14 +1879,14 @@ func makeDownloadsWindow() {
 				downloadWin.Refresh()
 				return
 			}
-            imgStart := time.Now()
-            var img *climg.CLImages
-            var err error
-            if isWASM && len(wasmCLImagesData) > 0 {
-                img, err = climg.LoadBytes(wasmCLImagesData)
-            } else {
-                img, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
-            }
+			imgStart := time.Now()
+			var img *climg.CLImages
+			var err error
+			if isWASM && len(wasmCLImagesData) > 0 {
+				img, err = climg.LoadBytes(wasmCLImagesData)
+			} else {
+				img, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+			}
 			if err != nil {
 				logError("failed to load CL_Images: %v", err)
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Images")
@@ -1903,12 +1907,12 @@ func makeDownloadsWindow() {
 				playersDirty = true
 			}
 
-            sndStart := time.Now()
-            if isWASM && len(wasmCLSoundsData) > 0 {
-                clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
-            } else {
-                clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
-            }
+			sndStart := time.Now()
+			if isWASM && len(wasmCLSoundsData) > 0 {
+				clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
+			} else {
+				clSounds, err = clsnd.Load(filepath.Join("data/CL_Sounds"))
+			}
 			if err != nil {
 				logError("failed to load CL_Sounds: %v", err)
 				handleDownloadAssetError(flow, statusText, pb, startDownload, &startedDownload, "Failed to load CL_Sounds")
@@ -1937,23 +1941,23 @@ func makeDownloadsWindow() {
 		}()
 	}
 
-    // Auto-start download in WASM to avoid extra click; keep window open for progress.
-    if isWASM {
-        startDownload()
-    }
+	// Auto-start download in WASM to avoid extra click; keep window open for progress.
+	if isWASM {
+		startDownload()
+	}
 
-    btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
-    if !isWASM {
-        dlBtn, dlEvents := eui.NewButton()
-        dlBtn.Text = "Download"
-        dlBtn.Size = eui.Point{X: 100, Y: 24}
-        dlEvents.Handle = func(ev eui.UIEvent) {
-            if ev.Type == eui.EventClick {
-                startDownload()
-            }
-        }
-        btnFlow.AddItem(dlBtn)
-    }
+	btnFlow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+	if !isWASM {
+		dlBtn, dlEvents := eui.NewButton()
+		dlBtn.Text = "Download"
+		dlBtn.Size = eui.Point{X: 100, Y: 24}
+		dlEvents.Handle = func(ev eui.UIEvent) {
+			if ev.Type == eui.EventClick {
+				startDownload()
+			}
+		}
+		btnFlow.AddItem(dlBtn)
+	}
 
 	closeBtn, closeEvents := eui.NewButton()
 	closeBtn.Size = eui.Point{X: 100, Y: 24}

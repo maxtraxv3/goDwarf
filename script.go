@@ -356,6 +356,9 @@ var pluginScripts embed.FS
 // Scripts now live alongside the executable in a top-level "scripts" folder
 // instead of under the data directory.
 func userScriptsDir() string {
+	if isWASM {
+		return ""
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return "scripts"
@@ -364,11 +367,20 @@ func userScriptsDir() string {
 }
 
 // scriptSearchDirs returns only the scripts/ folder next to the executable.
-func scriptSearchDirs() []string { return []string{userScriptsDir()} }
+func scriptSearchDirs() []string {
+	dir := userScriptsDir()
+	if dir == "" {
+		return nil
+	}
+	return []string{dir}
+}
 
 // ensureScriptsDir creates the scripts directory next to the executable and
 // populates it with the embedded scripts if it is missing.
 func ensureScriptsDir() {
+	if isWASM {
+		return
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return
@@ -408,6 +420,9 @@ func ensureScriptsDir() {
 // ensureDefaultScripts creates the user scripts directory and populates it
 // with example scripts when it is empty.
 func ensureDefaultScripts() {
+	if isWASM {
+		return
+	}
 	dir := userScriptsDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		log.Printf("create scripts dir: %v", err)
@@ -1671,6 +1686,9 @@ func pluginOverlayImage(owner string, id uint16, x, y int) {
 }
 
 func refreshPluginMod() {
+	if isWASM {
+		return
+	}
 	latest := time.Time{}
 	for _, dir := range scriptSearchDirs() {
 		entries, err := os.ReadDir(dir)
@@ -1805,6 +1823,9 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 }
 
 func rescanPlugins() {
+	if isWASM {
+		return
+	}
 	scanned := scanPlugins(scriptSearchDirs(), nil)
 
 	pluginMu.RLock()
@@ -1872,6 +1893,9 @@ func rescanPlugins() {
 }
 
 func checkPluginMods() {
+	if isWASM {
+		return
+	}
 	if time.Since(pluginModCheck) < 500*time.Millisecond {
 		return
 	}
@@ -1884,6 +1908,9 @@ func checkPluginMods() {
 }
 
 func loadPlugins() {
+	if isWASM {
+		return
+	}
 	ensureScriptsDir()
 	ensureDefaultScripts()
 	scanned := scanPlugins(scriptSearchDirs(), func(name, path string) {

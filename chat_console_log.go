@@ -25,6 +25,9 @@ func appendTextLog(msg string) {
 	if msg == "" {
 		return
 	}
+	if isWASM {
+		return
+	}
 
 	if playingMovie {
 		return
@@ -69,6 +72,11 @@ func appendTextLog(msg string) {
 // ensureTextLog initializes the legacy Text Log path matching old_mac_client.
 // Path: "Text Logs/<CharName>/CL Log YYYY/MM/DD HH.MM.SS.txt"
 func ensureTextLog() {
+	if isWASM {
+		textLogPath = ""
+		textLogChar = ""
+		return
+	}
 	textLogMu.Lock()
 	defer textLogMu.Unlock()
 
