@@ -249,6 +249,11 @@ func main() {
 			applyEnabledPlugins()
 
 			mp := newMoviePlayer(frames, clMovFPS, cancel)
+			if isWASM {
+				mp.repeat = true
+				gs.PowerSaveAlways = false
+				gs.PowerSaveBackground = false
+			}
 			mp.makePlaybackWindow()
 
 			if (gs.precacheSounds || gs.precacheImages) && !assetsPrecached {
