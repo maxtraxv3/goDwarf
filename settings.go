@@ -421,7 +421,11 @@ func loadSettings() bool {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		gs = gsdef
-		applyQualityPreset("High")
+		preset := "High"
+		if isWASM {
+			preset = "Standard"
+		}
+		applyQualityPreset(preset)
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
 		return false
@@ -465,7 +469,11 @@ func loadSettings() bool {
 		settingsLoaded = true
 	} else {
 		gs = gsdef
-		applyQualityPreset("High")
+		preset := "High"
+		if isWASM {
+			preset = "Standard"
+		}
+		applyQualityPreset(preset)
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
 		return false
