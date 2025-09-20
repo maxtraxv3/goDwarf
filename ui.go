@@ -1846,9 +1846,10 @@ func makeDownloadsWindow() {
 		downloadWin.Refresh()
 		go func() {
 			dlMutex.Lock()
-			defer dlMutex.Unlock()
+			curStatus := status
+			dlMutex.Unlock()
 
-			if err := downloadDataFiles(clVersion, status, downloadSoundfont, downloadTTS, downloadTTS, downloadTTS); err != nil {
+			if err := downloadDataFiles(clVersion, curStatus, downloadSoundfont, downloadTTS, downloadTTS, downloadTTS); err != nil {
 				logError("download data files: %v", err)
 				// Present inline Retry and Quit buttons
 				flow.Contents = []*eui.ItemData{statusText, pb}
@@ -1922,7 +1923,9 @@ func makeDownloadsWindow() {
 				log.Printf("measure: CL_Sounds archive loaded in %.2fms frame=%d", dtms, frameCounter)
 			}
 			if s, err := checkDataFiles(clVersion); err == nil {
+				dlMutex.Lock()
 				status = s
+				dlMutex.Unlock()
 			}
 			if name == "" && loginWin != nil {
 				// Force reselect from LastCharacter if available
