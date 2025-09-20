@@ -2267,6 +2267,9 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 	if !gs.SpeechBubbles {
 		return
 	}
+	if wasmPrivacyActive() {
+		return
+	}
 	descMap := snap.descriptors
 	maxDist := maxMobileInterpPixels * (snap.dropped + 1)
 	for _, b := range snap.bubbles {
