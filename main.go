@@ -174,12 +174,12 @@ func main() {
 
 	initDiscordRPC(ctx)
 
-    imgStart := time.Now()
-    if isWASM && len(wasmCLImagesData) > 0 {
-        clImages, err = climg.LoadBytes(wasmCLImagesData)
-    } else {
-        clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
-    }
+	imgStart := time.Now()
+	if isWASM && len(wasmCLImagesData) > 0 {
+		clImages, err = climg.LoadBytes(wasmCLImagesData)
+	} else {
+		clImages, err = climg.Load(filepath.Join(dataDirPath, CL_ImagesFile))
+	}
 	if err != nil {
 		logError("failed to load CL_Images: %v", err)
 		// Do not exit; allow UI to open download window.
@@ -196,12 +196,12 @@ func main() {
 		prepareClassicSplash()
 	}
 
-    sndStart := time.Now()
-    if isWASM && len(wasmCLSoundsData) > 0 {
-        clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
-    } else {
-        clSounds, err = clsnd.Load(filepath.Join(dataDirPath, CL_SoundsFile))
-    }
+	sndStart := time.Now()
+	if isWASM && len(wasmCLSoundsData) > 0 {
+		clSounds, err = clsnd.LoadBytes(wasmCLSoundsData)
+	} else {
+		clSounds, err = clsnd.Load(filepath.Join(dataDirPath, CL_SoundsFile))
+	}
 	if err != nil {
 		logError("failed to load CL_Sounds: %v", err)
 		// Do not exit; allow UI to open download window.
@@ -215,9 +215,17 @@ func main() {
 	}
 
 	go func() {
-		if clmovPath != "" {
+		if clmovPath != "" || (isWASM && len(wasmMovieZipData) > 0) {
 			drawStateEncrypted = false
-			frames, err := parseMovie(clmovPath, clVersion)
+			var (
+				frames []movieFrame
+				err    error
+			)
+			if clmovPath != "" {
+				frames, err = parseMovie(clmovPath, clVersion)
+			} else {
+				frames, err = parseMovieZipBytes(wasmMovieZipData, clVersion)
+			}
 			if err != nil {
 				log.Fatalf("parse movie: %v", err)
 			}

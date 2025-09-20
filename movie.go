@@ -30,45 +30,60 @@ type movieFrame struct {
 }
 
 func parseMovie(path string, clVersion int) ([]movieFrame, error) {
-	var (
-		data []byte
-		err  error
-	)
+	data, err := loadMovieData(path)
+	if err != nil {
+		return nil, err
+	}
+	return parseMovieData(data, clVersion)
+}
+
+func parseMovieZipBytes(zipData []byte, clVersion int) ([]movieFrame, error) {
+	zr, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		return nil, err
+	}
+	data, err := extractMovieFromZip(zr)
+	if err != nil {
+		return nil, err
+	}
+	return parseMovieData(data, clVersion)
+}
+
+func loadMovieData(path string) ([]byte, error) {
 	if strings.HasSuffix(strings.ToLower(path), ".zip") {
 		zr, err := zip.OpenReader(path)
 		if err != nil {
 			return nil, err
 		}
 		defer zr.Close()
-		var f *zip.File
-		for _, zf := range zr.File {
-			if strings.HasSuffix(strings.ToLower(zf.Name), ".clmov") {
-				f = zf
-				break
-			}
-		}
-		if f == nil {
-			if len(zr.File) > 0 {
-				f = zr.File[0]
-			} else {
-				return nil, fmt.Errorf("no files in archive")
-			}
-		}
-		rc, err := f.Open()
-		if err != nil {
-			return nil, err
-		}
-		defer rc.Close()
-		data, err = io.ReadAll(rc)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		data, err = os.ReadFile(path)
-		if err != nil {
-			return nil, err
+		return extractMovieFromZip(&zr.Reader)
+	}
+	return os.ReadFile(path)
+}
+
+func extractMovieFromZip(zr *zip.Reader) ([]byte, error) {
+	var target *zip.File
+	for _, f := range zr.File {
+		if strings.HasSuffix(strings.ToLower(f.Name), ".clmov") {
+			target = f
+			break
 		}
 	}
+	if target == nil {
+		if len(zr.File) == 0 {
+			return nil, fmt.Errorf("no files in archive")
+		}
+		target = zr.File[0]
+	}
+	rc, err := target.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
+}
+
+func parseMovieData(data []byte, clVersion int) ([]movieFrame, error) {
 	if len(data) < 8 {
 		return nil, fmt.Errorf("short file")
 	}
