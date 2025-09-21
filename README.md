@@ -8,6 +8,11 @@ An open-source (MIT) client for the classic **[Clan Lord](https://www.deltatao.c
 
 Approximately 43,000 lines of Go code.
 
+Currently supports Macintosh, Windows and Linux.
+
+Possible to add support for: FreeBSD, OpenBSD, Chrome, Firefox, Safari, Edge, Android, iOS, Nintendo Switch, Steam Deck, Xbox, PlayStation 5, Raspberry Pi, Steamworks.
+
+
 [Website Here](https://gothoom.xyz/)
 
 [Video Overview](https://youtu.be/MrGdcqIl3a4)
