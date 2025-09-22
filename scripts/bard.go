@@ -1,14 +1,14 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import "gt"
 
-// Plugin metadata
-const PluginName = "Bard Macros"
-const PluginAuthor = "Examples"
-const PluginCategory = "Profession"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Bard Macros"
+const scriptAuthor = "Examples"
+const scriptCategory = "Profession"
+const scriptAPIVersion = 1
 
 // Init sets up our commands and hotkeys.
 func Init() {

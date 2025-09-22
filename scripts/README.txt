@@ -4,11 +4,11 @@ This folder contains example script files for goThoom.
 
 Getting Started
 - Copy or edit any of the example .go files to get started.
-- Start each file with `//go:build plugin`.
+- Start each file with `//go:build script`.
 - Each script must define an Init() function. The client discovers and calls this function after loading the file.
-- Each script must define a unique PluginName, PluginAuthor and PluginCategory string. Changing Name or Author will make the script unable to access old saved data!
+- Each script must define a unique scriptName, scriptAuthor and scriptCategory string. Changing Name or Author will make the script unable to access old saved data!
 - Place .go files in the scripts/ directory next to the game.
-- Hotkeys added by scripts appear in a "Plugin Hotkeys" section of the hotkeys window where you can enable or disable them.
+- Hotkeys added by scripts appear in a "script Hotkeys" section of the hotkeys window where you can enable or disable them.
 
 Run the client with `go run .` or the built binary and any scripts in this folder load automatically.
 
@@ -44,13 +44,13 @@ Common API calls:
 Function Anatomy
 A minimal script typically looks like this:
 
-    //go:build plugin
+    //go:build script
     package main
     import "gt"
-    const PluginName = "My Script"
-    const PluginAuthor = "You"
-    const PluginCategory = "Utilities"
-    const PluginAPIVersion = 1
+    const scriptName = "My Script"
+    const scriptAuthor = "You"
+    const scriptCategory = "Utilities"
+    const scriptAPIVersion = 1
 
     func Init() {
         // Add a local command you can type as "/hello".

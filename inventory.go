@@ -273,7 +273,7 @@ func toggleInventoryEquipAt(id uint16, idx int) {
 
 // toggleInventoryEquip equips the specified item without specifying an index.
 // It retains the previous behavior and is kept for compatibility with
-// existing plugin APIs.
+// existing script APIs.
 func toggleInventoryEquip(id uint16) {
 	toggleInventoryEquipAt(id, -1)
 }

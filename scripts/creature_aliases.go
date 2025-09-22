@@ -1,14 +1,14 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import "gt"
 
-// Plugin metadata
-const PluginName = "Creature Aliases"
-const PluginAuthor = "Examples"
-const PluginCategory = "Fun"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Creature Aliases"
+const scriptAuthor = "Examples"
+const scriptCategory = "Fun"
+const scriptAPIVersion = 1
 
 // Init registers a bunch of chat shortcuts so typing
 // "abo" automatically expands to the full creature name.

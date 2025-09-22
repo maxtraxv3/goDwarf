@@ -32,7 +32,7 @@ type Hotkey struct {
 	Name     string          `json:"name,omitempty"`
 	Combo    string          `json:"combo"`
 	Commands []HotkeyCommand `json:"commands"`
-	Plugin   string          `json:"plugin,omitempty"`
+	Script   string          `json:"script,omitempty"`
 	Disabled bool            `json:"disabled,omitempty"`
 }
 
@@ -53,17 +53,17 @@ var (
 	recordTarget  *eui.ItemData
 	recordedCombo string
 
-	pluginHotkeyMu sync.RWMutex
+	scriptHotkeyMu sync.RWMutex
 
-	// pluginHotkeyEnabled holds the persisted enabled state for plugin
-	// hotkeys. The map is keyed first by plugin name and then by combo.
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	// scriptHotkeyEnabled holds the persisted enabled state for script
+	// hotkeys. The map is keyed first by script name and then by combo.
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 )
 
 func loadHotkeys() {
 	path := filepath.Join(dataDirPath, hotkeysFile)
-	pluginHotkeyMu.Lock()
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptHotkeyMu.Lock()
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 	data, err := os.ReadFile(path)
 
 	var newList []Hotkey
@@ -75,21 +75,21 @@ func loadHotkeys() {
 			Commands []HotkeyCommand `json:"commands"`
 			Command  string          `json:"command"`
 			Text     string          `json:"text,omitempty"`
-			Plugin   string          `json:"plugin,omitempty"`
+			script   string          `json:"script,omitempty"`
 			Disabled *bool           `json:"disabled,omitempty"`
 			Enabled  *bool           `json:"enabled,omitempty"`
 		}
 		var raw []hotkeyJSON
 		if err := json.Unmarshal(data, &raw); err != nil {
-			pluginHotkeyMu.Unlock()
+			scriptHotkeyMu.Unlock()
 			return
 		}
 		for _, r := range raw {
-			if r.Plugin != "" {
-				m := pluginHotkeyEnabled[r.Plugin]
+			if r.script != "" {
+				m := scriptHotkeyEnabled[r.script]
 				if m == nil {
 					m = map[string]bool{}
-					pluginHotkeyEnabled[r.Plugin] = m
+					scriptHotkeyEnabled[r.script] = m
 				}
 				enabled := false
 				if r.Enabled != nil {
@@ -125,17 +125,17 @@ func loadHotkeys() {
 	} else if os.IsNotExist(err) {
 		noFile = true
 	} else {
-		pluginHotkeyMu.Unlock()
+		scriptHotkeyMu.Unlock()
 		return
 	}
-	pluginHotkeyMu.Unlock()
+	scriptHotkeyMu.Unlock()
 
 	// Add default hotkeys only on first run (no existing config file).
 	if noFile {
 		fs := Hotkey{Name: "Toggle Fullscreen", Combo: "F12", Commands: []HotkeyCommand{{Command: "/fullscreen"}}}
 		exists := false
 		for _, hk := range newList {
-			if hk.Combo == fs.Combo && hk.Plugin == "" {
+			if hk.Combo == fs.Combo && hk.Script == "" {
 				exists = true
 				break
 			}
@@ -161,28 +161,28 @@ func saveHotkeys() {
 	hotkeysMu.RLock()
 	snap := append([]Hotkey(nil), hotkeys...)
 	hotkeysMu.RUnlock()
-	type pluginState struct {
-		Plugin  string `json:"plugin,omitempty"`
+	type scriptState struct {
+		Script  string `json:"script,omitempty"`
 		Combo   string `json:"combo"`
 		Enabled bool   `json:"enabled,omitempty"`
 	}
 
 	var out []any
-	pluginHotkeyMu.Lock()
+	scriptHotkeyMu.Lock()
 	for _, hk := range snap {
-		if hk.Plugin != "" {
+		if hk.Script != "" {
 			if hk.Disabled {
-				if m := pluginHotkeyEnabled[hk.Plugin]; m != nil {
+				if m := scriptHotkeyEnabled[hk.Script]; m != nil {
 					delete(m, hk.Combo)
 					if len(m) == 0 {
-						delete(pluginHotkeyEnabled, hk.Plugin)
+						delete(scriptHotkeyEnabled, hk.Script)
 					}
 				}
 			} else {
-				m := pluginHotkeyEnabled[hk.Plugin]
+				m := scriptHotkeyEnabled[hk.Script]
 				if m == nil {
 					m = map[string]bool{}
-					pluginHotkeyEnabled[hk.Plugin] = m
+					scriptHotkeyEnabled[hk.Script] = m
 				}
 				m[hk.Combo] = true
 			}
@@ -190,12 +190,12 @@ func saveHotkeys() {
 		}
 		out = append(out, hk)
 	}
-	for plug, m := range pluginHotkeyEnabled {
+	for plug, m := range scriptHotkeyEnabled {
 		for combo := range m {
-			out = append(out, pluginState{Plugin: plug, Combo: combo, Enabled: true})
+			out = append(out, scriptState{Script: plug, Combo: combo, Enabled: true})
 		}
 	}
-	pluginHotkeyMu.Unlock()
+	scriptHotkeyMu.Unlock()
 
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
@@ -204,36 +204,36 @@ func saveHotkeys() {
 	_ = os.WriteFile(path, data, 0o644)
 }
 
-func pluginHotkeys(owner string) []Hotkey {
+func scriptHotkeys(owner string) []Hotkey {
 	hotkeysMu.RLock()
 	defer hotkeysMu.RUnlock()
 	var list []Hotkey
 	for _, hk := range hotkeys {
-		if hk.Plugin == owner {
+		if hk.Script == owner {
 			list = append(list, hk)
 		}
 	}
 	return list
 }
 
-func pluginRemoveHotkey(owner, combo string) {
+func scriptRemoveHotkey(owner, combo string) {
 	hotkeysMu.Lock()
 	for i := 0; i < len(hotkeys); i++ {
 		hk := hotkeys[i]
-		if hk.Plugin == owner && hk.Combo == combo {
+		if hk.Script == owner && hk.Combo == combo {
 			hotkeys = append(hotkeys[:i], hotkeys[i+1:]...)
 			i--
 		}
 	}
 	hotkeysMu.Unlock()
-	pluginHotkeyMu.Lock()
-	if m := pluginHotkeyEnabled[owner]; m != nil {
+	scriptHotkeyMu.Lock()
+	if m := scriptHotkeyEnabled[owner]; m != nil {
 		delete(m, combo)
 		if len(m) == 0 {
-			delete(pluginHotkeyEnabled, owner)
+			delete(scriptHotkeyEnabled, owner)
 		}
 	}
-	pluginHotkeyMu.Unlock()
+	scriptHotkeyMu.Unlock()
 	refreshHotkeysList()
 	saveHotkeys()
 }
@@ -301,7 +301,7 @@ func refreshHotkeysList() {
 
 	// global hotkeys
 	for i, hk := range list {
-		if hk.Plugin != "" {
+		if hk.Script != "" {
 			continue
 		}
 		idx := i
@@ -342,14 +342,14 @@ func refreshHotkeysList() {
 		hotkeysList.AddItem(row)
 	}
 
-	// plugin hotkeys header and list
+	// script hotkeys header and list
 	headerAdded := false
 	for i, hk := range list {
-		if hk.Plugin == "" {
+		if hk.Script == "" {
 			continue
 		}
 		if !headerAdded {
-			label := &eui.ItemData{ItemType: eui.ITEM_TEXT, Text: "Plugin Hotkeys", Fixed: true}
+			label := &eui.ItemData{ItemType: eui.ITEM_TEXT, Text: "script Hotkeys", Fixed: true}
 			label.Size = eui.Point{X: 480, Y: 20}
 			label.FontSize = 10
 			hotkeysList.AddItem(label)
@@ -369,24 +369,24 @@ func refreshHotkeysList() {
 					hk = hotkeys[idx]
 				}
 				hotkeysMu.Unlock()
-				if hk.Plugin != "" {
-					pluginHotkeyMu.Lock()
+				if hk.Script != "" {
+					scriptHotkeyMu.Lock()
 					if hk.Disabled {
-						if m := pluginHotkeyEnabled[hk.Plugin]; m != nil {
+						if m := scriptHotkeyEnabled[hk.Script]; m != nil {
 							delete(m, hk.Combo)
 							if len(m) == 0 {
-								delete(pluginHotkeyEnabled, hk.Plugin)
+								delete(scriptHotkeyEnabled, hk.Script)
 							}
 						}
 					} else {
-						m := pluginHotkeyEnabled[hk.Plugin]
+						m := scriptHotkeyEnabled[hk.Script]
 						if m == nil {
 							m = map[string]bool{}
-							pluginHotkeyEnabled[hk.Plugin] = m
+							scriptHotkeyEnabled[hk.Script] = m
 						}
 						m[hk.Combo] = true
 					}
-					pluginHotkeyMu.Unlock()
+					scriptHotkeyMu.Unlock()
 				}
 				saveHotkeys()
 			}
@@ -396,9 +396,9 @@ func refreshHotkeysList() {
 		if hk.Name != "" {
 			text = hk.Name + " : " + hk.Combo
 		}
-		disp := pluginDisplayNames[hk.Plugin]
+		disp := scriptDisplayNames[hk.Script]
 		if disp == "" {
-			disp = hk.Plugin
+			disp = hk.Script
 		}
 		lbl := &eui.ItemData{ItemType: eui.ITEM_TEXT, Text: disp + " -> " + text, Fixed: true}
 		lbl.Size = eui.Point{X: 460, Y: 20}
@@ -658,7 +658,7 @@ func finishHotkeyEdit(save bool) {
 					hotkeysMu.RUnlock()
 					name := hk.Name
 					if name == "" {
-						name = hk.Plugin
+						name = hk.Script
 					}
 					if name == "" {
 						name = "another hotkey"
@@ -978,10 +978,10 @@ func checkHotkeys() {
 		hotkeysMu.RUnlock()
 		for _, hk := range list {
 			if !hk.Disabled && (hk.Combo == combo || strings.EqualFold(hk.Combo, combo) || sameCombo(hk.Combo, combo)) {
-				// If this is a plugin hotkey with a function handler, call it.
-				if hk.Plugin != "" {
-					if fn, ok := pluginGetHotkeyFn(hk.Plugin, hk.Combo); ok && fn != nil {
-						pluginLogEvent(hk.Plugin, "Hotkey", combo)
+				// If this is a script hotkey with a function handler, call it.
+				if hk.Script != "" {
+					if fn, ok := scriptGetHotkeyFn(hk.Script, hk.Combo); ok && fn != nil {
+						scriptLogEvent(hk.Script, "Hotkey", combo)
 						parts := strings.Split(combo, "-")
 						trig := ""
 						if len(parts) > 0 {
@@ -1015,7 +1015,7 @@ func checkHotkeys() {
 						}
 					}
 					if cmd != "" {
-						if gs.pluginOutputDebug {
+						if gs.scriptOutputDebug {
 							consoleMessage("> " + cmd)
 						}
 					}

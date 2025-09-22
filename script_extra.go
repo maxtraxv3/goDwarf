@@ -44,31 +44,31 @@ func mouseButtonFromName(name string) (ebiten.MouseButton, bool) {
 	return 0, false
 }
 
-func pluginKeyJustPressed(name string) bool {
+func scriptKeyJustPressed(name string) bool {
 	if k, ok := keyFromName(name); ok {
 		return inpututil.IsKeyJustPressed(k)
 	}
 	return false
 }
 
-func pluginMouseJustPressed(name string) bool {
+func scriptMouseJustPressed(name string) bool {
 	if b, ok := mouseButtonFromName(name); ok {
 		return inpututil.IsMouseButtonJustPressed(b)
 	}
 	return false
 }
 
-func pluginMouseWheel() (float64, float64) {
+func scriptMouseWheel() (float64, float64) {
 	return ebiten.Wheel()
 }
 
-func pluginLastClick() ClickInfo {
+func scriptLastClick() ClickInfo {
 	lastClickMu.Lock()
 	defer lastClickMu.Unlock()
 	return lastClick
 }
 
-func pluginEquippedItems() []InventoryItem {
+func scriptEquippedItems() []InventoryItem {
 	items := getInventory()
 	res := make([]InventoryItem, 0, len(items))
 	for _, it := range items {
@@ -79,7 +79,7 @@ func pluginEquippedItems() []InventoryItem {
 	return res
 }
 
-func pluginHasItem(name string) bool {
+func scriptHasItem(name string) bool {
 	n := strings.ToLower(name)
 	for _, it := range getInventory() {
 		if strings.ToLower(it.Name) == n {
@@ -89,8 +89,8 @@ func pluginHasItem(name string) bool {
 	return false
 }
 
-// pluginIsEquipped reports whether any equipped item matches the given name.
-func pluginIsEquipped(name string) bool {
+// scriptIsEquipped reports whether any equipped item matches the given name.
+func scriptIsEquipped(name string) bool {
 	n := strings.ToLower(name)
 	for _, it := range getInventory() {
 		if it.Equipped && strings.ToLower(it.Name) == n {

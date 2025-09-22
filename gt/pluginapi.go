@@ -15,9 +15,9 @@ func ShowNotification(msg string) {}
 func Notify(msg string)           {}
 
 // Commands
-type PluginCommandHandler func(args string)
+type scriptCommandHandler func(args string)
 
-func RegisterCommand(name string, handler PluginCommandHandler) {}
+func RegisterCommand(name string, handler scriptCommandHandler) {}
 func Run(cmd string)                                            {}
 func Cmd(cmd string)                                            {}
 func RunCommand(cmd string)                                     {}
@@ -84,16 +84,22 @@ func EquippedItems() []InventoryItem { return nil }
 func HasItem(name string) bool       { return false }
 func IsEquipped(name string) bool    { return false }
 func Has(name string) bool           { return HasItem(name) }
+
 // Equip equips an item by name (case-insensitive).
 func Equip(name string) {}
+
 // Unequip unequips an item by name (case-insensitive).
 func Unequip(name string) {}
+
 // EquipPartial equips the first item whose name contains the substring (case-insensitive).
 func EquipPartial(name string) {}
+
 // UnequipPartial unequips an equipped item whose name contains the substring (case-insensitive).
 func UnequipPartial(name string) {}
+
 // EquipById equips an item by numeric ID.
 func EquipById(id uint16) {}
+
 // UnequipById unequips an item by numeric ID.
 func UnequipById(id uint16) {}
 

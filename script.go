@@ -19,14 +19,14 @@ import (
 	"github.com/traefik/yaegi/stdlib"
 )
 
-const pluginAPICurrentVersion = 1
+const scriptAPICurrentVersion = 1
 
-type pluginScope struct {
+type scriptScope struct {
 	All   bool
 	Chars map[string]bool
 }
 
-func (s pluginScope) enablesFor(effChar string) bool {
+func (s scriptScope) enablesFor(effChar string) bool {
 	if s.All {
 		return true
 	}
@@ -36,7 +36,7 @@ func (s pluginScope) enablesFor(effChar string) bool {
 	return s.Chars[effChar]
 }
 
-func (s *pluginScope) addChar(name string) {
+func (s *scriptScope) addChar(name string) {
 	if name == "" {
 		return
 	}
@@ -46,54 +46,54 @@ func (s *pluginScope) addChar(name string) {
 	s.Chars[name] = true
 }
 
-func (s *pluginScope) removeChar(name string) {
+func (s *scriptScope) removeChar(name string) {
 	if s.Chars == nil || name == "" {
 		return
 	}
 	delete(s.Chars, name)
 }
 
-func (s pluginScope) empty() bool { return !s.All && (s.Chars == nil || len(s.Chars) == 0) }
+func (s scriptScope) empty() bool { return !s.All && (s.Chars == nil || len(s.Chars) == 0) }
 
-// Expose the plugin API under both a short and a module-qualified path so
+// Expose the script API under both a short and a module-qualified path so
 // Yaegi can resolve imports regardless of how the script refers to it.
-var basePluginExports = interp.Exports{
-	// Short path used by simple plugin scripts: import "gt"
+var basescriptExports = interp.Exports{
+	// Short path used by simple script scripts: import "gt"
 	// Yaegi expects keys as "importPath/pkgName".
 	"gt/gt": {
-		"Console":          reflect.ValueOf(pluginConsole),
-		"ShowNotification": reflect.ValueOf(pluginShowNotification),
+		"Console":          reflect.ValueOf(scriptConsole),
+		"ShowNotification": reflect.ValueOf(scriptShowNotification),
 		"clVersion":        reflect.ValueOf(&clVersion).Elem(),
-		"PlayerName":       reflect.ValueOf(pluginPlayerName),
-		"Players":          reflect.ValueOf(pluginPlayers),
-		"Inventory":        reflect.ValueOf(pluginInventory),
+		"PlayerName":       reflect.ValueOf(scriptPlayerName),
+		"Players":          reflect.ValueOf(scriptPlayers),
+		"Inventory":        reflect.ValueOf(scriptInventory),
 		"InventoryItem":    reflect.ValueOf((*InventoryItem)(nil)),
 		"Player":           reflect.ValueOf((*Player)(nil)),
-		"PlaySound":        reflect.ValueOf(pluginPlaySound),
-		"InputText":        reflect.ValueOf(pluginInputText),
-		"SetInputText":     reflect.ValueOf(pluginSetInputText),
-		"KeyJustPressed":   reflect.ValueOf(pluginKeyJustPressed),
-		"MouseJustPressed": reflect.ValueOf(pluginMouseJustPressed),
-		"MouseWheel":       reflect.ValueOf(pluginMouseWheel),
-		"LastClick":        reflect.ValueOf(pluginLastClick),
+		"PlaySound":        reflect.ValueOf(scriptPlaySound),
+		"InputText":        reflect.ValueOf(scriptInputText),
+		"SetInputText":     reflect.ValueOf(scriptSetInputText),
+		"KeyJustPressed":   reflect.ValueOf(scriptKeyJustPressed),
+		"MouseJustPressed": reflect.ValueOf(scriptMouseJustPressed),
+		"MouseWheel":       reflect.ValueOf(scriptMouseWheel),
+		"LastClick":        reflect.ValueOf(scriptLastClick),
 		"ClickInfo":        reflect.ValueOf((*ClickInfo)(nil)),
 		"Mobile":           reflect.ValueOf((*Mobile)(nil)),
-		"EquippedItems":    reflect.ValueOf(pluginEquippedItems),
-		"HasItem":          reflect.ValueOf(pluginHasItem),
-		"IsEquipped":       reflect.ValueOf(pluginIsEquipped),
-		"IgnoreCase":       reflect.ValueOf(pluginIgnoreCase),
-		"StartsWith":       reflect.ValueOf(pluginStartsWith),
-		"EndsWith":         reflect.ValueOf(pluginEndsWith),
-		"Includes":         reflect.ValueOf(pluginIncludes),
-		"Lower":            reflect.ValueOf(pluginLower),
-		"Upper":            reflect.ValueOf(pluginUpper),
-		"Trim":             reflect.ValueOf(pluginTrim),
-		"TrimStart":        reflect.ValueOf(pluginTrimStart),
-		"TrimEnd":          reflect.ValueOf(pluginTrimEnd),
-		"Words":            reflect.ValueOf(pluginWords),
-		"Join":             reflect.ValueOf(pluginJoin),
-		"Replace":          reflect.ValueOf(pluginReplace),
-		"Split":            reflect.ValueOf(pluginSplit),
+		"EquippedItems":    reflect.ValueOf(scriptEquippedItems),
+		"HasItem":          reflect.ValueOf(scriptHasItem),
+		"IsEquipped":       reflect.ValueOf(scriptIsEquipped),
+		"IgnoreCase":       reflect.ValueOf(scriptIgnoreCase),
+		"StartsWith":       reflect.ValueOf(scriptStartsWith),
+		"EndsWith":         reflect.ValueOf(scriptEndsWith),
+		"Includes":         reflect.ValueOf(scriptIncludes),
+		"Lower":            reflect.ValueOf(scriptLower),
+		"Upper":            reflect.ValueOf(scriptUpper),
+		"Trim":             reflect.ValueOf(scriptTrim),
+		"TrimStart":        reflect.ValueOf(scriptTrimStart),
+		"TrimEnd":          reflect.ValueOf(scriptTrimEnd),
+		"Words":            reflect.ValueOf(scriptWords),
+		"Join":             reflect.ValueOf(scriptJoin),
+		"Replace":          reflect.ValueOf(scriptReplace),
+		"Split":            reflect.ValueOf(scriptSplit),
 		// Hotkey event type for function-based hotkeys
 		"HotkeyEvent": reflect.ValueOf((*HotkeyEvent)(nil)),
 		// Chat trigger flags
@@ -106,120 +106,120 @@ var basePluginExports = interp.Exports{
 	},
 }
 
-func exportsForPlugin(owner string) interp.Exports {
+func exportsForscript(owner string) interp.Exports {
 	ex := make(interp.Exports)
-	for pkg, symbols := range basePluginExports {
+	for pkg, symbols := range basescriptExports {
 		m := map[string]reflect.Value{}
 		for k, v := range symbols {
 			m[k] = v
 		}
 		// Prefer string-based APIs; keep ID variants for power users
-		m["Equip"] = reflect.ValueOf(func(name string) { pluginEquipByName(owner, name) })
-		m["Unequip"] = reflect.ValueOf(func(name string) { pluginUnequipByName(owner, name) })
-		m["EquipPartial"] = reflect.ValueOf(func(name string) { pluginEquipPartial(owner, name) })
-		m["UnequipPartial"] = reflect.ValueOf(func(name string) { pluginUnequipPartial(owner, name) })
-		m["EquipById"] = reflect.ValueOf(func(id uint16) { pluginEquip(owner, id) })
-		m["UnequipById"] = reflect.ValueOf(func(id uint16) { pluginUnequip(owner, id) })
-		m["AddHotkey"] = reflect.ValueOf(func(combo, command string) { pluginAddHotkey(owner, combo, command) })
-		m["AddHotkeyFn"] = reflect.ValueOf(func(combo string, handler func(HotkeyEvent)) { pluginAddHotkeyFn(owner, combo, handler) })
-		m["RemoveHotkey"] = reflect.ValueOf(func(combo string) { pluginRemoveHotkey(owner, combo) })
-		m["RegisterCommand"] = reflect.ValueOf(func(name string, handler PluginCommandHandler) {
-			pluginRegisterCommand(owner, name, handler)
+		m["Equip"] = reflect.ValueOf(func(name string) { scriptEquipByName(owner, name) })
+		m["Unequip"] = reflect.ValueOf(func(name string) { scriptUnequipByName(owner, name) })
+		m["EquipPartial"] = reflect.ValueOf(func(name string) { scriptEquipPartial(owner, name) })
+		m["UnequipPartial"] = reflect.ValueOf(func(name string) { scriptUnequipPartial(owner, name) })
+		m["EquipById"] = reflect.ValueOf(func(id uint16) { scriptEquip(owner, id) })
+		m["UnequipById"] = reflect.ValueOf(func(id uint16) { scriptUnequip(owner, id) })
+		m["AddHotkey"] = reflect.ValueOf(func(combo, command string) { scriptAddHotkey(owner, combo, command) })
+		m["AddHotkeyFn"] = reflect.ValueOf(func(combo string, handler func(HotkeyEvent)) { scriptAddHotkeyFn(owner, combo, handler) })
+		m["RemoveHotkey"] = reflect.ValueOf(func(combo string) { scriptRemoveHotkey(owner, combo) })
+		m["RegisterCommand"] = reflect.ValueOf(func(name string, handler scriptCommandHandler) {
+			scriptRegisterCommand(owner, name, handler)
 		})
-		m["AddShortcut"] = reflect.ValueOf(func(short, full string) { pluginAddShortcut(owner, short, full) })
-		m["AddShortcuts"] = reflect.ValueOf(func(shortcuts map[string]string) { pluginAddShortcuts(owner, shortcuts) })
+		m["AddShortcut"] = reflect.ValueOf(func(short, full string) { scriptAddShortcut(owner, short, full) })
+		m["AddShortcuts"] = reflect.ValueOf(func(shortcuts map[string]string) { scriptAddShortcuts(owner, shortcuts) })
 		// Chat/Console (simple, no slices)
 		// Simple DSL aliases
-		m["Print"] = reflect.ValueOf(pluginConsole)
-		m["Notify"] = reflect.ValueOf(pluginShowNotification)
-		m["Cmd"] = reflect.ValueOf(func(text string) { pluginEnqueueCommand(owner, strings.TrimSpace(text)) })
-		m["Run"] = reflect.ValueOf(func(text string) { pluginRunCommand(owner, strings.TrimSpace(text)) })
-		m["Me"] = reflect.ValueOf(pluginPlayerName)
-		m["Has"] = reflect.ValueOf(func(name string) bool { return pluginHasItem(name) })
-		m["Save"] = reflect.ValueOf(func(key, value string) { pluginStorageSet(owner, key, value) })
+		m["Print"] = reflect.ValueOf(scriptConsole)
+		m["Notify"] = reflect.ValueOf(scriptShowNotification)
+		m["Cmd"] = reflect.ValueOf(func(text string) { scriptEnqueueCommand(owner, strings.TrimSpace(text)) })
+		m["Run"] = reflect.ValueOf(func(text string) { scriptRunCommand(owner, strings.TrimSpace(text)) })
+		m["Me"] = reflect.ValueOf(scriptPlayerName)
+		m["Has"] = reflect.ValueOf(func(name string) bool { return scriptHasItem(name) })
+		m["Save"] = reflect.ValueOf(func(key, value string) { scriptStorageSet(owner, key, value) })
 		m["Load"] = reflect.ValueOf(func(key string) string {
-			if v, ok := pluginStorageGet(owner, key).(string); ok {
+			if v, ok := scriptStorageGet(owner, key).(string); ok {
 				return v
 			}
 			return ""
 		})
-		m["Delete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
-		m["Input"] = reflect.ValueOf(pluginInputText)
-		m["SetInput"] = reflect.ValueOf(pluginSetInputText)
+		m["Delete"] = reflect.ValueOf(func(key string) { scriptStorageDelete(owner, key) })
+		m["Input"] = reflect.ValueOf(scriptInputText)
+		m["SetInput"] = reflect.ValueOf(scriptSetInputText)
 		// (Removed explicit Thank/Curse/Share/Unshare helpers to avoid duplicating
 		// in-game commands; authors can use Cmd("/thank ...") etc.)
 		// No-slice chat/console helpers (one call per phrase)
 		m["Chat"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, "", []string{p}, ChatAny, handler)
+				scriptRegisterChat(owner, "", []string{p}, ChatAny, handler)
 			}
 		})
 		m["PlayerChat"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, "", []string{p}, ChatPlayer, handler)
+				scriptRegisterChat(owner, "", []string{p}, ChatPlayer, handler)
 			}
 		})
 		m["NPCChat"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, "", []string{p}, ChatNPC, handler)
+				scriptRegisterChat(owner, "", []string{p}, ChatNPC, handler)
 			}
 		})
 		m["CreatureChat"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, "", []string{p}, ChatCreature, handler)
+				scriptRegisterChat(owner, "", []string{p}, ChatCreature, handler)
 			}
 		})
 		m["SelfChat"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, "", []string{p}, ChatSelf, handler)
+				scriptRegisterChat(owner, "", []string{p}, ChatSelf, handler)
 			}
 		})
 		m["OtherChat"] = reflect.ValueOf(func(name, phrase string, handler func(string)) {
 			n := strings.TrimSpace(name)
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterChat(owner, n, []string{p}, ChatOther, handler)
+				scriptRegisterChat(owner, n, []string{p}, ChatOther, handler)
 			}
 		})
 		m["ChatFrom"] = reflect.ValueOf(func(name, phrase string, handler func(string)) {
 			n := strings.TrimSpace(name)
 			p := strings.TrimSpace(phrase)
 			if n != "" && p != "" {
-				pluginRegisterChat(owner, n, []string{p}, ChatAny, handler)
+				scriptRegisterChat(owner, n, []string{p}, ChatAny, handler)
 			}
 		})
 		m["PlayerChatFrom"] = reflect.ValueOf(func(name, phrase string, handler func(string)) {
 			n := strings.TrimSpace(name)
 			p := strings.TrimSpace(phrase)
 			if n != "" && p != "" {
-				pluginRegisterChat(owner, n, []string{p}, ChatPlayer, handler)
+				scriptRegisterChat(owner, n, []string{p}, ChatPlayer, handler)
 			}
 		})
 		m["OtherChatFrom"] = reflect.ValueOf(func(name, phrase string, handler func(string)) {
 			n := strings.TrimSpace(name)
 			p := strings.TrimSpace(phrase)
 			if n != "" && p != "" {
-				pluginRegisterChat(owner, n, []string{p}, ChatOther, handler)
+				scriptRegisterChat(owner, n, []string{p}, ChatOther, handler)
 			}
 		})
 		m["ConsoleMsg"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterConsole(owner, []string{p}, handler)
+				scriptRegisterConsole(owner, []string{p}, handler)
 			}
 		})
 		// Sleep for game ticks (blocks current goroutine only)
-		m["SleepTicks"] = reflect.ValueOf(func(ticks int) { pluginSleepTicks(owner, ticks) })
+		m["SleepTicks"] = reflect.ValueOf(func(ticks int) { scriptSleepTicks(owner, ticks) })
 		// Simpler alias: Console("text", fn)
 		m["Console"] = reflect.ValueOf(func(phrase string, handler func(string)) {
 			p := strings.TrimSpace(phrase)
 			if p != "" {
-				pluginRegisterConsole(owner, []string{p}, handler)
+				scriptRegisterConsole(owner, []string{p}, handler)
 			}
 		})
 		// Back-compat registrations matching gt stubs
@@ -227,34 +227,34 @@ func exportsForPlugin(owner string) interp.Exports {
 			if fn == nil || len(phrases) == 0 {
 				return
 			}
-			pluginRegisterChat(owner, name, phrases, ChatAny, fn)
+			scriptRegisterChat(owner, name, phrases, ChatAny, fn)
 		})
 		m["RegisterConsoleTriggers"] = reflect.ValueOf(func(phrases []string, fn func()) {
 			if fn == nil || len(phrases) == 0 {
 				return
 			}
-			pluginRegisterConsoleTriggers(owner, phrases, fn)
+			scriptRegisterConsoleTriggers(owner, phrases, fn)
 		})
 		m["RegisterTrigger"] = reflect.ValueOf(func(name, phrase string, fn func()) {
 			p := strings.TrimSpace(phrase)
 			if p == "" || fn == nil {
 				return
 			}
-			pluginRegisterChat(owner, name, []string{p}, ChatAny, func(string) { fn() })
+			scriptRegisterChat(owner, name, []string{p}, ChatAny, func(string) { fn() })
 		})
-		m["RegisterPlayerHandler"] = reflect.ValueOf(func(fn func(Player)) { pluginRegisterPlayerHandler(owner, fn) })
-		m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { pluginRegisterInputHandler(owner, fn) })
-		m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { pluginRegisterChatHandler(owner, fn) })
+		m["RegisterPlayerHandler"] = reflect.ValueOf(func(fn func(Player)) { scriptRegisterPlayerHandler(owner, fn) })
+		m["RegisterInputHandler"] = reflect.ValueOf(func(fn func(string) string) { scriptRegisterInputHandler(owner, fn) })
+		m["RegisterChatHandler"] = reflect.ValueOf(func(fn func(string)) { scriptRegisterChatHandler(owner, fn) })
 		// Simple world overlay drawing (top-left origin, world units)
-		m["OverlayClear"] = reflect.ValueOf(func() { pluginOverlayClear(owner) })
+		m["OverlayClear"] = reflect.ValueOf(func() { scriptOverlayClear(owner) })
 		m["OverlayRect"] = reflect.ValueOf(func(x, y, w, h int, r, g, b, a uint8) {
-			pluginOverlayRect(owner, x, y, w, h, r, g, b, a)
+			scriptOverlayRect(owner, x, y, w, h, r, g, b, a)
 		})
 		m["OverlayText"] = reflect.ValueOf(func(x, y int, txt string, r, g, b, a uint8) {
-			pluginOverlayText(owner, x, y, txt, r, g, b, a)
+			scriptOverlayText(owner, x, y, txt, r, g, b, a)
 		})
 		m["OverlayImage"] = reflect.ValueOf(func(id uint16, x, y int) {
-			pluginOverlayImage(owner, id, x, y)
+			scriptOverlayImage(owner, id, x, y)
 		})
 		m["WorldSize"] = reflect.ValueOf(func() (int, int) { return gameAreaSizeX, gameAreaSizeY })
 		m["ImageSize"] = reflect.ValueOf(func(id uint16) (int, int) {
@@ -264,12 +264,12 @@ func exportsForPlugin(owner string) interp.Exports {
 			w, h := clImages.Size(uint32(id))
 			return w, h
 		})
-		m["RunCommand"] = reflect.ValueOf(func(cmd string) { pluginRunCommand(owner, cmd) })
-		m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { pluginEnqueueCommand(owner, cmd) })
-		m["StorageGet"] = reflect.ValueOf(func(key string) any { return pluginStorageGet(owner, key) })
-		m["StorageSet"] = reflect.ValueOf(func(key string, value any) { pluginStorageSet(owner, key, value) })
-		m["StorageDelete"] = reflect.ValueOf(func(key string) { pluginStorageDelete(owner, key) })
-		m["AddConfig"] = reflect.ValueOf(func(name, typ string) { pluginAddConfig(owner, name, typ) })
+		m["RunCommand"] = reflect.ValueOf(func(cmd string) { scriptRunCommand(owner, cmd) })
+		m["EnqueueCommand"] = reflect.ValueOf(func(cmd string) { scriptEnqueueCommand(owner, cmd) })
+		m["StorageGet"] = reflect.ValueOf(func(key string) any { return scriptStorageGet(owner, key) })
+		m["StorageSet"] = reflect.ValueOf(func(key string, value any) { scriptStorageSet(owner, key, value) })
+		m["StorageDelete"] = reflect.ValueOf(func(key string) { scriptStorageDelete(owner, key) })
+		m["AddConfig"] = reflect.ValueOf(func(name, typ string) { scriptAddConfig(owner, name, typ) })
 
 		// Timers
 		m["After"] = reflect.ValueOf(func(ms int, fn func()) {
@@ -277,27 +277,27 @@ func exportsForPlugin(owner string) interp.Exports {
 				return
 			}
 			t := time.AfterFunc(time.Duration(ms)*time.Millisecond, fn)
-			pluginMu.Lock()
-			pluginTimers[owner] = append(pluginTimers[owner], t)
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptTimers[owner] = append(scriptTimers[owner], t)
+			scriptMu.Unlock()
 		})
 		m["AfterDur"] = reflect.ValueOf(func(d time.Duration, fn func()) {
 			if fn == nil || d <= 0 {
 				return
 			}
 			t := time.AfterFunc(d, fn)
-			pluginMu.Lock()
-			pluginTimers[owner] = append(pluginTimers[owner], t)
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptTimers[owner] = append(scriptTimers[owner], t)
+			scriptMu.Unlock()
 		})
 		m["Every"] = reflect.ValueOf(func(ms int, fn func()) {
 			if fn == nil || ms <= 0 {
 				return
 			}
 			stop := make(chan struct{})
-			pluginMu.Lock()
-			pluginTickerStops[owner] = append(pluginTickerStops[owner], stop)
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptTickerStops[owner] = append(scriptTickerStops[owner], stop)
+			scriptMu.Unlock()
 			d := time.Duration(ms) * time.Millisecond
 			go func() {
 				ticker := time.NewTicker(d)
@@ -317,9 +317,9 @@ func exportsForPlugin(owner string) interp.Exports {
 				return
 			}
 			stop := make(chan struct{})
-			pluginMu.Lock()
-			pluginTickerStops[owner] = append(pluginTickerStops[owner], stop)
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptTickerStops[owner] = append(scriptTickerStops[owner], stop)
+			scriptMu.Unlock()
 			go func() {
 				ticker := time.NewTicker(d)
 				defer ticker.Stop()
@@ -341,8 +341,8 @@ func exportsForPlugin(owner string) interp.Exports {
 				return
 			}
 			cmd := "__hk_" + strings.ReplaceAll(strings.ToLower(c), " ", "_")
-			pluginRegisterCommand(owner, cmd, func(args string) { handler() })
-			pluginAddHotkey(owner, c, "/"+cmd)
+			scriptRegisterCommand(owner, cmd, func(args string) { handler() })
+			scriptAddHotkey(owner, c, "/"+cmd)
 		})
 		ex[pkg] = m
 	}
@@ -350,7 +350,7 @@ func exportsForPlugin(owner string) interp.Exports {
 }
 
 //go:embed scripts
-var pluginScripts embed.FS
+var scriptScripts embed.FS
 
 // userScriptsDir returns the preferred location for user-editable scripts.
 // Scripts now live alongside the executable in a top-level "scripts" folder
@@ -396,7 +396,7 @@ func ensureScriptsDir() {
 		log.Printf("create scripts dir: %v", err)
 		return
 	}
-	entries, err := pluginScripts.ReadDir("scripts")
+	entries, err := scriptScripts.ReadDir("scripts")
 	if err != nil {
 		log.Printf("read embedded scripts: %v", err)
 		return
@@ -405,7 +405,7 @@ func ensureScriptsDir() {
 		if e.IsDir() {
 			continue
 		}
-		data, err := pluginScripts.ReadFile(path.Join("scripts", e.Name()))
+		data, err := scriptScripts.ReadFile(path.Join("scripts", e.Name()))
 		if err != nil {
 			log.Printf("read embedded %s: %v", e.Name(), err)
 			continue
@@ -441,7 +441,7 @@ func ensureDefaultScripts() {
 	if hasGo {
 		return
 	}
-	// Write example plugin files
+	// Write example script files
 	files := []string{
 		"default_shortcuts.go",
 		"README.txt",
@@ -449,7 +449,7 @@ func ensureDefaultScripts() {
 	}
 	for _, src := range files {
 		sPath := path.Join("scripts", src)
-		data, err := pluginScripts.ReadFile(sPath)
+		data, err := scriptScripts.ReadFile(sPath)
 		if err != nil {
 			log.Printf("read embedded %s: %v", sPath, err)
 			continue
@@ -463,9 +463,9 @@ func ensureDefaultScripts() {
 	}
 }
 
-// ensurePluginAPI removed: the editor stub now ships in scripts/gt.
+// ensurescriptAPI removed: the editor stub now ships in scripts/gt.
 
-var pluginAllowedPkgs = []string{
+var scriptAllowedPkgs = []string{
 	"bytes/bytes",
 	"encoding/json/json",
 	"errors/errors",
@@ -481,18 +481,18 @@ var pluginAllowedPkgs = []string{
 	"unicode/utf8/utf8",
 }
 
-const pluginGoroutineLimit = 1024
+const scriptGoroutineLimit = 1024
 
 func init() {
-	go pluginGoroutineWatchdog()
+	go scriptGoroutineWatchdog()
 }
 
-func pluginGoroutineWatchdog() {
+func scriptGoroutineWatchdog() {
 	for {
-		if runtime.NumGoroutine() > pluginGoroutineLimit {
-			log.Printf("[plugin] goroutine limit exceeded; stopping all plugins")
-			consoleMessage("[plugin] goroutine limit exceeded; stopping plugins")
-			stopAllPlugins()
+		if runtime.NumGoroutine() > scriptGoroutineLimit {
+			log.Printf("[script] goroutine limit exceeded; stopping all scripts")
+			consoleMessage("[script] goroutine limit exceeded; stopping scripts")
+			stopAllscripts()
 			return
 		}
 		time.Sleep(time.Millisecond * 100)
@@ -501,7 +501,7 @@ func pluginGoroutineWatchdog() {
 
 func restrictedStdlib() interp.Exports {
 	restricted := interp.Exports{}
-	for _, key := range pluginAllowedPkgs {
+	for _, key := range scriptAllowedPkgs {
 		if syms, ok := stdlib.Symbols[key]; ok {
 			restricted[key] = syms
 		}
@@ -509,85 +509,85 @@ func restrictedStdlib() interp.Exports {
 	return restricted
 }
 
-func pluginConsole(msg string) {
-	if gs.pluginOutputDebug {
+func scriptConsole(msg string) {
+	if gs.scriptOutputDebug {
 		consoleMessage(msg)
 	}
 }
 
-func pluginLogEvent(owner, ev, data string) {
-	if !gs.pluginEventDebug {
+func scriptLogEvent(owner, ev, data string) {
+	if !gs.scriptEventDebug {
 		return
 	}
 	line := fmt.Sprintf("[%s] %s: %s", owner, ev, data)
-	pluginDebugMu.Lock()
-	pluginDebugLines = append(pluginDebugLines, line)
-	if len(pluginDebugLines) > 200 {
-		pluginDebugLines = pluginDebugLines[len(pluginDebugLines)-200:]
+	scriptDebugMu.Lock()
+	scriptDebugLines = append(scriptDebugLines, line)
+	if len(scriptDebugLines) > 200 {
+		scriptDebugLines = scriptDebugLines[len(scriptDebugLines)-200:]
 	}
-	pluginDebugMu.Unlock()
-	refreshPluginDebug()
+	scriptDebugMu.Unlock()
+	refreshscriptDebug()
 }
 
-func pluginShowNotification(msg string) {
+func scriptShowNotification(msg string) {
 	showNotification(msg)
 }
 
-func pluginIsDisabled(owner string) bool {
-	pluginMu.RLock()
-	disabled := pluginDisabled[owner]
-	pluginMu.RUnlock()
+func scriptIsDisabled(owner string) bool {
+	scriptMu.RLock()
+	disabled := scriptDisabled[owner]
+	scriptMu.RUnlock()
 	return disabled
 }
 
-func pluginAddHotkey(owner, combo, command string) {
-	if pluginIsDisabled(owner) {
+func scriptAddHotkey(owner, combo, command string) {
+	if scriptIsDisabled(owner) {
 		return
 	}
-	// Default plugin hotkeys to enabled on first add; users can disable them
+	// Default script hotkeys to enabled on first add; users can disable them
 	// in the Hotkeys window. Persisted preferences still override this.
-	hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Plugin: owner, Disabled: false}
-	pluginHotkeyMu.RLock()
-	if m := pluginHotkeyEnabled[owner]; m != nil {
+	hk := Hotkey{Name: command, Combo: combo, Commands: []HotkeyCommand{{Command: command}}, Script: owner, Disabled: false}
+	scriptHotkeyMu.RLock()
+	if m := scriptHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
 			hk.Disabled = false
 		}
 	}
-	pluginHotkeyMu.RUnlock()
+	scriptHotkeyMu.RUnlock()
 	hotkeysMu.Lock()
 	for _, existing := range hotkeys {
-		if existing.Plugin == owner && existing.Combo == combo {
+		if existing.Script == owner && existing.Combo == combo {
 			hotkeysMu.Unlock()
 			return
 		}
 	}
 	hotkeys = append(hotkeys, hk)
 	hotkeysMu.Unlock()
-	pluginHotkeyMu.Lock()
+	scriptHotkeyMu.Lock()
 	if hk.Disabled {
-		if m := pluginHotkeyEnabled[owner]; m != nil {
+		if m := scriptHotkeyEnabled[owner]; m != nil {
 			delete(m, combo)
 			if len(m) == 0 {
-				delete(pluginHotkeyEnabled, owner)
+				delete(scriptHotkeyEnabled, owner)
 			}
 		}
 	} else {
-		m := pluginHotkeyEnabled[owner]
+		m := scriptHotkeyEnabled[owner]
 		if m == nil {
 			m = map[string]bool{}
-			pluginHotkeyEnabled[owner] = m
+			scriptHotkeyEnabled[owner] = m
 		}
 		m[combo] = true
 	}
-	pluginHotkeyMu.Unlock()
+	scriptHotkeyMu.Unlock()
 	refreshHotkeysList()
 	saveHotkeys()
-	name := pluginDisplayNames[owner]
+	name := scriptDisplayNames[owner]
 	if name == "" {
 		name = owner
 	}
-	msg := fmt.Sprintf("[plugin:%s] hotkey added: %s -> %s", name, combo, command)
-	if gs.pluginOutputDebug {
+	msg := fmt.Sprintf("[script:%s] hotkey added: %s -> %s", name, combo, command)
+	if gs.scriptOutputDebug {
 		consoleMessage(msg)
 	}
 	log.Print(msg)
@@ -604,41 +604,41 @@ type HotkeyEvent struct {
 }
 
 var (
-	pluginHotkeyFnMu sync.RWMutex
-	pluginHotkeyFns  = map[string]map[string]func(HotkeyEvent){}
+	scriptHotkeyFnMu sync.RWMutex
+	scriptHotkeyFns  = map[string]map[string]func(HotkeyEvent){}
 )
 
-// pluginAddHotkeyFn registers a function-based hotkey for a plugin.
-// The hotkey appears in the "Plugin Hotkeys" list and can be enabled/disabled
+// scriptAddHotkeyFn registers a function-based hotkey for a script.
+// The hotkey appears in the "script Hotkeys" list and can be enabled/disabled
 // like command-based hotkeys, but when pressed it will call the provided
 // handler instead of emitting a slash command.
-func pluginAddHotkeyFn(owner, combo string, handler func(HotkeyEvent)) {
-	if pluginIsDisabled(owner) || handler == nil {
+func scriptAddHotkeyFn(owner, combo string, handler func(HotkeyEvent)) {
+	if scriptIsDisabled(owner) || handler == nil {
 		return
 	}
 	// Remember handler
-	pluginHotkeyFnMu.Lock()
-	m := pluginHotkeyFns[owner]
+	scriptHotkeyFnMu.Lock()
+	m := scriptHotkeyFns[owner]
 	if m == nil {
 		m = map[string]func(HotkeyEvent){}
-		pluginHotkeyFns[owner] = m
+		scriptHotkeyFns[owner] = m
 	}
 	m[combo] = handler
-	pluginHotkeyFnMu.Unlock()
+	scriptHotkeyFnMu.Unlock()
 
-	// Ensure a visible toggleable hotkey entry exists for this plugin+combo.
+	// Ensure a visible toggleable hotkey entry exists for this script+combo.
 	// Function-based hotkeys default to enabled on first add.
-	hk := Hotkey{Name: "", Combo: combo, Plugin: owner, Disabled: false}
-	pluginHotkeyMu.RLock()
-	if m := pluginHotkeyEnabled[owner]; m != nil {
+	hk := Hotkey{Name: "", Combo: combo, Script: owner, Disabled: false}
+	scriptHotkeyMu.RLock()
+	if m := scriptHotkeyEnabled[owner]; m != nil {
 		if m[combo] {
 			hk.Disabled = false
 		}
 	}
-	pluginHotkeyMu.RUnlock()
+	scriptHotkeyMu.RUnlock()
 	hotkeysMu.Lock()
 	for _, existing := range hotkeys {
-		if existing.Plugin == owner && existing.Combo == combo {
+		if existing.Script == owner && existing.Combo == combo {
 			hotkeysMu.Unlock()
 			refreshHotkeysList()
 			saveHotkeys()
@@ -647,40 +647,40 @@ func pluginAddHotkeyFn(owner, combo string, handler func(HotkeyEvent)) {
 	}
 	hotkeys = append(hotkeys, hk)
 	hotkeysMu.Unlock()
-	pluginHotkeyMu.Lock()
+	scriptHotkeyMu.Lock()
 	if hk.Disabled {
-		if m := pluginHotkeyEnabled[owner]; m != nil {
+		if m := scriptHotkeyEnabled[owner]; m != nil {
 			delete(m, combo)
 			if len(m) == 0 {
-				delete(pluginHotkeyEnabled, owner)
+				delete(scriptHotkeyEnabled, owner)
 			}
 		}
 	} else {
-		m := pluginHotkeyEnabled[owner]
+		m := scriptHotkeyEnabled[owner]
 		if m == nil {
 			m = map[string]bool{}
-			pluginHotkeyEnabled[owner] = m
+			scriptHotkeyEnabled[owner] = m
 		}
 		m[combo] = true
 	}
-	pluginHotkeyMu.Unlock()
+	scriptHotkeyMu.Unlock()
 	refreshHotkeysList()
 	saveHotkeys()
-	name := pluginDisplayNames[owner]
+	name := scriptDisplayNames[owner]
 	if name == "" {
 		name = owner
 	}
-	msg := fmt.Sprintf("[plugin:%s] hotkey added: %s -> <function>", name, combo)
-	if gs.pluginOutputDebug {
+	msg := fmt.Sprintf("[script:%s] hotkey added: %s -> <function>", name, combo)
+	if gs.scriptOutputDebug {
 		consoleMessage(msg)
 	}
 	log.Print(msg)
 }
 
-func pluginGetHotkeyFn(owner, combo string) (func(HotkeyEvent), bool) {
-	pluginHotkeyFnMu.RLock()
-	defer pluginHotkeyFnMu.RUnlock()
-	if m := pluginHotkeyFns[owner]; m != nil {
+func scriptGetHotkeyFn(owner, combo string) (func(HotkeyEvent), bool) {
+	scriptHotkeyFnMu.RLock()
+	defer scriptHotkeyFnMu.RUnlock()
+	if m := scriptHotkeyFns[owner]; m != nil {
 		if fn := m[combo]; fn != nil {
 			return fn, true
 		}
@@ -688,8 +688,8 @@ func pluginGetHotkeyFn(owner, combo string) (func(HotkeyEvent), bool) {
 	return nil, false
 }
 
-// Plugin command registries.
-type PluginCommandHandler func(args string)
+// script command registries.
+type scriptCommandHandler func(args string)
 
 type triggerHandler struct {
 	owner string
@@ -703,48 +703,48 @@ type inputHandler struct {
 	fn    func(string) string
 }
 
-// chatHandler holds a plugin-owned handler for all chat messages.
+// chatHandler holds a script-owned handler for all chat messages.
 type chatHandler struct {
 	owner string
 	fn    func(string)
 }
 
 var (
-	pluginCommands        = map[string]PluginCommandHandler{}
-	pluginMu              sync.RWMutex
-	pluginNames           = map[string]bool{}
-	pluginDisplayNames    = map[string]string{}
-	pluginAuthors         = map[string]string{}
-	pluginCategories      = map[string]string{}
-	pluginSubCategories   = map[string]string{}
-	pluginInvalid         = map[string]bool{}
-	pluginDisabled        = map[string]bool{}
-	pluginEnabledFor      = map[string]pluginScope{}
-	pluginPaths           = map[string]string{}
-	pluginTerminators     = map[string]func(){}
-	pluginTriggers        = map[string][]triggerHandler{}
-	pluginConsoleTriggers = map[string][]triggerHandler{}
+	scriptCommands        = map[string]scriptCommandHandler{}
+	scriptMu              sync.RWMutex
+	scriptNames           = map[string]bool{}
+	scriptDisplayNames    = map[string]string{}
+	scriptAuthors         = map[string]string{}
+	scriptCategories      = map[string]string{}
+	scriptSubCategories   = map[string]string{}
+	scriptInvalid         = map[string]bool{}
+	scriptDisabled        = map[string]bool{}
+	scriptEnabledFor      = map[string]scriptScope{}
+	scriptPaths           = map[string]string{}
+	scriptTerminators     = map[string]func(){}
+	scriptTriggers        = map[string][]triggerHandler{}
+	scriptConsoleTriggers = map[string][]triggerHandler{}
 	triggerHandlersMu     sync.RWMutex
 	// Handlers that receive every chat message (no phrase filtering)
-	pluginChatHandlers  []chatHandler
+	scriptChatHandlers  []chatHandler
 	chatHandlersMu      sync.RWMutex
-	pluginInputHandlers []inputHandler
+	scriptInputHandlers []inputHandler
 	inputHandlersMu     sync.RWMutex
-	pluginCommandOwners = map[string]string{}
-	pluginSendHistory   = map[string][]time.Time{}
-	pluginModTime       time.Time
-	pluginModCheck      time.Time
-	// timers per plugin owner
-	pluginTimers      = map[string][]*time.Timer{}
-	pluginTickerStops = map[string][]chan struct{}{}
-	pluginTickWaiters = map[string][]*tickWaiter{}
+	scriptCommandOwners = map[string]string{}
+	scriptSendHistory   = map[string][]time.Time{}
+	scriptModTime       time.Time
+	scriptModCheck      time.Time
+	// timers per script owner
+	scriptTimers      = map[string][]*time.Timer{}
+	scriptTickerStops = map[string][]chan struct{}{}
+	scriptTickWaiters = map[string][]*tickWaiter{}
 
-	// Per-plugin world overlay draw operations.
-	pluginOverlayOps = map[string][]overlayOp{}
+	// Per-script world overlay draw operations.
+	scriptOverlayOps = map[string][]overlayOp{}
 	overlayMu        sync.RWMutex
 
-	pluginDebugLines []string
-	pluginDebugMu    sync.Mutex
+	scriptDebugLines []string
+	scriptDebugMu    sync.Mutex
 )
 
 // overlayOp describes a simple draw command for the world overlay.
@@ -762,20 +762,20 @@ type tickWaiter struct {
 	done   chan struct{}
 }
 
-func pluginSleepTicks(owner string, ticks int) {
+func scriptSleepTicks(owner string, ticks int) {
 	if ticks <= 0 {
 		return
 	}
 	w := &tickWaiter{remain: ticks, done: make(chan struct{}, 1)}
-	pluginMu.Lock()
-	pluginTickWaiters[owner] = append(pluginTickWaiters[owner], w)
-	pluginMu.Unlock()
+	scriptMu.Lock()
+	scriptTickWaiters[owner] = append(scriptTickWaiters[owner], w)
+	scriptMu.Unlock()
 	<-w.done
 }
 
-func pluginAdvanceTick() {
-	pluginMu.Lock()
-	for owner, list := range pluginTickWaiters {
+func scriptAdvanceTick() {
+	scriptMu.Lock()
+	for owner, list := range scriptTickWaiters {
 		n := 0
 		for _, w := range list {
 			if w == nil {
@@ -793,56 +793,56 @@ func pluginAdvanceTick() {
 			}
 		}
 		if n == 0 {
-			delete(pluginTickWaiters, owner)
+			delete(scriptTickWaiters, owner)
 		} else {
-			pluginTickWaiters[owner] = list[:n]
+			scriptTickWaiters[owner] = list[:n]
 		}
 	}
-	pluginMu.Unlock()
+	scriptMu.Unlock()
 }
 
 const (
-	minPluginMetaLen = 2
-	maxPluginMetaLen = 40
+	minscriptMetaLen = 2
+	maxscriptMetaLen = 40
 )
 
-func invalidPluginValue(s string) bool {
+func invalidscriptValue(s string) bool {
 	l := len(s)
-	return l < minPluginMetaLen || l > maxPluginMetaLen
+	return l < minscriptMetaLen || l > maxscriptMetaLen
 }
 
-// pluginRegisterCommand lets plugins handle a local slash command like
+// scriptRegisterCommand lets scripts handle a local slash command like
 // "/example". The name should be without the leading slash and will be
 // matched case-insensitively.
-func pluginRegisterCommand(owner, name string, handler PluginCommandHandler) {
+func scriptRegisterCommand(owner, name string, handler scriptCommandHandler) {
 	if name == "" || handler == nil {
 		return
 	}
-	if pluginIsDisabled(owner) {
+	if scriptIsDisabled(owner) {
 		return
 	}
 	key := strings.ToLower(strings.TrimPrefix(name, "/"))
-	pluginMu.Lock()
-	if _, exists := pluginCommands[key]; exists {
-		pluginMu.Unlock()
-		msg := fmt.Sprintf("[plugin] command conflict: /%s already registered", key)
+	scriptMu.Lock()
+	if _, exists := scriptCommands[key]; exists {
+		scriptMu.Unlock()
+		msg := fmt.Sprintf("[script] command conflict: /%s already registered", key)
 		consoleMessage(msg)
 		log.Print(msg)
 		return
 	}
-	pluginCommands[key] = handler
-	pluginCommandOwners[key] = owner
-	pluginMu.Unlock()
-	consoleMessage("[plugin] command registered: /" + key)
-	log.Printf("[plugin] command registered: /%s", key)
+	scriptCommands[key] = handler
+	scriptCommandOwners[key] = owner
+	scriptMu.Unlock()
+	consoleMessage("[script] command registered: /" + key)
+	log.Printf("[script] command registered: /%s", key)
 }
 
-// pluginRunCommand echoes and enqueues a command for immediate sending.
-func pluginRunCommand(owner, cmd string) {
-	if pluginIsDisabled(owner) {
+// scriptRunCommand echoes and enqueues a command for immediate sending.
+func scriptRunCommand(owner, cmd string) {
+	if scriptIsDisabled(owner) {
 		return
 	}
-	if recordPluginSend(owner) {
+	if recordscriptSend(owner) {
 		return
 	}
 	cmd = strings.TrimSpace(cmd)
@@ -854,12 +854,12 @@ func pluginRunCommand(owner, cmd string) {
 	nextCommand()
 }
 
-// pluginEnqueueCommand enqueues a command to be sent on the next tick without echoing.
-func pluginEnqueueCommand(owner, cmd string) {
-	if pluginIsDisabled(owner) {
+// scriptEnqueueCommand enqueues a command to be sent on the next tick without echoing.
+func scriptEnqueueCommand(owner, cmd string) {
+	if scriptIsDisabled(owner) {
 		return
 	}
-	if recordPluginSend(owner) {
+	if recordscriptSend(owner) {
 		return
 	}
 	cmd = strings.TrimSpace(cmd)
@@ -869,29 +869,29 @@ func pluginEnqueueCommand(owner, cmd string) {
 	enqueueCommand(cmd)
 }
 
-func loadPluginSource(owner, name, path string, src []byte, restricted interp.Exports) {
-	pluginRemoveConfig(owner)
+func loadscriptSource(owner, name, path string, src []byte, restricted interp.Exports) {
+	scriptRemoveConfig(owner)
 	i := interp.New(interp.Options{})
 	if len(restricted) > 0 {
 		i.Use(restricted)
 	}
-	i.Use(exportsForPlugin(owner))
-	pluginMu.Lock()
-	pluginDisabled[owner] = false
-	pluginMu.Unlock()
+	i.Use(exportsForscript(owner))
+	scriptMu.Lock()
+	scriptDisabled[owner] = false
+	scriptMu.Unlock()
 	// Strip build tags like //go:build which are for the Go toolchain only.
 	src = stripGoBuildDirectives(src)
 	if _, err := i.Eval(string(src)); err != nil {
-		log.Printf("plugin %s: %v", path, err)
-		consoleMessage("[plugin] load error for " + path + ": " + err.Error())
-		disablePlugin(owner, "load error")
+		log.Printf("script %s: %v", path, err)
+		consoleMessage("[script] load error for " + path + ": " + err.Error())
+		disablescript(owner, "load error")
 		return
 	}
 	if v, err := i.Eval("Terminate"); err == nil {
 		if fn, ok := v.Interface().(func()); ok {
-			pluginMu.Lock()
-			pluginTerminators[owner] = fn
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptTerminators[owner] = fn
+			scriptMu.Unlock()
 		}
 	}
 	if v, err := i.Eval("Init"); err == nil {
@@ -899,8 +899,8 @@ func loadPluginSource(owner, name, path string, src []byte, restricted interp.Ex
 			go fn()
 		}
 	}
-	log.Printf("loaded plugin %s", path)
-	consoleMessage("[plugin] loaded: " + name)
+	log.Printf("loaded script %s", path)
+	consoleMessage("[script] loaded: " + name)
 }
 
 // stripGoBuildDirectives removes leading build constraints (//go:build, // +build)
@@ -929,34 +929,34 @@ func stripGoBuildDirectives(src []byte) []byte {
 	return src
 }
 
-func enablePlugin(owner string) {
-	pluginMu.RLock()
-	path := pluginPaths[owner]
-	name := pluginDisplayNames[owner]
-	pluginMu.RUnlock()
+func enablescript(owner string) {
+	scriptMu.RLock()
+	path := scriptPaths[owner]
+	name := scriptDisplayNames[owner]
+	scriptMu.RUnlock()
 	if path == "" {
 		return
 	}
 	src, err := os.ReadFile(path)
 	if err != nil {
-		log.Printf("read plugin %s: %v", path, err)
-		consoleMessage("[plugin] read error for " + path + ": " + err.Error())
+		log.Printf("read script %s: %v", path, err)
+		consoleMessage("[script] read error for " + path + ": " + err.Error())
 		return
 	}
-	loadPluginSource(owner, name, path, src, restrictedStdlib())
+	loadscriptSource(owner, name, path, src, restrictedStdlib())
 	settingsDirty = true
 	saveSettings()
-	refreshPluginsWindow()
+	refreshscriptsWindow()
 }
 
-func recordPluginSend(owner string) bool {
+func recordscriptSend(owner string) bool {
 	if !gs.ScriptSpamKill {
 		return false
 	}
 	now := time.Now()
 	cutoff := now.Add(-5 * time.Second)
-	pluginMu.Lock()
-	times := pluginSendHistory[owner]
+	scriptMu.Lock()
+	times := scriptSendHistory[owner]
 	n := 0
 	for _, t := range times {
 		if t.After(cutoff) {
@@ -966,47 +966,47 @@ func recordPluginSend(owner string) bool {
 	}
 	times = times[:n]
 	times = append(times, now)
-	pluginSendHistory[owner] = times
+	scriptSendHistory[owner] = times
 	count := len(times)
-	pluginMu.Unlock()
+	scriptMu.Unlock()
 	if count > 30 {
-		disablePlugin(owner, "sent too many lines")
+		disablescript(owner, "sent too many lines")
 		return true
 	}
 	return false
 }
 
-func disablePlugin(owner, reason string) {
-	pluginMu.Lock()
-	pluginDisabled[owner] = true
+func disablescript(owner, reason string) {
+	scriptMu.Lock()
+	scriptDisabled[owner] = true
 	if reason != "disabled for this character" && reason != "reloaded" {
-		delete(pluginEnabledFor, owner)
+		delete(scriptEnabledFor, owner)
 	}
-	term := pluginTerminators[owner]
-	delete(pluginTerminators, owner)
-	pluginMu.Unlock()
+	term := scriptTerminators[owner]
+	delete(scriptTerminators, owner)
+	scriptMu.Unlock()
 	if term != nil {
 		go term()
 	}
-	for _, hk := range pluginHotkeys(owner) {
-		pluginRemoveHotkey(owner, hk.Combo)
+	for _, hk := range scriptHotkeys(owner) {
+		scriptRemoveHotkey(owner, hk.Combo)
 	}
-	pluginRemoveShortcuts(owner)
-	pluginRemoveConfig(owner)
-	if pluginConfigWin != nil && pluginConfigOwner == owner {
-		pluginConfigWin.Close()
-		pluginConfigWin = nil
-		pluginConfigOwner = ""
+	scriptRemoveShortcuts(owner)
+	scriptRemoveConfig(owner)
+	if scriptConfigWin != nil && scriptConfigOwner == owner {
+		scriptConfigWin.Close()
+		scriptConfigWin = nil
+		scriptConfigOwner = ""
 	}
 	inputHandlersMu.Lock()
-	for i := len(pluginInputHandlers) - 1; i >= 0; i-- {
-		if pluginInputHandlers[i].owner == owner {
-			pluginInputHandlers = append(pluginInputHandlers[:i], pluginInputHandlers[i+1:]...)
+	for i := len(scriptInputHandlers) - 1; i >= 0; i-- {
+		if scriptInputHandlers[i].owner == owner {
+			scriptInputHandlers = append(scriptInputHandlers[:i], scriptInputHandlers[i+1:]...)
 		}
 	}
 	inputHandlersMu.Unlock()
 	triggerHandlersMu.Lock()
-	for phrase, hs := range pluginTriggers {
+	for phrase, hs := range scriptTriggers {
 		n := 0
 		for _, h := range hs {
 			if h.owner != owner {
@@ -1015,12 +1015,12 @@ func disablePlugin(owner, reason string) {
 			}
 		}
 		if n == 0 {
-			delete(pluginTriggers, phrase)
+			delete(scriptTriggers, phrase)
 		} else {
-			pluginTriggers[phrase] = hs[:n]
+			scriptTriggers[phrase] = hs[:n]
 		}
 	}
-	for phrase, hs := range pluginConsoleTriggers {
+	for phrase, hs := range scriptConsoleTriggers {
 		n := 0
 		for _, h := range hs {
 			if h.owner != owner {
@@ -1029,55 +1029,55 @@ func disablePlugin(owner, reason string) {
 			}
 		}
 		if n == 0 {
-			delete(pluginConsoleTriggers, phrase)
+			delete(scriptConsoleTriggers, phrase)
 		} else {
-			pluginConsoleTriggers[phrase] = hs[:n]
+			scriptConsoleTriggers[phrase] = hs[:n]
 		}
 	}
 	triggerHandlersMu.Unlock()
 	// Remove function hotkeys
-	pluginHotkeyFnMu.Lock()
-	delete(pluginHotkeyFns, owner)
-	pluginHotkeyFnMu.Unlock()
+	scriptHotkeyFnMu.Lock()
+	delete(scriptHotkeyFns, owner)
+	scriptHotkeyFnMu.Unlock()
 	refreshTriggersList()
 	playerHandlersMu.Lock()
-	for i := len(pluginPlayerHandlers) - 1; i >= 0; i-- {
-		if pluginPlayerHandlers[i].owner == owner {
-			pluginPlayerHandlers = append(pluginPlayerHandlers[:i], pluginPlayerHandlers[i+1:]...)
+	for i := len(scriptPlayerHandlers) - 1; i >= 0; i-- {
+		if scriptPlayerHandlers[i].owner == owner {
+			scriptPlayerHandlers = append(scriptPlayerHandlers[:i], scriptPlayerHandlers[i+1:]...)
 		}
 	}
 	playerHandlersMu.Unlock()
-	// Remove all-chat handlers for this plugin
+	// Remove all-chat handlers for this script
 	chatHandlersMu.Lock()
-	for i := len(pluginChatHandlers) - 1; i >= 0; i-- {
-		if pluginChatHandlers[i].owner == owner {
-			pluginChatHandlers = append(pluginChatHandlers[:i], pluginChatHandlers[i+1:]...)
+	for i := len(scriptChatHandlers) - 1; i >= 0; i-- {
+		if scriptChatHandlers[i].owner == owner {
+			scriptChatHandlers = append(scriptChatHandlers[:i], scriptChatHandlers[i+1:]...)
 		}
 	}
 	chatHandlersMu.Unlock()
 	// Clear overlay ops
 	overlayMu.Lock()
-	delete(pluginOverlayOps, owner)
+	delete(scriptOverlayOps, owner)
 	overlayMu.Unlock()
-	// Stop any timers/tickers and tick waiters for this plugin
-	pluginMu.Lock()
-	if list := pluginTimers[owner]; len(list) > 0 {
+	// Stop any timers/tickers and tick waiters for this script
+	scriptMu.Lock()
+	if list := scriptTimers[owner]; len(list) > 0 {
 		for _, t := range list {
 			if t != nil {
 				t.Stop()
 			}
 		}
-		delete(pluginTimers, owner)
+		delete(scriptTimers, owner)
 	}
-	if stops := pluginTickerStops[owner]; len(stops) > 0 {
+	if stops := scriptTickerStops[owner]; len(stops) > 0 {
 		for _, ch := range stops {
 			if ch != nil {
 				close(ch)
 			}
 		}
-		delete(pluginTickerStops, owner)
+		delete(scriptTickerStops, owner)
 	}
-	if waits := pluginTickWaiters[owner]; len(waits) > 0 {
+	if waits := scriptTickWaiters[owner]; len(waits) > 0 {
 		for _, w := range waits {
 			if w != nil {
 				select {
@@ -1086,64 +1086,64 @@ func disablePlugin(owner, reason string) {
 				}
 			}
 		}
-		delete(pluginTickWaiters, owner)
+		delete(scriptTickWaiters, owner)
 	}
-	pluginMu.Unlock()
-	pluginMu.Lock()
-	for cmd, o := range pluginCommandOwners {
+	scriptMu.Unlock()
+	scriptMu.Lock()
+	for cmd, o := range scriptCommandOwners {
 		if o == owner {
-			delete(pluginCommands, cmd)
-			delete(pluginCommandOwners, cmd)
+			delete(scriptCommands, cmd)
+			delete(scriptCommandOwners, cmd)
 		}
 	}
-	delete(pluginSendHistory, owner)
-	disp := pluginDisplayNames[owner]
-	pluginMu.Unlock()
+	delete(scriptSendHistory, owner)
+	disp := scriptDisplayNames[owner]
+	scriptMu.Unlock()
 	if disp == "" {
 		disp = owner
 	}
-	consoleMessage("[plugin:" + disp + "] stopped: " + reason)
+	consoleMessage("[script:" + disp + "] stopped: " + reason)
 	settingsDirty = true
 	saveSettings()
-	refreshPluginsWindow()
+	refreshscriptsWindow()
 }
 
-func stopAllPlugins() {
-	pluginMu.RLock()
-	owners := make([]string, 0, len(pluginDisplayNames))
-	for o := range pluginDisplayNames {
-		if !pluginDisabled[o] {
+func stopAllscripts() {
+	scriptMu.RLock()
+	owners := make([]string, 0, len(scriptDisplayNames))
+	for o := range scriptDisplayNames {
+		if !scriptDisabled[o] {
 			owners = append(owners, o)
 		}
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 	for _, o := range owners {
-		disablePlugin(o, "stopped by user")
+		disablescript(o, "stopped by user")
 	}
 	if len(owners) > 0 {
 		commandQueue = nil
 		pendingCommand = ""
-		consoleMessage("[plugin] all plugins stopped")
+		consoleMessage("[script] all scripts stopped")
 	}
 }
 
-func applyEnabledPlugins() {
-	pluginMu.RLock()
-	owners := make([]string, 0, len(pluginDisplayNames))
-	for o := range pluginDisplayNames {
+func applyEnabledScripts() {
+	scriptMu.RLock()
+	owners := make([]string, 0, len(scriptDisplayNames))
+	for o := range scriptDisplayNames {
 		owners = append(owners, o)
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 	for _, o := range owners {
-		pluginMu.RLock()
-		scope := pluginEnabledFor[o]
-		disabled := pluginDisabled[o]
-		invalid := pluginInvalid[o]
-		pluginMu.RUnlock()
+		scriptMu.RLock()
+		scope := scriptEnabledFor[o]
+		disabled := scriptDisabled[o]
+		invalid := scriptInvalid[o]
+		scriptMu.RUnlock()
 		if invalid {
-			pluginMu.Lock()
-			pluginDisabled[o] = true
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptDisabled[o] = true
+			scriptMu.Unlock()
 			continue
 		}
 		// Enable when set to all, or when the scope includes the active
@@ -1154,24 +1154,24 @@ func applyEnabledPlugins() {
 		}
 		shouldEnable := scope.enablesFor(effChar)
 		if disabled && shouldEnable {
-			enablePlugin(o)
+			enablescript(o)
 		} else if !disabled && !shouldEnable {
-			disablePlugin(o, "disabled for this character")
+			disablescript(o, "disabled for this character")
 		} else {
-			pluginMu.Lock()
-			pluginDisabled[o] = !shouldEnable
-			pluginMu.Unlock()
+			scriptMu.Lock()
+			scriptDisabled[o] = !shouldEnable
+			scriptMu.Unlock()
 		}
 	}
 }
 
-func setPluginEnabled(owner string, char, all bool) {
-	pluginMu.Lock()
-	if pluginInvalid[owner] {
-		pluginMu.Unlock()
+func setscriptEnabled(owner string, char, all bool) {
+	scriptMu.Lock()
+	if scriptInvalid[owner] {
+		scriptMu.Unlock()
 		return
 	}
-	s := pluginEnabledFor[owner]
+	s := scriptEnabledFor[owner]
 	if all {
 		s.All = true
 		s.Chars = nil
@@ -1192,61 +1192,61 @@ func setPluginEnabled(owner string, char, all bool) {
 		if effChar != "" {
 			s.removeChar(effChar)
 		} else {
-			s = pluginScope{}
+			s = scriptScope{}
 		}
 	}
 	if s.empty() {
-		delete(pluginEnabledFor, owner)
+		delete(scriptEnabledFor, owner)
 	} else {
-		pluginEnabledFor[owner] = s
+		scriptEnabledFor[owner] = s
 	}
-	pluginMu.Unlock()
-	applyEnabledPlugins()
+	scriptMu.Unlock()
+	applyEnabledScripts()
 	saveSettings()
-	refreshPluginsWindow()
+	refreshscriptsWindow()
 }
 
-// clearPluginScope removes all enablement for a plugin (no all, no characters)
+// clearscriptScope removes all enablement for a script (no all, no characters)
 // and refreshes apply/save/UI. Used by the UI when unchecking the "All" box
-// to explicitly stop a plugin regardless of any per-character flags.
-func clearPluginScope(owner string) {
-	pluginMu.Lock()
-	delete(pluginEnabledFor, owner)
-	pluginMu.Unlock()
-	// Stop scheduled timers/tickers for this plugin
-	if list := pluginTimers[owner]; len(list) > 0 {
+// to explicitly stop a script regardless of any per-character flags.
+func clearscriptScope(owner string) {
+	scriptMu.Lock()
+	delete(scriptEnabledFor, owner)
+	scriptMu.Unlock()
+	// Stop scheduled timers/tickers for this script
+	if list := scriptTimers[owner]; len(list) > 0 {
 		for _, t := range list {
 			if t != nil {
 				t.Stop()
 			}
 		}
-		delete(pluginTimers, owner)
+		delete(scriptTimers, owner)
 	}
-	if stops := pluginTickerStops[owner]; len(stops) > 0 {
+	if stops := scriptTickerStops[owner]; len(stops) > 0 {
 		for _, ch := range stops {
 			if ch != nil {
 				close(ch)
 			}
 		}
-		delete(pluginTickerStops, owner)
+		delete(scriptTickerStops, owner)
 	}
-	applyEnabledPlugins()
+	applyEnabledScripts()
 	saveSettings()
-	refreshPluginsWindow()
+	refreshscriptsWindow()
 }
 
-func pluginPlayerName() string {
+func scriptPlayerName() string {
 	return playerName
 }
 
-func pluginPlayers() []Player {
+func scriptPlayers() []Player {
 	ps := getPlayers()
 	out := make([]Player, len(ps))
 	copy(out, ps)
 	return out
 }
 
-func pluginInventory() []InventoryItem {
+func scriptInventory() []InventoryItem {
 	return getInventory()
 }
 
@@ -1256,14 +1256,14 @@ type Stats struct {
 	Balance, BalanceMax int
 }
 
-func pluginInputText() string {
+func scriptInputText() string {
 	inputMu.Lock()
 	txt := string(inputText)
 	inputMu.Unlock()
 	return txt
 }
 
-func pluginSetInputText(text string) {
+func scriptSetInputText(text string) {
 	inputMu.Lock()
 	inputText = []rune(text)
 	inputActive = true
@@ -1271,8 +1271,8 @@ func pluginSetInputText(text string) {
 	inputMu.Unlock()
 }
 
-func pluginEquip(owner string, id uint16) {
-	if recordPluginSend(owner) {
+func scriptEquip(owner string, id uint16) {
+	if recordscriptSend(owner) {
 		return
 	}
 	items := getInventory()
@@ -1300,10 +1300,10 @@ func pluginEquip(owner string, id uint16) {
 	equipInventoryItem(id, idx, true)
 }
 
-// pluginEquipByName equips the first inventory item whose name matches the
+// scriptEquipByName equips the first inventory item whose name matches the
 // provided name (case-insensitive). If the item is already equipped, it skips.
-func pluginEquipByName(owner, name string) {
-	if recordPluginSend(owner) {
+func scriptEquipByName(owner, name string) {
+	if recordscriptSend(owner) {
 		return
 	}
 	targetName := strings.ToLower(strings.TrimSpace(name))
@@ -1341,8 +1341,8 @@ func pluginEquipByName(owner, name string) {
 	equipInventoryItem(id, idx, true)
 }
 
-func pluginUnequip(owner string, id uint16) {
-	if recordPluginSend(owner) {
+func scriptUnequip(owner string, id uint16) {
+	if recordscriptSend(owner) {
 		return
 	}
 	items := getInventory()
@@ -1360,10 +1360,10 @@ func pluginUnequip(owner string, id uint16) {
 	equipInventoryItem(id, -1, false)
 }
 
-// pluginEquipPartial equips the first item whose name contains the pattern
+// scriptEquipPartial equips the first item whose name contains the pattern
 // (case-insensitive). If a matching item is already equipped, it skips.
-func pluginEquipPartial(owner, pattern string) {
-	if recordPluginSend(owner) {
+func scriptEquipPartial(owner, pattern string) {
+	if recordscriptSend(owner) {
 		return
 	}
 	p := strings.ToLower(strings.TrimSpace(pattern))
@@ -1394,10 +1394,10 @@ func pluginEquipPartial(owner, pattern string) {
 	equipInventoryItem(id, idx, true)
 }
 
-// pluginUnequipPartial unequips any equipped item whose name contains the
+// scriptUnequipPartial unequips any equipped item whose name contains the
 // provided pattern (case-insensitive).
-func pluginUnequipPartial(owner, pattern string) {
-	if recordPluginSend(owner) {
+func scriptUnequipPartial(owner, pattern string) {
+	if recordscriptSend(owner) {
 		return
 	}
 	p := strings.ToLower(strings.TrimSpace(pattern))
@@ -1414,10 +1414,10 @@ func pluginUnequipPartial(owner, pattern string) {
 	}
 }
 
-// pluginUnequipByName unequips an item by name (case-insensitive). If multiple
+// scriptUnequipByName unequips an item by name (case-insensitive). If multiple
 // items share the name, it unequips any equipped instance.
-func pluginUnequipByName(owner, name string) {
-	if recordPluginSend(owner) {
+func scriptUnequipByName(owner, name string) {
+	if recordscriptSend(owner) {
 		return
 	}
 	targetName := strings.ToLower(strings.TrimSpace(name))
@@ -1449,12 +1449,12 @@ func pluginUnequipByName(owner, name string) {
 	equipInventoryItem(id, -1, false)
 }
 
-func pluginRegisterInputHandler(owner string, fn func(string) string) {
-	if pluginIsDisabled(owner) || fn == nil {
+func scriptRegisterInputHandler(owner string, fn func(string) string) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	inputHandlersMu.Lock()
-	pluginInputHandlers = append(pluginInputHandlers, inputHandler{owner: owner, fn: fn})
+	scriptInputHandlers = append(scriptInputHandlers, inputHandler{owner: owner, fn: fn})
 	inputHandlersMu.Unlock()
 }
 
@@ -1468,9 +1468,9 @@ const (
 	ChatOther                // message not from yourself
 )
 
-// pluginRegisterChat registers a chat trigger with optional name and kind flags.
-func pluginRegisterChat(owner, name string, phrases []string, flags int, fn func(string)) {
-	if pluginIsDisabled(owner) || fn == nil {
+// scriptRegisterChat registers a chat trigger with optional name and kind flags.
+func scriptRegisterChat(owner, name string, phrases []string, flags int, fn func(string)) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	triggerHandlersMu.Lock()
@@ -1480,23 +1480,23 @@ func pluginRegisterChat(owner, name string, phrases []string, flags int, fn func
 			continue
 		}
 		p = strings.ToLower(p)
-		pluginTriggers[p] = append(pluginTriggers[p], triggerHandler{owner: owner, name: name, flags: flags, fn: fn})
+		scriptTriggers[p] = append(scriptTriggers[p], triggerHandler{owner: owner, name: name, flags: flags, fn: fn})
 	}
 	triggerHandlersMu.Unlock()
 	refreshTriggersList()
 }
 
 // Back-compat wrapper for older API without flags.
-func pluginRegisterTriggers(owner, name string, phrases []string, fn func()) {
+func scriptRegisterTriggers(owner, name string, phrases []string, fn func()) {
 	if fn == nil {
 		return
 	}
-	pluginRegisterChat(owner, name, phrases, ChatAny, func(string) { fn() })
+	scriptRegisterChat(owner, name, phrases, ChatAny, func(string) { fn() })
 }
 
 // New console registration with message parameter
-func pluginRegisterConsole(owner string, phrases []string, fn func(string)) {
-	if pluginIsDisabled(owner) || fn == nil {
+func scriptRegisterConsole(owner string, phrases []string, fn func(string)) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	triggerHandlersMu.Lock()
@@ -1505,32 +1505,32 @@ func pluginRegisterConsole(owner string, phrases []string, fn func(string)) {
 			continue
 		}
 		p = strings.ToLower(p)
-		pluginConsoleTriggers[p] = append(pluginConsoleTriggers[p], triggerHandler{owner: owner, fn: fn})
+		scriptConsoleTriggers[p] = append(scriptConsoleTriggers[p], triggerHandler{owner: owner, fn: fn})
 	}
 	triggerHandlersMu.Unlock()
 	refreshTriggersList()
 }
 
 // Back-compat: old console registration without msg parameter
-func pluginRegisterConsoleTriggers(owner string, phrases []string, fn func()) {
+func scriptRegisterConsoleTriggers(owner string, phrases []string, fn func()) {
 	if fn == nil {
 		return
 	}
-	pluginRegisterConsole(owner, phrases, func(string) { fn() })
+	scriptRegisterConsole(owner, phrases, func(string) { fn() })
 }
 
-// pluginAutoReply sends a command when a chat message contains trigger.
-func pluginAutoReply(owner, trigger, command string) {
-	if pluginIsDisabled(owner) || trigger == "" || command == "" {
+// scriptAutoReply sends a command when a chat message contains trigger.
+func scriptAutoReply(owner, trigger, command string) {
+	if scriptIsDisabled(owner) || trigger == "" || command == "" {
 		return
 	}
-	pluginRegisterTriggers(owner, "", []string{trigger}, func() {
-		pluginEnqueueCommand(owner, command)
+	scriptRegisterTriggers(owner, "", []string{trigger}, func() {
+		scriptEnqueueCommand(owner, command)
 	})
 }
 
-func pluginRegisterTrigger(owner string, phrase string, fn func(string)) {
-	if pluginIsDisabled(owner) || fn == nil {
+func scriptRegisterTrigger(owner string, phrase string, fn func(string)) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	if len(phrase) < 2 {
@@ -1538,36 +1538,36 @@ func pluginRegisterTrigger(owner string, phrase string, fn func(string)) {
 	}
 	triggerHandlersMu.Lock()
 	phrase = strings.ToLower(phrase)
-	pluginTriggers[phrase] = append(pluginTriggers[phrase], triggerHandler{owner: owner, fn: fn})
+	scriptTriggers[phrase] = append(scriptTriggers[phrase], triggerHandler{owner: owner, fn: fn})
 	triggerHandlersMu.Unlock()
 }
 
-func pluginRegisterPlayerHandler(owner string, fn func(Player)) {
-	if pluginIsDisabled(owner) || fn == nil {
+func scriptRegisterPlayerHandler(owner string, fn func(Player)) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	playerHandlersMu.Lock()
-	pluginPlayerHandlers = append(pluginPlayerHandlers, playerHandler{owner: owner, fn: fn})
+	scriptPlayerHandlers = append(scriptPlayerHandlers, playerHandler{owner: owner, fn: fn})
 	playerHandlersMu.Unlock()
 }
 
-// pluginRegisterChatHandler registers a callback invoked for every chat message.
-func pluginRegisterChatHandler(owner string, fn func(string)) {
-	if pluginIsDisabled(owner) || fn == nil {
+// scriptRegisterChatHandler registers a callback invoked for every chat message.
+func scriptRegisterChatHandler(owner string, fn func(string)) {
+	if scriptIsDisabled(owner) || fn == nil {
 		return
 	}
 	chatHandlersMu.Lock()
-	pluginChatHandlers = append(pluginChatHandlers, chatHandler{owner: owner, fn: fn})
+	scriptChatHandlers = append(scriptChatHandlers, chatHandler{owner: owner, fn: fn})
 	chatHandlersMu.Unlock()
 }
 
 func runInputHandlers(txt string) string {
 	inputHandlersMu.RLock()
-	handlers := append([]inputHandler{}, pluginInputHandlers...)
+	handlers := append([]inputHandler{}, scriptInputHandlers...)
 	inputHandlersMu.RUnlock()
 	for _, h := range handlers {
 		if h.fn != nil {
-			pluginLogEvent(h.owner, "InputHandler", txt)
+			scriptLogEvent(h.owner, "InputHandler", txt)
 			txt = h.fn(txt)
 		}
 	}
@@ -1599,7 +1599,7 @@ func runChatTriggers(msg string) {
 	} else {
 		msgFlags |= ChatCreature
 	}
-	for phrase, hs := range pluginTriggers {
+	for phrase, hs := range scriptTriggers {
 		if strings.Contains(strings.ToLower(msg), phrase) {
 			for _, h := range hs {
 				if h.name != "" && h.name != strings.ToLower(speaker) {
@@ -1612,7 +1612,7 @@ func runChatTriggers(msg string) {
 				if (f & msgFlags) != 0 {
 					owner := h.owner
 					fn := h.fn
-					pluginLogEvent(owner, "ChatTrigger", fmt.Sprintf("%q %q", phrase, msg))
+					scriptLogEvent(owner, "ChatTrigger", fmt.Sprintf("%q %q", phrase, msg))
 					go fn(msg)
 				}
 			}
@@ -1622,11 +1622,11 @@ func runChatTriggers(msg string) {
 
 	// Dispatch all-chat handlers (no phrase filtering).
 	chatHandlersMu.RLock()
-	handlers := append([]chatHandler{}, pluginChatHandlers...)
+	handlers := append([]chatHandler{}, scriptChatHandlers...)
 	chatHandlersMu.RUnlock()
 	for _, h := range handlers {
 		if h.fn != nil {
-			pluginLogEvent(h.owner, "ChatHandler", msg)
+			scriptLogEvent(h.owner, "ChatHandler", msg)
 			go h.fn(msg)
 		}
 	}
@@ -1635,10 +1635,10 @@ func runChatTriggers(msg string) {
 func runConsoleTriggers(msg string) {
 	triggerHandlersMu.RLock()
 	msgLower := strings.ToLower(msg)
-	for phrase, hs := range pluginConsoleTriggers {
+	for phrase, hs := range scriptConsoleTriggers {
 		if strings.Contains(msgLower, phrase) {
 			for _, h := range hs {
-				pluginLogEvent(h.owner, "ConsoleTrigger", fmt.Sprintf("%q %q", phrase, msg))
+				scriptLogEvent(h.owner, "ConsoleTrigger", fmt.Sprintf("%q %q", phrase, msg))
 				fn := h.fn
 				go fn(msg)
 			}
@@ -1647,45 +1647,45 @@ func runConsoleTriggers(msg string) {
 	triggerHandlersMu.RUnlock()
 }
 
-func pluginPlaySound(ids []uint16) {
+func scriptPlaySound(ids []uint16) {
 	playSound(ids)
 }
 
-// ---- Overlay helpers (called by plugin exports) ----
-func pluginOverlayClear(owner string) {
+// ---- Overlay helpers (called by script exports) ----
+func scriptOverlayClear(owner string) {
 	overlayMu.Lock()
-	delete(pluginOverlayOps, owner)
+	delete(scriptOverlayOps, owner)
 	overlayMu.Unlock()
 }
 
-func pluginOverlayRect(owner string, x, y, w, h int, r, g, b, a uint8) {
+func scriptOverlayRect(owner string, x, y, w, h int, r, g, b, a uint8) {
 	if w <= 0 || h <= 0 {
 		return
 	}
 	overlayMu.Lock()
-	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 0, x: x, y: y, w: w, h: h, r: r, g: g, b: b, a: a})
+	scriptOverlayOps[owner] = append(scriptOverlayOps[owner], overlayOp{kind: 0, x: x, y: y, w: w, h: h, r: r, g: g, b: b, a: a})
 	overlayMu.Unlock()
 }
 
-func pluginOverlayText(owner string, x, y int, txt string, r, g, b, a uint8) {
+func scriptOverlayText(owner string, x, y int, txt string, r, g, b, a uint8) {
 	if txt == "" {
 		return
 	}
 	overlayMu.Lock()
-	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 1, x: x, y: y, text: txt, r: r, g: g, b: b, a: a})
+	scriptOverlayOps[owner] = append(scriptOverlayOps[owner], overlayOp{kind: 1, x: x, y: y, text: txt, r: r, g: g, b: b, a: a})
 	overlayMu.Unlock()
 }
 
-func pluginOverlayImage(owner string, id uint16, x, y int) {
+func scriptOverlayImage(owner string, id uint16, x, y int) {
 	if id == 0xffff || id == 0 {
 		return
 	}
 	overlayMu.Lock()
-	pluginOverlayOps[owner] = append(pluginOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
+	scriptOverlayOps[owner] = append(scriptOverlayOps[owner], overlayOp{kind: 2, x: x, y: y, id: id, a: 255, r: 255, g: 255, b: 255})
 	overlayMu.Unlock()
 }
 
-func refreshPluginMod() {
+func refreshscriptMod() {
 	if isWASM {
 		return
 	}
@@ -1706,10 +1706,10 @@ func refreshPluginMod() {
 			}
 		}
 	}
-	pluginModTime = latest
+	scriptModTime = latest
 }
 
-type pluginInfo struct {
+type scriptInfo struct {
 	name        string
 	author      string
 	category    string
@@ -1720,19 +1720,19 @@ type pluginInfo struct {
 	apiVer      int
 }
 
-func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pluginInfo {
-	nameRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+PluginName\s*=\s*"([^"]+)"`)
-	authorRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+PluginAuthor\s*=\s*"([^"]+)"`)
-	categoryRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+PluginCategory\s*=\s*"([^"]+)"`)
-	subCategoryRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+PluginSubCategory\s*=\s*"([^"]+)"`)
-	apiVerRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+PluginAPIVersion\s*=\s*([0-9]+)\s*$`)
-	plugins := map[string]pluginInfo{}
+func scanscripts(scriptDirs []string, dup func(name, path string)) map[string]scriptInfo {
+	nameRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+scriptName\s*=\s*"([^"]+)"`)
+	authorRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+scriptAuthor\s*=\s*"([^"]+)"`)
+	categoryRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+scriptCategory\s*=\s*"([^"]+)"`)
+	subCategoryRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+scriptSubCategory\s*=\s*"([^"]+)"`)
+	apiVerRE := regexp.MustCompile(`(?m)^\s*(?:var|const)\s+scriptAPIVersion\s*=\s*([0-9]+)\s*$`)
+	scripts := map[string]scriptInfo{}
 	seenNames := map[string]bool{}
-	for _, dir := range pluginDirs {
+	for _, dir := range scriptDirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				log.Printf("read plugin dir %s: %v", dir, err)
+				log.Printf("read script dir %s: %v", dir, err)
 			}
 			continue
 		}
@@ -1743,7 +1743,7 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 			path := filepath.Join(dir, e.Name())
 			src, err := os.ReadFile(path)
 			if err != nil {
-				log.Printf("read plugin %s: %v", path, err)
+				log.Printf("read script %s: %v", path, err)
 				continue
 			}
 			nameMatch := nameRE.FindSubmatch(src)
@@ -1768,28 +1768,28 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 			}
 			invalid := false
 			apiVer := 0
-			if len(nameMatch) < 2 || name == "" || invalidPluginValue(name) {
+			if len(nameMatch) < 2 || name == "" || invalidscriptValue(name) {
 				if len(nameMatch) < 2 || name == "" {
-					consoleMessage("[plugin] missing name: " + path)
+					consoleMessage("[script] missing name: " + path)
 					name = base
 				} else {
-					consoleMessage("[plugin] invalid name: " + path)
+					consoleMessage("[script] invalid name: " + path)
 				}
 				invalid = true
 			}
-			if author == "" || invalidPluginValue(author) {
+			if author == "" || invalidscriptValue(author) {
 				if author == "" {
-					consoleMessage("[plugin] missing author: " + path)
+					consoleMessage("[script] missing author: " + path)
 				} else {
-					consoleMessage("[plugin] invalid author: " + path)
+					consoleMessage("[script] invalid author: " + path)
 				}
 				invalid = true
 			}
-			if category == "" || invalidPluginValue(category) {
+			if category == "" || invalidscriptValue(category) {
 				if category == "" {
-					consoleMessage("[plugin] missing category: " + path)
+					consoleMessage("[script] missing category: " + path)
 				} else {
-					consoleMessage("[plugin] invalid category: " + path)
+					consoleMessage("[script] invalid category: " + path)
 				}
 				invalid = true
 			}
@@ -1807,7 +1807,7 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 			}
 			seenNames[lower] = true
 			owner := name + "_" + base
-			plugins[owner] = pluginInfo{
+			scripts[owner] = scriptInfo{
 				name:        name,
 				author:      author,
 				category:    category,
@@ -1819,58 +1819,58 @@ func scanPlugins(pluginDirs []string, dup func(name, path string)) map[string]pl
 			}
 		}
 	}
-	return plugins
+	return scripts
 }
 
-func rescanPlugins() {
+func rescanscripts() {
 	if isWASM {
 		return
 	}
-	scanned := scanPlugins(scriptSearchDirs(), nil)
+	scanned := scanscripts(scriptSearchDirs(), nil)
 
-	pluginMu.RLock()
-	oldDisabled := make(map[string]bool, len(pluginDisabled))
-	for o, d := range pluginDisabled {
+	scriptMu.RLock()
+	oldDisabled := make(map[string]bool, len(scriptDisabled))
+	for o, d := range scriptDisabled {
 		oldDisabled[o] = d
 	}
-	oldOwners := make(map[string]struct{}, len(pluginDisplayNames))
-	for o := range pluginDisplayNames {
+	oldOwners := make(map[string]struct{}, len(scriptDisplayNames))
+	for o := range scriptDisplayNames {
 		oldOwners[o] = struct{}{}
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 
 	for o := range oldOwners {
 		if _, ok := scanned[o]; !ok {
-			disablePlugin(o, "removed")
+			disablescript(o, "removed")
 		}
 	}
 
-	pluginMu.Lock()
-	pluginDisplayNames = make(map[string]string, len(scanned))
-	pluginPaths = make(map[string]string, len(scanned))
-	pluginAuthors = make(map[string]string, len(scanned))
-	pluginCategories = make(map[string]string, len(scanned))
-	pluginSubCategories = make(map[string]string, len(scanned))
-	pluginInvalid = make(map[string]bool, len(scanned))
-	pluginDisabled = make(map[string]bool, len(scanned))
-	newEnabled := map[string]pluginScope{}
+	scriptMu.Lock()
+	scriptDisplayNames = make(map[string]string, len(scanned))
+	scriptPaths = make(map[string]string, len(scanned))
+	scriptAuthors = make(map[string]string, len(scanned))
+	scriptCategories = make(map[string]string, len(scanned))
+	scriptSubCategories = make(map[string]string, len(scanned))
+	scriptInvalid = make(map[string]bool, len(scanned))
+	scriptDisabled = make(map[string]bool, len(scanned))
+	newEnabled := map[string]scriptScope{}
 	for o, info := range scanned {
-		pluginDisplayNames[o] = info.name
-		pluginPaths[o] = info.path
-		pluginAuthors[o] = info.author
-		pluginCategories[o] = info.category
-		pluginSubCategories[o] = info.subCategory
-		// Require a matching plugin API version
-		invalid := info.invalid || info.apiVer != pluginAPICurrentVersion
-		pluginInvalid[o] = invalid
+		scriptDisplayNames[o] = info.name
+		scriptPaths[o] = info.path
+		scriptAuthors[o] = info.author
+		scriptCategories[o] = info.category
+		scriptSubCategories[o] = info.subCategory
+		// Require a matching script API version
+		invalid := info.invalid || info.apiVer != scriptAPICurrentVersion
+		scriptInvalid[o] = invalid
 		if invalid {
-			pluginDisabled[o] = true
+			scriptDisabled[o] = true
 			continue
 		}
-		if en, ok := pluginEnabledFor[o]; ok {
+		if en, ok := scriptEnabledFor[o]; ok {
 			newEnabled[o] = en
-		} else if gs.EnabledPlugins != nil {
-			if val, ok := gs.EnabledPlugins[o]; ok {
+		} else if gs.Enabledscripts != nil {
+			if val, ok := gs.Enabledscripts[o]; ok {
 				newEnabled[o] = scopeFromSettingValue(val)
 			}
 		}
@@ -1878,52 +1878,52 @@ func rescanPlugins() {
 		if effChar == "" {
 			effChar = gs.LastCharacter
 		}
-		pluginDisabled[o] = !newEnabled[o].enablesFor(effChar)
+		scriptDisabled[o] = !newEnabled[o].enablesFor(effChar)
 	}
-	pluginEnabledFor = newEnabled
-	pluginNames = make(map[string]bool, len(scanned))
+	scriptEnabledFor = newEnabled
+	scriptNames = make(map[string]bool, len(scanned))
 	for _, info := range scanned {
-		pluginNames[strings.ToLower(info.name)] = true
+		scriptNames[strings.ToLower(info.name)] = true
 	}
-	pluginMu.Unlock()
+	scriptMu.Unlock()
 
-	applyEnabledPlugins()
-	refreshPluginsWindow()
+	applyEnabledScripts()
+	refreshscriptsWindow()
 	settingsDirty = true
 }
 
-func checkPluginMods() {
+func checkForScriptEdit() {
 	if isWASM {
 		return
 	}
-	if time.Since(pluginModCheck) < 500*time.Millisecond {
+	if time.Since(scriptModCheck) < 500*time.Millisecond {
 		return
 	}
-	pluginModCheck = time.Now()
-	old := pluginModTime
-	refreshPluginMod()
-	if pluginModTime.After(old) {
-		rescanPlugins()
+	scriptModCheck = time.Now()
+	old := scriptModTime
+	refreshscriptMod()
+	if scriptModTime.After(old) {
+		rescanscripts()
 	}
 }
 
-func loadPlugins() {
+func loadScripts() {
 	if isWASM {
 		return
 	}
 	ensureScriptsDir()
 	ensureDefaultScripts()
-	scanned := scanPlugins(scriptSearchDirs(), func(name, path string) {
-		log.Printf("plugin %s duplicate name %s", path, name)
-		consoleMessage("[plugin] duplicate name: " + name)
+	scanned := scanscripts(scriptSearchDirs(), func(name, path string) {
+		log.Printf("script %s duplicate name %s", path, name)
+		consoleMessage("[script] duplicate name: " + name)
 	})
 
-	pluginNames = make(map[string]bool, len(scanned))
+	scriptNames = make(map[string]bool, len(scanned))
 	for o, info := range scanned {
-		pluginNames[strings.ToLower(info.name)] = true
-		s, ok := pluginEnabledFor[o]
-		if !ok && gs.EnabledPlugins != nil {
-			if val, ok2 := gs.EnabledPlugins[o]; ok2 {
+		scriptNames[strings.ToLower(info.name)] = true
+		s, ok := scriptEnabledFor[o]
+		if !ok && gs.Enabledscripts != nil {
+			if val, ok2 := gs.Enabledscripts[o]; ok2 {
 				s = scopeFromSettingValue(val)
 			}
 		}
@@ -1931,45 +1931,45 @@ func loadPlugins() {
 		if effChar == "" {
 			effChar = gs.LastCharacter
 		}
-		invalid := info.invalid || info.apiVer != pluginAPICurrentVersion
+		invalid := info.invalid || info.apiVer != scriptAPICurrentVersion
 		disabled := invalid || !s.enablesFor(effChar)
-		pluginMu.Lock()
-		pluginDisplayNames[o] = info.name
-		pluginCategories[o] = info.category
-		pluginSubCategories[o] = info.subCategory
-		pluginPaths[o] = info.path
+		scriptMu.Lock()
+		scriptDisplayNames[o] = info.name
+		scriptCategories[o] = info.category
+		scriptSubCategories[o] = info.subCategory
+		scriptPaths[o] = info.path
 		if !s.empty() {
-			pluginEnabledFor[o] = s
+			scriptEnabledFor[o] = s
 		}
-		pluginAuthors[o] = info.author
-		pluginInvalid[o] = invalid
-		pluginDisabled[o] = disabled
-		pluginMu.Unlock()
+		scriptAuthors[o] = info.author
+		scriptInvalid[o] = invalid
+		scriptDisabled[o] = disabled
+		scriptMu.Unlock()
 		if !disabled {
-			loadPluginSource(o, info.name, info.path, info.src, restrictedStdlib())
+			loadscriptSource(o, info.name, info.path, info.src, restrictedStdlib())
 		}
 	}
 	hotkeysMu.Lock()
 	for i := range hotkeys {
-		if hotkeys[i].Plugin != "" {
+		if hotkeys[i].Script != "" {
 			hotkeys[i].Disabled = true
 		}
 	}
 	hotkeysMu.Unlock()
 	refreshHotkeysList()
-	refreshPluginsWindow()
-	refreshPluginMod()
+	refreshscriptsWindow()
+	refreshscriptMod()
 }
 
-// scopeFromSettingValue converts a settings value into a pluginScope.
+// scopeFromSettingValue converts a settings value into a scriptScope.
 // Accepted values:
 // - string("all"): All=true
 // - string(name): include that character
 // - []string: include all listed characters
 // - []any (from JSON): include all listed string characters
 // - bool(true): include LastCharacter if present
-func scopeFromSettingValue(v any) pluginScope {
-	s := pluginScope{}
+func scopeFromSettingValue(v any) scriptScope {
+	s := scriptScope{}
 	switch val := v.(type) {
 	case string:
 		if val == "all" {

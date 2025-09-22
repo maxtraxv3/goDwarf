@@ -12,4 +12,4 @@ Added confirm remove character dialog.
 Added avatars and profession icons to login screen
 Cleaned up login window. 
 Added TTS speed and voice selector.
-Added basic hotkey and plugin system (see example_plugins and data/plugins)
+Added basic hotkey and script system (see example_scripts and data/scripts)

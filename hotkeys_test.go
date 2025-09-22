@@ -190,7 +190,7 @@ func TestLoadHotkeysShowsEntriesInWindow(t *testing.T) {
 	hotkeys = nil
 	hotkeysWin = nil
 	hotkeysList = nil
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 
 	dir := t.TempDir()
 	origDir := dataDirPath
@@ -308,57 +308,57 @@ func TestHotkeyEquipAlreadyEquipped(t *testing.T) {
 	}
 }
 
-// Test that plugin hotkeys are rendered with a valid font size.
-func TestPluginHotkeysFontSize(t *testing.T) {
-	hotkeys = []Hotkey{{Combo: "Ctrl-P", Plugin: "plug", Commands: []HotkeyCommand{{Command: "say hi"}}}}
+// Test that script hotkeys are rendered with a valid font size.
+func TestscriptHotkeysFontSize(t *testing.T) {
+	hotkeys = []Hotkey{{Combo: "Ctrl-P", script: "plug", Commands: []HotkeyCommand{{Command: "say hi"}}}}
 	hotkeysWin = nil
 	hotkeysList = nil
-	pluginDisplayNames = map[string]string{"plug": "Plugin"}
-	pluginCategories = map[string]string{"plug": ""}
-	pluginSubCategories = map[string]string{"plug": ""}
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptDisplayNames = map[string]string{"plug": "script"}
+	scriptCategories = map[string]string{"plug": ""}
+	scriptSubCategories = map[string]string{"plug": ""}
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 
 	makeHotkeysWindow()
 
 	if len(hotkeysList.Contents) != 2 {
-		t.Fatalf("expected plugin header and row, got %d", len(hotkeysList.Contents))
+		t.Fatalf("expected script header and row, got %d", len(hotkeysList.Contents))
 	}
 	header := hotkeysList.Contents[0]
 	if header.FontSize == 0 {
-		t.Fatalf("plugin header font size not set")
+		t.Fatalf("script header font size not set")
 	}
 	row := hotkeysList.Contents[1]
 	if len(row.Contents) != 2 {
-		t.Fatalf("plugin row malformed")
+		t.Fatalf("script row malformed")
 	}
 	lbl := row.Contents[1]
 	if lbl.FontSize == 0 {
-		t.Fatalf("plugin hotkey label font size not set")
+		t.Fatalf("script hotkey label font size not set")
 	}
 }
 
-// Test that enabling a plugin hotkey persists only its state and not the
+// Test that enabling a script hotkey persists only its state and not the
 // command details.
-func TestPluginHotkeyStatePersisted(t *testing.T) {
+func TestscriptHotkeyStatePersisted(t *testing.T) {
 	hotkeys = nil
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 	dir := t.TempDir()
 	origDir := dataDirPath
 	dataDirPath = dir
 	defer func() { dataDirPath = origDir }()
 
-	// Add plugin hotkey and enable it.
-	pluginAddHotkey("plug", "Ctrl-P", "say hi")
+	// Add script hotkey and enable it.
+	scriptAddHotkey("plug", "Ctrl-P", "say hi")
 	if len(hotkeys) != 1 {
-		t.Fatalf("expected one plugin hotkey")
+		t.Fatalf("expected one script hotkey")
 	}
 	hotkeysMu.Lock()
 	hotkeys[0].Disabled = false
 	hotkeysMu.Unlock()
-	if pluginHotkeyEnabled["plug"] == nil {
-		pluginHotkeyEnabled["plug"] = map[string]bool{}
+	if scriptHotkeyEnabled["plug"] == nil {
+		scriptHotkeyEnabled["plug"] = map[string]bool{}
 	}
-	pluginHotkeyEnabled["plug"]["Ctrl-P"] = true
+	scriptHotkeyEnabled["plug"]["Ctrl-P"] = true
 	saveHotkeys()
 
 	// File should not contain command text.
@@ -367,22 +367,22 @@ func TestPluginHotkeyStatePersisted(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	if strings.Contains(string(data), "say hi") {
-		t.Fatalf("plugin command persisted: %s", data)
+		t.Fatalf("script command persisted: %s", data)
 	}
 
 	// Simulate restart.
 	hotkeys = nil
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 	loadHotkeys()
-	if !pluginHotkeyEnabled["plug"]["Ctrl-P"] {
+	if !scriptHotkeyEnabled["plug"]["Ctrl-P"] {
 		t.Fatalf("expected enabled state, got disabled")
 	}
 
-	pluginAddHotkey("plug", "Ctrl-P", "say hi")
+	scriptAddHotkey("plug", "Ctrl-P", "say hi")
 	found := false
 	hotkeysMu.RLock()
 	for _, hk := range hotkeys {
-		if hk.Plugin == "plug" {
+		if hk.script == "plug" {
 			found = true
 			if hk.Disabled {
 				t.Fatalf("hotkey disabled after reload")
@@ -391,19 +391,19 @@ func TestPluginHotkeyStatePersisted(t *testing.T) {
 	}
 	hotkeysMu.RUnlock()
 	if !found {
-		t.Fatalf("plugin hotkey not re-added")
+		t.Fatalf("script hotkey not re-added")
 	}
 }
 
-// Test that removing a plugin hotkey clears it from all state and UI.
-func TestPluginRemoveHotkeyClearsState(t *testing.T) {
+// Test that removing a script hotkey clears it from all state and UI.
+func TestscriptRemoveHotkeyClearsState(t *testing.T) {
 	origHotkeys := hotkeys
 	hotkeys = nil
 	t.Cleanup(func() { hotkeys = origHotkeys })
 
-	origEnabled := pluginHotkeyEnabled
-	pluginHotkeyEnabled = map[string]map[string]bool{"plug": {"Ctrl-P": true}}
-	t.Cleanup(func() { pluginHotkeyEnabled = origEnabled })
+	origEnabled := scriptHotkeyEnabled
+	scriptHotkeyEnabled = map[string]map[string]bool{"plug": {"Ctrl-P": true}}
+	t.Cleanup(func() { scriptHotkeyEnabled = origEnabled })
 
 	origWin := hotkeysWin
 	origList := hotkeysList
@@ -418,21 +418,21 @@ func TestPluginRemoveHotkeyClearsState(t *testing.T) {
 	dataDirPath = t.TempDir()
 	t.Cleanup(func() { dataDirPath = origDir })
 
-	origDisabled := pluginDisabled
-	pluginDisabled = map[string]bool{}
-	origInvalid := pluginInvalid
-	pluginInvalid = map[string]bool{}
+	origDisabled := scriptDisabled
+	scriptDisabled = map[string]bool{}
+	origInvalid := scriptInvalid
+	scriptInvalid = map[string]bool{}
 	t.Cleanup(func() {
-		pluginDisabled = origDisabled
-		pluginInvalid = origInvalid
+		scriptDisabled = origDisabled
+		scriptInvalid = origInvalid
 	})
-	origEnabledPlugins := pluginEnabledFor
-	pluginEnabledFor = map[string]pluginScope{}
-	t.Cleanup(func() { pluginEnabledFor = origEnabledPlugins })
+	origEnabledscripts := scriptEnabledFor
+	scriptEnabledFor = map[string]scriptScope{}
+	t.Cleanup(func() { scriptEnabledFor = origEnabledscripts })
 
 	makeHotkeysWindow()
 
-	pluginAddHotkey("plug", "Ctrl-P", "say hi")
+	scriptAddHotkey("plug", "Ctrl-P", "say hi")
 
 	hotkeysMu.RLock()
 	if len(hotkeys) != 1 {
@@ -440,26 +440,26 @@ func TestPluginRemoveHotkeyClearsState(t *testing.T) {
 		t.Fatalf("expected hotkey added, got %d", len(hotkeys))
 	}
 	hotkeysMu.RUnlock()
-	if m := pluginHotkeyEnabled["plug"]; m == nil || !m["Ctrl-P"] {
-		t.Fatalf("expected pluginHotkeyEnabled entry before removal")
+	if m := scriptHotkeyEnabled["plug"]; m == nil || !m["Ctrl-P"] {
+		t.Fatalf("expected scriptHotkeyEnabled entry before removal")
 	}
 	if len(hotkeysList.Contents) != 2 {
-		t.Fatalf("expected hotkey list to have plugin header and row before removal, got %d", len(hotkeysList.Contents))
+		t.Fatalf("expected hotkey list to have script header and row before removal, got %d", len(hotkeysList.Contents))
 	}
 
-	pluginRemoveHotkey("plug", "Ctrl-P")
+	scriptRemoveHotkey("plug", "Ctrl-P")
 
 	hotkeysMu.RLock()
 	for _, hk := range hotkeys {
-		if hk.Plugin == "plug" && hk.Combo == "Ctrl-P" {
+		if hk.script == "plug" && hk.Combo == "Ctrl-P" {
 			hotkeysMu.RUnlock()
-			t.Fatalf("plugin hotkey not removed")
+			t.Fatalf("script hotkey not removed")
 		}
 	}
 	hotkeysMu.RUnlock()
 
-	if _, ok := pluginHotkeyEnabled["plug"]; ok {
-		t.Fatalf("pluginHotkeyEnabled entry remains after removal")
+	if _, ok := scriptHotkeyEnabled["plug"]; ok {
+		t.Fatalf("scriptHotkeyEnabled entry remains after removal")
 	}
 
 	if len(hotkeysList.Contents) != 0 {

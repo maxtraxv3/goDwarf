@@ -94,7 +94,7 @@ func handleConsoleInputContext(mx, my int) bool {
 			// Paste into the input and ensure input mode is active
 			// and the console updates immediately.
 			cur := string(inputText)
-			pluginSetInputText(cur + clip)
+			scriptSetInputText(cur + clip)
 			spellDirty = true
 			updateConsoleWindow()
 			if consoleWin != nil {
@@ -117,7 +117,7 @@ func handleConsoleInputContext(mx, my int) bool {
 	opts = append(opts, "Clear Line")
 	actions = append(actions, func() {
 		// Clear the input and switch to input mode so the empty state is visible.
-		pluginSetInputText("")
+		scriptSetInputText("")
 		spellDirty = true
 		updateConsoleWindow()
 		if consoleWin != nil {

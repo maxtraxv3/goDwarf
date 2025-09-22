@@ -29,7 +29,7 @@ const (
 	globalShortcutsFile = "global-shortcuts.json"
 )
 
-// pluginAddShortcut registers a single shortcut for the script identified by owner.
+// scriptAddShortcut registers a single shortcut for the script identified by owner.
 // Typing short text in the chat box will expand into the full string before
 // being sent.  For example, adding ("pp", "/ponder ") means that typing
 // "pp" or "pp hello" becomes "/ponder " or "/ponder hello" respectively.
@@ -40,7 +40,7 @@ func addShortcut(owner, short, full string) {
 	if m == nil {
 		m = map[string]string{}
 		shortcutMaps[owner] = m
-		pluginRegisterInputHandler(owner, func(txt string) string {
+		scriptRegisterInputHandler(owner, func(txt string) string {
 			shortcutMu.RLock()
 			local := shortcutMaps[owner]
 			shortcutMu.RUnlock()
@@ -63,46 +63,46 @@ func addShortcut(owner, short, full string) {
 	refreshShortcutsList()
 }
 
-func pluginAddShortcut(owner, short, full string) {
-	if pluginIsDisabled(owner) {
+func scriptAddShortcut(owner, short, full string) {
+	if scriptIsDisabled(owner) {
 		return
 	}
 	addShortcut(owner, short, full)
-	name := pluginDisplayNames[owner]
+	name := scriptDisplayNames[owner]
 	if name == "" {
 		name = owner
 	}
-	msg := fmt.Sprintf("[plugin:%s] shortcut added: %s -> %s", name, short, full)
-	if gs.pluginOutputDebug {
+	msg := fmt.Sprintf("[script:%s] shortcut added: %s -> %s", name, short, full)
+	if gs.scriptOutputDebug {
 		consoleMessage(msg)
 	}
 	log.Print(msg)
 }
 
-// pluginAddShortcuts registers many shortcuts at once for the given script.
-func pluginAddShortcuts(owner string, shortcuts map[string]string) {
-	if pluginIsDisabled(owner) {
+// scriptAddShortcuts registers many shortcuts at once for the given script.
+func scriptAddShortcuts(owner string, shortcuts map[string]string) {
+	if scriptIsDisabled(owner) {
 		return
 	}
 	for k, v := range shortcuts {
-		pluginAddShortcut(owner, k, v)
+		scriptAddShortcut(owner, k, v)
 	}
 }
 
-// pluginRemoveShortcuts deletes all shortcuts registered by the specified script.
+// scriptRemoveShortcuts deletes all shortcuts registered by the specified script.
 // It is typically called when a script is disabled or unloaded so that any
 // previously registered shortcut prefixes no longer expand.
-func pluginRemoveShortcuts(owner string) {
+func scriptRemoveShortcuts(owner string) {
 	shortcutMu.Lock()
 	delete(shortcutMaps, owner)
 	shortcutMu.Unlock()
 	refreshShortcutsList()
-	name := pluginDisplayNames[owner]
+	name := scriptDisplayNames[owner]
 	if name == "" {
 		name = owner
 	}
-	msg := fmt.Sprintf("[plugin:%s] shortcuts removed", name)
-	if gs.pluginOutputDebug {
+	msg := fmt.Sprintf("[script:%s] shortcuts removed", name)
+	if gs.scriptOutputDebug {
 		consoleMessage(msg)
 	}
 	log.Print(msg)

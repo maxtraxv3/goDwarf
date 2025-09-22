@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -15,10 +15,10 @@ import (
 //   your character by name, to avoid false triggers.
 // - It replies only once every few seconds so it won’t spam.
 
-const PluginName = "Yes Boats"
-const PluginAuthor = "Example"
-const PluginCategory = "Quality Of Life"
-const PluginAPIVersion = 1
+const scriptName = "Yes Boats"
+const scriptAuthor = "Example"
+const scriptCategory = "Quality Of Life"
+const scriptAPIVersion = 1
 
 var (
 	lastYes     time.Time         // last time we replied

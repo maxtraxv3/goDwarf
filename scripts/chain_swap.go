@@ -1,17 +1,17 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import (
-    "gt"
-    "time"
+	"gt"
+	"time"
 )
 
-// Plugin metadata
-const PluginName = "Chain Swap"
-const PluginAuthor = "Examples"
-const PluginCategory = "Equipment"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Chain Swap"
+const scriptAuthor = "Examples"
+const scriptCategory = "Equipment"
+const scriptAPIVersion = 1
 
 var savedName string
 var lastSwap time.Time
@@ -34,26 +34,26 @@ func swapChain() {
 	}
 	lastSwap = time.Now()
 
-    var chainName string
-    var equippedName string
-    for _, it := range gt.Inventory() {
-        if gt.IgnoreCase(it.Name, "chain") {
-            chainName = it.Name
-        }
-        if it.Equipped && !gt.IgnoreCase(it.Name, "chain") {
-            equippedName = it.Name
-        }
-    }
-    if chainName == "" {
-        // No chain found.
-        return
-    }
-    if equippedName != "" {
-        // Remember what we unequipped so we can switch back later.
-        savedName = equippedName
-        gt.Equip(chainName)
-    } else if savedName != "" {
-        // Chain already equipped, so swap back.
-        gt.Equip(savedName)
-    }
+	var chainName string
+	var equippedName string
+	for _, it := range gt.Inventory() {
+		if gt.IgnoreCase(it.Name, "chain") {
+			chainName = it.Name
+		}
+		if it.Equipped && !gt.IgnoreCase(it.Name, "chain") {
+			equippedName = it.Name
+		}
+	}
+	if chainName == "" {
+		// No chain found.
+		return
+	}
+	if equippedName != "" {
+		// Remember what we unequipped so we can switch back later.
+		savedName = equippedName
+		gt.Equip(chainName)
+	} else if savedName != "" {
+		// Chain already equipped, so swap back.
+		gt.Equip(savedName)
+	}
 }

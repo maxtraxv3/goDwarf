@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-const PluginName = "APIFull"
-const PluginAuthor = "Test"
-const PluginCategory = "Tests"
-const PluginAPIVersion = 1
+const scriptName = "APIFull"
+const scriptAuthor = "Test"
+const scriptCategory = "Tests"
+const scriptAPIVersion = 1
 
 func Init() {
 	// Console and notifications

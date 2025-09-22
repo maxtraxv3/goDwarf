@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -8,10 +8,10 @@ import (
 	"gt"
 )
 
-const PluginAuthor = "Examples"
-const PluginCategory = "Fun"
-const PluginAPIVersion = 1
-const PluginName = "Dance Macros"
+const scriptAuthor = "Examples"
+const scriptCategory = "Fun"
+const scriptAPIVersion = 1
+const scriptName = "Dance Macros"
 
 // How to use:
 //   - Type /dance or press Shift+D and your exile will run a short

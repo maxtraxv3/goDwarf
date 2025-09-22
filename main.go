@@ -246,7 +246,7 @@ func main() {
 			if wasmPrivacyActive() {
 				playerName = ""
 			}
-			applyEnabledPlugins()
+			applyEnabledScripts()
 
 			mp := newMoviePlayer(frames, clMovFPS, cancel)
 			if isWASM {

@@ -13,7 +13,7 @@ var (
 func init() {
 	ttsBlocklist = make(map[string]struct{})
 	syncTTSBlocklist()
-	pluginRegisterCommand("client", "notts", handleNoTTSCommand)
+	scriptRegisterCommand("client", "notts", handleNoTTSCommand)
 }
 
 func syncTTSBlocklist() {

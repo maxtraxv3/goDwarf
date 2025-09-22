@@ -10,49 +10,49 @@ import (
 	"testing"
 )
 
-// Test that plugins missing required metadata are marked invalid and disabled.
-func TestPluginMissingMetaDisabled(t *testing.T) {
+// Test that scripts missing required metadata are marked invalid and disabled.
+func TestscriptMissingMetaDisabled(t *testing.T) {
 	origDir := dataDirPath
 	dataDirPath = t.TempDir()
 	t.Cleanup(func() { dataDirPath = origDir })
 
-	plugDir := filepath.Join(dataDirPath, "plugins")
+	plugDir := filepath.Join(dataDirPath, "scripts")
 	if err := os.MkdirAll(plugDir, 0o755); err != nil {
-		t.Fatalf("mkdir plugins: %v", err)
+		t.Fatalf("mkdir scripts: %v", err)
 	}
 	src := `package main
-const PluginName = "MetaTest"
+const scriptName = "MetaTest"
 `
 	if err := os.WriteFile(filepath.Join(plugDir, "meta.go"), []byte(src), 0o644); err != nil {
-		t.Fatalf("write plugin: %v", err)
+		t.Fatalf("write script: %v", err)
 	}
 
-	// Reset plugin state.
-	pluginMu = sync.RWMutex{}
-	pluginDisplayNames = map[string]string{}
-	pluginAuthors = map[string]string{}
-	pluginCategories = map[string]string{}
-	pluginSubCategories = map[string]string{}
-	pluginInvalid = map[string]bool{}
-	pluginDisabled = map[string]bool{}
-	pluginEnabledFor = map[string]pluginScope{}
-	pluginNames = map[string]bool{}
+	// Reset script state.
+	scriptMu = sync.RWMutex{}
+	scriptDisplayNames = map[string]string{}
+	scriptAuthors = map[string]string{}
+	scriptCategories = map[string]string{}
+	scriptSubCategories = map[string]string{}
+	scriptInvalid = map[string]bool{}
+	scriptDisabled = map[string]bool{}
+	scriptEnabledFor = map[string]scriptScope{}
+	scriptNames = map[string]bool{}
 
-	loadPlugins()
+	loadscripts()
 	owner := "MetaTest_meta"
-	if !pluginInvalid[owner] {
-		t.Fatalf("plugin not marked invalid: %+v", pluginInvalid)
+	if !scriptInvalid[owner] {
+		t.Fatalf("script not marked invalid: %+v", scriptInvalid)
 	}
-	if !pluginDisabled[owner] {
-		t.Fatalf("plugin not disabled")
+	if !scriptDisabled[owner] {
+		t.Fatalf("script not disabled")
 	}
 
 	playerName = "Tester"
-	setPluginEnabled(owner, true, false)
-	if s, ok := pluginEnabledFor[owner]; ok && !s.empty() {
-		t.Fatalf("invalid plugin unexpectedly enabled: %+v", s)
+	setscriptEnabled(owner, true, false)
+	if s, ok := scriptEnabledFor[owner]; ok && !s.empty() {
+		t.Fatalf("invalid script unexpectedly enabled: %+v", s)
 	}
-	if !pluginDisabled[owner] {
-		t.Fatalf("invalid plugin became enabled")
+	if !scriptDisabled[owner] {
+		t.Fatalf("invalid script became enabled")
 	}
 }

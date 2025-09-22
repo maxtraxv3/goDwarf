@@ -10,14 +10,14 @@ import (
 )
 
 // Test that a single macro expands input text and matches case-insensitively.
-func TestPluginAddShortcutExpandsInput(t *testing.T) {
+func TestscriptAddShortcutExpandsInput(t *testing.T) {
 	// Reset shared state.
 	shortcutMu = sync.RWMutex{}
 	shortcutMaps = map[string]map[string]string{}
 	inputHandlersMu = sync.RWMutex{}
-	pluginInputHandlers = nil
+	scriptInputHandlers = nil
 
-	pluginAddShortcut("tester", "pp", "/ponder ")
+	scriptAddShortcut("tester", "pp", "/ponder ")
 
 	if got, want := runInputHandlers("pp"), "/ponder "; got != want {
 		t.Fatalf("bare macro failed: got %q, want %q", got, want)
@@ -37,13 +37,13 @@ func TestPluginAddShortcutExpandsInput(t *testing.T) {
 }
 
 // Test that multiple macros can be registered at once.
-func TestPluginAddShortcuts(t *testing.T) {
+func TestscriptAddShortcuts(t *testing.T) {
 	shortcutMu = sync.RWMutex{}
 	shortcutMaps = map[string]map[string]string{}
 	inputHandlersMu = sync.RWMutex{}
-	pluginInputHandlers = nil
+	scriptInputHandlers = nil
 
-	pluginAddShortcuts("bulk", map[string]string{"pp": "/ponder ", "hi": "/hello "})
+	scriptAddShortcuts("bulk", map[string]string{"pp": "/ponder ", "hi": "/hello "})
 
 	if got, want := runInputHandlers("pp there"), "/ponder there"; got != want {
 		t.Fatalf("pp macro failed: got %q, want %q", got, want)
@@ -53,20 +53,20 @@ func TestPluginAddShortcuts(t *testing.T) {
 	}
 }
 
-// Test that calling pluginAddMacro multiple times for the same plugin
+// Test that calling scriptAddMacro multiple times for the same script
 // installs only one input handler while all macros still expand.
-func TestPluginAddShortcutSingleHandler(t *testing.T) {
+func TestscriptAddShortcutSingleHandler(t *testing.T) {
 	shortcutMu = sync.RWMutex{}
 	shortcutMaps = map[string]map[string]string{}
 	inputHandlersMu = sync.RWMutex{}
-	pluginInputHandlers = nil
+	scriptInputHandlers = nil
 
 	owner := "dup"
-	pluginAddShortcut(owner, "pp", "/ponder ")
-	pluginAddShortcut(owner, "hi", "/hello ")
+	scriptAddShortcut(owner, "pp", "/ponder ")
+	scriptAddShortcut(owner, "hi", "/hello ")
 
 	handlers := 0
-	for _, h := range pluginInputHandlers {
+	for _, h := range scriptInputHandlers {
 		if h.owner == owner {
 			handlers++
 		}
@@ -83,20 +83,20 @@ func TestPluginAddShortcutSingleHandler(t *testing.T) {
 }
 
 // Test that AutoReply triggers the specified command when the message starts with the trigger.
-func TestPluginAutoReplyRunsCommand(t *testing.T) {
+func TestscriptAutoReplyRunsCommand(t *testing.T) {
 	shortcutMu = sync.RWMutex{}
 	shortcutMaps = map[string]map[string]string{}
 	inputHandlersMu = sync.RWMutex{}
-	pluginInputHandlers = nil
+	scriptInputHandlers = nil
 	triggerHandlersMu = sync.RWMutex{}
-	pluginTriggers = map[string][]triggerHandler{}
-	pluginConsoleTriggers = map[string][]triggerHandler{}
+	scriptTriggers = map[string][]triggerHandler{}
+	scriptConsoleTriggers = map[string][]triggerHandler{}
 	consoleLog = messageLog{max: maxMessages}
 	commandQueue = nil
 	pendingCommand = ""
-	pluginSendHistory = map[string][]time.Time{}
+	scriptSendHistory = map[string][]time.Time{}
 
-	pluginAutoReply("bot", "hi", "/wave")
+	scriptAutoReply("bot", "hi", "/wave")
 	runChatTriggers("Hi there")
 
 	if msgs := getConsoleMessages(); len(msgs) != 0 {
@@ -107,36 +107,36 @@ func TestPluginAutoReplyRunsCommand(t *testing.T) {
 	}
 }
 
-// Test that disabling a plugin removes any macros it registered.
-func TestPluginRemoveShortcutsOnDisable(t *testing.T) {
+// Test that disabling a script removes any macros it registered.
+func TestscriptRemoveShortcutsOnDisable(t *testing.T) {
 	// Reset shared state.
 	shortcutMu = sync.RWMutex{}
 	shortcutMaps = map[string]map[string]string{}
 	inputHandlersMu = sync.RWMutex{}
-	pluginInputHandlers = nil
-	pluginMu = sync.RWMutex{}
-	pluginDisabled = map[string]bool{}
-	pluginInvalid = map[string]bool{}
-	pluginEnabledFor = map[string]pluginScope{}
-	pluginDisplayNames = map[string]string{}
-	pluginCategories = map[string]string{}
-	pluginSubCategories = map[string]string{}
-	pluginTerminators = map[string]func(){}
-	pluginCommandOwners = map[string]string{}
-	pluginCommands = map[string]PluginCommandHandler{}
-	pluginSendHistory = map[string][]time.Time{}
+	scriptInputHandlers = nil
+	scriptMu = sync.RWMutex{}
+	scriptDisabled = map[string]bool{}
+	scriptInvalid = map[string]bool{}
+	scriptEnabledFor = map[string]scriptScope{}
+	scriptDisplayNames = map[string]string{}
+	scriptCategories = map[string]string{}
+	scriptSubCategories = map[string]string{}
+	scriptTerminators = map[string]func(){}
+	scriptCommandOwners = map[string]string{}
+	scriptCommands = map[string]scriptCommandHandler{}
+	scriptSendHistory = map[string][]time.Time{}
 	hotkeysMu = sync.RWMutex{}
 	hotkeys = nil
-	pluginHotkeyEnabled = map[string]map[string]bool{}
+	scriptHotkeyEnabled = map[string]map[string]bool{}
 	consoleLog = messageLog{max: maxMessages}
 
 	owner := "plug"
-	pluginAddShortcut(owner, "pp", "/ponder ")
+	scriptAddShortcut(owner, "pp", "/ponder ")
 	if got, want := runInputHandlers("pp hello"), "/ponder hello"; got != want {
 		t.Fatalf("macro not added: got %q, want %q", got, want)
 	}
 
-	disablePlugin(owner, "testing")
+	disablescript(owner, "testing")
 
 	if got, want := runInputHandlers("pp hello"), "pp hello"; got != want {
 		t.Fatalf("macro not removed: got %q, want %q", got, want)

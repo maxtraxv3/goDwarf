@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -6,11 +6,11 @@ import (
 	"gt"
 )
 
-// Plugin metadata
-const PluginName = "Healer Helper"
-const PluginAuthor = "Examples"
-const PluginCategory = "Profession"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Healer Helper"
+const scriptAuthor = "Examples"
+const scriptCategory = "Profession"
+const scriptAPIVersion = 1
 
 // Init subscribes to mouse click hotkeys rather than polling.
 func Init() {
@@ -53,9 +53,9 @@ func Init() {
 func equipItem(name string) {
 	for _, it := range gt.Inventory() {
 		if gt.IgnoreCase(it.Name, name) {
-            if !it.Equipped {
-                gt.Equip(it.Name)
-            }
+			if !it.Equipped {
+				gt.Equip(it.Name)
+			}
 			return
 		}
 	}

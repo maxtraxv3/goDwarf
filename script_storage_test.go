@@ -13,38 +13,38 @@ import (
 	"testing"
 )
 
-func TestPluginStorageSetGetDelete(t *testing.T) {
+func TestscriptStorageSetGetDelete(t *testing.T) {
 	origDir := dataDirPath
 	dataDirPath = t.TempDir()
 	t.Cleanup(func() { dataDirPath = origDir })
 
 	owner := "plug_file"
-	pluginDisplayNames = map[string]string{owner: "Plug"}
-	pluginAuthors = map[string]string{owner: "Auth"}
-	pluginStores = map[string]*pluginStore{}
-	pluginStoreMu = sync.Mutex{}
+	scriptDisplayNames = map[string]string{owner: "Plug"}
+	scriptAuthors = map[string]string{owner: "Auth"}
+	scriptStores = map[string]*scriptStore{}
+	scriptStoreMu = sync.Mutex{}
 
-	if v := pluginStorageGet(owner, "foo"); v != nil {
+	if v := scriptStorageGet(owner, "foo"); v != nil {
 		t.Fatalf("expected nil, got %v", v)
 	}
 
-	pluginStorageSet(owner, "foo", "bar")
-	if v := pluginStorageGet(owner, "foo"); v != "bar" {
+	scriptStorageSet(owner, "foo", "bar")
+	if v := scriptStorageGet(owner, "foo"); v != "bar" {
 		t.Fatalf("got %v, want bar", v)
 	}
 
-	store := getPluginStore(owner)
+	store := getscriptStore(owner)
 	if !store.dirty {
 		t.Fatalf("store not marked dirty")
 	}
 
-	savePluginStores()
+	savescriptStores()
 
 	if store.dirty {
 		t.Fatalf("store still dirty after save")
 	}
 
-	path := pluginStoragePath(owner)
+	path := scriptStoragePath(owner)
 	sum := sha256.Sum256([]byte("Plug:Auth"))
 	wantFile := hex.EncodeToString(sum[:]) + ".json"
 	if filepath.Base(path) != wantFile {
@@ -62,8 +62,8 @@ func TestPluginStorageSetGetDelete(t *testing.T) {
 		t.Fatalf("file contents %v", m)
 	}
 
-	pluginStorageDelete(owner, "foo")
-	savePluginStores()
+	scriptStorageDelete(owner, "foo")
+	savescriptStores()
 	data, err = os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read storage: %v", err)

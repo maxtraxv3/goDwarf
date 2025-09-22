@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -10,11 +10,11 @@ import "gt"
 // - Press 1–9 on the numeric keypad (NumLock on).
 // - Each key sends a /pose command so nearby players can see it.
 //
-// Plugin metadata
-const PluginName = "Numpad Poser"
-const PluginAuthor = "Examples"
-const PluginCategory = "Fun"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Numpad Poser"
+const scriptAuthor = "Examples"
+const scriptCategory = "Fun"
+const scriptAPIVersion = 1
 
 // Init binds each number key on the keypad to a fun pose.
 func Init() {

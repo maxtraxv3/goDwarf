@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
-// Plugin metadata
-const PluginName = "Sharecads"
-const PluginAuthor = "Examples"
-const PluginCategory = "Quality Of Life"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Sharecads"
+const scriptAuthor = "Examples"
+const scriptCategory = "Quality Of Life"
+const scriptAPIVersion = 1
 
 var (
 	scOn    bool

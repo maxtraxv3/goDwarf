@@ -1,15 +1,15 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import "gt"
 
-// Plugin metadata
-var PluginName = "Rank Decoder"
-var PluginAuthor = "Examples"
-var PluginCategory = "Tools"
+// script metadata
+var scriptName = "Rank Decoder"
+var scriptAuthor = "Examples"
+var scriptCategory = "Tools"
 
-const PluginAPIVersion = 1
+const scriptAPIVersion = 1
 
 // rankMessages maps trainer phrases to their numerical rank ranges.
 var rankMessages = map[string]string{
@@ -72,12 +72,12 @@ var rankMessages = map[string]string{
 }
 
 func Init() {
-    // Register a chat trigger for each known trainer phrase.
-    // Passing an empty phrase to gt.Chat is a no-op, so we must
-    // explicitly register each phrase we care about.
-    for phrase := range rankMessages {
-        gt.Chat(phrase, rankDecodeChat)
-    }
+	// Register a chat trigger for each known trainer phrase.
+	// Passing an empty phrase to gt.Chat is a no-op, so we must
+	// explicitly register each phrase we care about.
+	for phrase := range rankMessages {
+		gt.Chat(phrase, rankDecodeChat)
+	}
 }
 
 func rankDecodeChat(msg string) {

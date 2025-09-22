@@ -85,13 +85,13 @@ var addCharPassInput *eui.ItemData
 var addCharPassWarn *eui.ItemData
 var addCharPassPrev string
 var windowsWin *eui.WindowData
-var pluginsWin *eui.WindowData
-var pluginsList *eui.ItemData
-var pluginDetails *eui.ItemData
-var selectedPlugin string
-var pluginConfigWin *eui.WindowData
-var pluginConfigOwner string
-var pluginDebugList *eui.ItemData
+var scriptsWin *eui.WindowData
+var scriptsList *eui.ItemData
+var scriptDetails *eui.ItemData
+var selectedscript string
+var scriptConfigWin *eui.WindowData
+var scriptConfigOwner string
+var scriptDebugList *eui.ItemData
 
 // Checkboxes in the Windows window so we can update their state live
 var windowsPlayersCB *eui.ItemData
@@ -270,7 +270,7 @@ func initUI() {
 	makeHotkeysWindow()
 	makeTriggersWindow()
 	makeJoystickWindow()
-	makePluginsWindow()
+	makescriptsWindow()
 	makeMixerWindow()
 	makeToolbar()
 
@@ -353,8 +353,8 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 				refreshTriggersList()
 				triggersWin.ToggleNear(actionsBtn)
 			case 3:
-				refreshPluginsWindow()
-				pluginsWin.ToggleNear(actionsBtn)
+				refreshscriptsWindow()
+				scriptsWin.ToggleNear(actionsBtn)
 			case 4:
 				makeSavedDataWindow()
 				savedDataWin.ToggleNear(actionsBtn)
@@ -446,7 +446,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 
 	/*
 	   stopBtn, stopEvents := eui.NewButton()
-	   stopBtn.Text = "Stop Plugins"
+	   stopBtn.Text = "Stop scripts"
 	   stopBtn.Size = eui.Point{X: buttonWidth * 2, Y: buttonHeight}
 	   stopBtn.FontSize = toolFontSize
 
@@ -457,7 +457,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 	   stopBtn.Theme = &stopBtnTheme
 	   stopEvents.Handle = func(ev eui.UIEvent) {
 	           if ev.Type == eui.EventClick {
-	                   stopAllPlugins()
+	                   stopAllscripts()
 	           }
 	   }
 	   row2.AddItem(stopBtn)
@@ -478,30 +478,30 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 	return menu
 }
 
-func makePluginsWindow() {
-	if pluginsWin != nil {
+func makescriptsWindow() {
+	if scriptsWin != nil {
 		return
 	}
-	pluginsWin = eui.NewWindow()
-	pluginsWin.Title = "Scripts"
-	pluginsWin.Closable = true
-	pluginsWin.Resizable = false
-	pluginsWin.AutoSize = true
-	pluginsWin.Movable = true
-	pluginsWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
+	scriptsWin = eui.NewWindow()
+	scriptsWin.Title = "Scripts"
+	scriptsWin.Closable = true
+	scriptsWin.Resizable = false
+	scriptsWin.AutoSize = true
+	scriptsWin.Movable = true
+	scriptsWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
 
 	root := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Scrollable: true}
-	pluginsWin.AddItem(root)
+	scriptsWin.AddItem(root)
 
 	main := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 	root.AddItem(main)
 
 	list := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
-	pluginsList = list
+	scriptsList = list
 	main.AddItem(list)
 
-	pluginDetails = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
-	main.AddItem(pluginDetails)
+	scriptDetails = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	main.AddItem(scriptDetails)
 
 	buttonsBottom := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 	root.AddItem(buttonsBottom)
@@ -512,7 +512,7 @@ func makePluginsWindow() {
 	refreshBtn.Size = eui.Point{X: 64, Y: 24}
 	rh.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
-			rescanPlugins()
+			rescanscripts()
 		}
 	}
 	buttonsBottom.AddItem(refreshBtn)
@@ -533,35 +533,35 @@ func makePluginsWindow() {
 	debugCB, debugEvents := eui.NewCheckbox()
 	debugCB.Text = "Debug events"
 	debugCB.Size = eui.Point{X: 160, Y: 24}
-	debugCB.Checked = gs.pluginEventDebug
+	debugCB.Checked = gs.scriptEventDebug
 	debugEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.pluginEventDebug = ev.Checked
-			pluginDebugList.Invisible = !ev.Checked
+			gs.scriptEventDebug = ev.Checked
+			scriptDebugList.Invisible = !ev.Checked
 			if ev.Checked {
-				refreshPluginDebug()
+				refreshscriptDebug()
 			}
 		}
 	}
 	debugFlow.AddItem(debugCB)
 	dbg := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Scrollable: true}
 	dbg.Size = eui.Point{X: 480, Y: 120}
-	dbg.Invisible = !gs.pluginEventDebug
-	pluginDebugList = dbg
+	dbg.Invisible = !gs.scriptEventDebug
+	scriptDebugList = dbg
 	debugFlow.AddItem(dbg)
 
-	pluginsWin.AddWindow(false)
-	refreshPluginsWindow()
+	scriptsWin.AddWindow(false)
+	refreshscriptsWindow()
 }
 
-func refreshPluginsWindow() {
-	if pluginsList == nil {
+func refreshscriptsWindow() {
+	if scriptsList == nil {
 		return
 	}
 	checkSize := eui.Point{X: 32, Y: 32}
-	pluginSize := eui.Point{X: 256, Y: 32}
+	scriptSize := eui.Point{X: 256, Y: 32}
 
-	pluginsList.Contents = pluginsList.Contents[:0]
+	scriptsList.Contents = scriptsList.Contents[:0]
 	legend := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
 	charTxt, _ := eui.NewText()
 	charTxt.Text = "Player"
@@ -574,11 +574,11 @@ func refreshPluginsWindow() {
 	allTxt.Size = checkSize
 	legend.AddItem(allTxt)
 	plugTxt, _ := eui.NewText()
-	plugTxt.Text = "Plugin"
+	plugTxt.Text = "script"
 	plugTxt.FontSize = 9
-	plugTxt.Size = pluginSize
+	plugTxt.Size = scriptSize
 	legend.AddItem(plugTxt)
-	pluginsList.AddItem(legend)
+	scriptsList.AddItem(legend)
 
 	type entry struct {
 		owner   string
@@ -587,18 +587,18 @@ func refreshPluginsWindow() {
 		sub     string
 		invalid bool
 	}
-	pluginMu.RLock()
+	scriptMu.RLock()
 	cats := make(map[string][]entry)
-	for o, n := range pluginDisplayNames {
-		cats[pluginCategories[o]] = append(cats[pluginCategories[o]], entry{
+	for o, n := range scriptDisplayNames {
+		cats[scriptCategories[o]] = append(cats[scriptCategories[o]], entry{
 			owner:   o,
 			name:    n,
-			cat:     pluginCategories[o],
-			sub:     pluginSubCategories[o],
-			invalid: pluginInvalid[o],
+			cat:     scriptCategories[o],
+			sub:     scriptSubCategories[o],
+			invalid: scriptInvalid[o],
 		})
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 	var catList []string
 	for c := range cats {
 		catList = append(catList, c)
@@ -617,9 +617,9 @@ func refreshPluginsWindow() {
 		}
 		txt.Text = label
 		txt.FontSize = 12
-		txt.Size = pluginSize
+		txt.Size = scriptSize
 		row.AddItem(txt)
-		pluginsList.AddItem(row)
+		scriptsList.AddItem(row)
 
 		plist := cats[cat]
 		sort.Slice(plist, func(i, j int) bool {
@@ -642,18 +642,18 @@ func refreshPluginsWindow() {
 				label += " [" + e.sub + "]"
 			}
 			owner := e.owner
-			pluginMu.RLock()
-			scope := pluginEnabledFor[owner]
-			pluginMu.RUnlock()
+			scriptMu.RLock()
+			scope := scriptEnabledFor[owner]
+			scriptMu.RUnlock()
 			charCB.Checked = effChar != "" && scope.Chars != nil && scope.Chars[effChar]
 			charCB.Disabled = e.invalid || effChar == ""
 			allCB.Checked = scope.All
 			allCB.Disabled = e.invalid
-			click := func() { selectPlugin(owner) }
-			if selectedPlugin == owner {
+			click := func() { selectscript(owner) }
+			if selectedscript == owner {
 				row.Filled = true
-				if pluginsWin != nil && pluginsWin.Theme != nil {
-					row.Color = pluginsWin.Theme.Button.SelectedColor
+				if scriptsWin != nil && scriptsWin.Theme != nil {
+					row.Color = scriptsWin.Theme.Button.SelectedColor
 				}
 			}
 			if !e.invalid {
@@ -662,21 +662,21 @@ func refreshPluginsWindow() {
 						// Character/all are mutually exclusive. Prioritize the
 						// clicked box and clear the other to reflect scope.
 						if ev.Checked {
-							setPluginEnabled(owner, true, false)
+							setscriptEnabled(owner, true, false)
 						} else {
 							// Unchecking character when not selecting "all" disables.
-							setPluginEnabled(owner, false, allCB.Checked)
+							setscriptEnabled(owner, false, allCB.Checked)
 						}
 					}
 				}
 				allEvents.Handle = func(ev eui.UIEvent) {
 					if ev.Type == eui.EventCheckboxChanged {
 						if ev.Checked {
-							setPluginEnabled(owner, false, true)
+							setscriptEnabled(owner, false, true)
 						} else {
-							// Unchecking "All" should fully disable the plugin,
+							// Unchecking "All" should fully disable the script,
 							// regardless of the per-character box state.
-							clearPluginScope(owner)
+							clearscriptScope(owner)
 						}
 					}
 				}
@@ -686,7 +686,7 @@ func refreshPluginsWindow() {
 			nameTxt, _ := eui.NewText()
 			nameTxt.Text = label
 			nameTxt.FontSize = 12
-			nameTxt.Size = pluginSize
+			nameTxt.Size = scriptSize
 			nameTxt.Disabled = e.invalid
 			nameTxt.Action = click
 			row.Action = click
@@ -695,31 +695,31 @@ func refreshPluginsWindow() {
 			if !e.invalid {
 				reloadBtn, rh := eui.NewButton()
 				reloadBtn.Text = "Reload"
-				reloadBtn.SetTooltip("Restart this plugin if enabled")
+				reloadBtn.SetTooltip("Restart this script if enabled")
 				reloadBtn.Size = eui.Point{X: 55, Y: 24}
 				rh.Handle = func(ev eui.UIEvent) {
 					if ev.Type == eui.EventClick {
-						pluginMu.RLock()
-						enabled := !pluginDisabled[owner]
-						pluginMu.RUnlock()
+						scriptMu.RLock()
+						enabled := !scriptDisabled[owner]
+						scriptMu.RUnlock()
 						if enabled {
-							disablePlugin(owner, "reloaded")
-							enablePlugin(owner)
+							disablescript(owner, "reloaded")
+							enablescript(owner)
 						}
 					}
 				}
 				row.AddItem(reloadBtn)
 
-				pluginConfigMu.RLock()
-				cfg := pluginConfigEntries[owner]
-				pluginConfigMu.RUnlock()
+				scriptConfigMu.RLock()
+				cfg := scriptConfigEntries[owner]
+				scriptConfigMu.RUnlock()
 				if len(cfg) > 0 {
 					cfgBtn, ch := eui.NewButton()
 					cfgBtn.Text = "Configure"
 					cfgBtn.Size = eui.Point{X: 70, Y: 24}
 					ch.Handle = func(ev eui.UIEvent) {
 						if ev.Type == eui.EventClick {
-							openPluginConfigWindow(owner)
+							openscriptConfigWindow(owner)
 						}
 					}
 					row.AddItem(cfgBtn)
@@ -733,48 +733,48 @@ func refreshPluginsWindow() {
 			row.Action = click
 			row.AddItem(nameTxt)
 
-			pluginsList.AddItem(row)
+			scriptsList.AddItem(row)
 		}
 	}
-	if pluginsWin != nil {
-		refreshPluginDetails()
-		pluginsWin.Refresh()
+	if scriptsWin != nil {
+		refreshscriptDetails()
+		scriptsWin.Refresh()
 	}
 }
 
-func selectPlugin(owner string) {
-	if selectedPlugin == owner {
+func selectscript(owner string) {
+	if selectedscript == owner {
 		return
 	}
-	selectedPlugin = owner
-	refreshPluginsWindow()
+	selectedscript = owner
+	refreshscriptsWindow()
 }
 
-func refreshPluginDetails() {
+func refreshscriptDetails() {
 
 	infoSize := eui.Point{X: 256, Y: 24}
-	if pluginDetails == nil {
+	if scriptDetails == nil {
 		return
 	}
-	pluginDetails.Contents = pluginDetails.Contents[:0]
-	owner := selectedPlugin
+	scriptDetails.Contents = scriptDetails.Contents[:0]
+	owner := selectedscript
 	if owner == "" {
 		txt, _ := eui.NewText()
-		txt.Text = "Select a plugin"
+		txt.Text = "Select a script"
 		txt.FontSize = 12
 		txt.Size = infoSize
-		pluginDetails.AddItem(txt)
+		scriptDetails.AddItem(txt)
 		return
 	}
 
-	pluginMu.RLock()
-	name := pluginDisplayNames[owner]
-	author := pluginAuthors[owner]
-	cat := pluginCategories[owner]
-	sub := pluginSubCategories[owner]
-	disabled := pluginDisabled[owner]
-	invalid := pluginInvalid[owner]
-	pluginMu.RUnlock()
+	scriptMu.RLock()
+	name := scriptDisplayNames[owner]
+	author := scriptAuthors[owner]
+	cat := scriptCategories[owner]
+	sub := scriptSubCategories[owner]
+	disabled := scriptDisabled[owner]
+	invalid := scriptInvalid[owner]
+	scriptMu.RUnlock()
 
 	status := "Enabled"
 	if invalid {
@@ -788,7 +788,7 @@ func refreshPluginDetails() {
 		item.Text = s
 		item.FontSize = 12
 		item.Size = infoSize
-		pluginDetails.AddItem(item)
+		scriptDetails.AddItem(item)
 	}
 
 	line("Name: " + name)
@@ -804,7 +804,7 @@ func refreshPluginDetails() {
 	line("Status: " + status)
 	errText := "None"
 	if invalid {
-		errText = "Invalid plugin"
+		errText = "Invalid script"
 	}
 	line("Errors: " + errText)
 
@@ -826,13 +826,13 @@ func refreshPluginDetails() {
 			t.Text = "  " + p.short + " = " + strings.TrimSpace(p.full)
 			t.FontSize = 12
 			t.Size = infoSize
-			pluginDetails.AddItem(t)
+			scriptDetails.AddItem(t)
 		}
 	}
 
 	triggerHandlersMu.RLock()
 	var triggers []string
-	for phrase, hs := range pluginTriggers {
+	for phrase, hs := range scriptTriggers {
 		for _, h := range hs {
 			if h.owner == owner {
 				triggers = append(triggers, phrase)
@@ -851,58 +851,58 @@ func refreshPluginDetails() {
 			txt.Text = "  " + t
 			txt.FontSize = 12
 			txt.Size = infoSize
-			pluginDetails.AddItem(txt)
+			scriptDetails.AddItem(txt)
 		}
 	}
 
-	if pluginsWin != nil {
-		pluginsWin.Refresh()
+	if scriptsWin != nil {
+		scriptsWin.Refresh()
 	}
 }
 
-func refreshPluginDebug() {
-	if pluginDebugList == nil {
+func refreshscriptDebug() {
+	if scriptDebugList == nil {
 		return
 	}
-	pluginDebugList.Contents = pluginDebugList.Contents[:0]
-	pluginDebugMu.Lock()
-	lines := append([]string(nil), pluginDebugLines...)
-	pluginDebugMu.Unlock()
+	scriptDebugList.Contents = scriptDebugList.Contents[:0]
+	scriptDebugMu.Lock()
+	lines := append([]string(nil), scriptDebugLines...)
+	scriptDebugMu.Unlock()
 	for _, ln := range lines {
 		t, _ := eui.NewText()
 		t.Text = ln
 		t.FontSize = 12
 		t.Size = eui.Point{X: 400, Y: 16}
-		pluginDebugList.AddItem(t)
+		scriptDebugList.AddItem(t)
 	}
-	if pluginsWin != nil {
-		pluginsWin.Refresh()
+	if scriptsWin != nil {
+		scriptsWin.Refresh()
 	}
 }
 
-func openPluginConfigWindow(owner string) {
-	pluginConfigMu.RLock()
-	entries := pluginConfigEntries[owner]
-	pluginConfigMu.RUnlock()
+func openscriptConfigWindow(owner string) {
+	scriptConfigMu.RLock()
+	entries := scriptConfigEntries[owner]
+	scriptConfigMu.RUnlock()
 	if len(entries) == 0 {
 		return
 	}
-	if pluginConfigWin != nil {
-		pluginConfigWin.Close()
+	if scriptConfigWin != nil {
+		scriptConfigWin.Close()
 	}
-	pluginMu.RLock()
-	name := pluginDisplayNames[owner]
-	pluginMu.RUnlock()
-	pluginConfigWin = eui.NewWindow()
-	pluginConfigWin.Title = "Configure: " + name
-	pluginConfigWin.Closable = true
-	pluginConfigWin.Resizable = false
-	pluginConfigWin.AutoSize = true
-	pluginConfigWin.Movable = true
-	pluginConfigWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
+	scriptMu.RLock()
+	name := scriptDisplayNames[owner]
+	scriptMu.RUnlock()
+	scriptConfigWin = eui.NewWindow()
+	scriptConfigWin.Title = "Configure: " + name
+	scriptConfigWin.Closable = true
+	scriptConfigWin.Resizable = false
+	scriptConfigWin.AutoSize = true
+	scriptConfigWin.Movable = true
+	scriptConfigWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
 
 	root := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
-	pluginConfigWin.AddItem(root)
+	scriptConfigWin.AddItem(root)
 
 	for _, ce := range entries {
 		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
@@ -941,8 +941,8 @@ func openPluginConfigWindow(owner string) {
 		root.AddItem(row)
 	}
 
-	pluginConfigWin.AddWindow(false)
-	pluginConfigOwner = owner
+	scriptConfigWin.AddWindow(false)
+	scriptConfigOwner = owner
 }
 
 func makeMixerWindow() {
@@ -2576,7 +2576,7 @@ func makeLoginWindow() {
 					return
 				}
 				playerName = extractMoviePlayerName(frames)
-				applyEnabledPlugins()
+				applyEnabledScripts()
 				ctx, cancel := context.WithCancel(gameCtx)
 				mp := newMoviePlayer(frames, clMovFPS, cancel)
 				mp.makePlaybackWindow()
@@ -3016,7 +3016,7 @@ var settingsWizardPages = []settingsWizardPage{
 			},
 			{
 				Name:        "Auto-kill spammy scripts",
-				Description: "Automatically stops plugins that flood output before they bog down the client.",
+				Description: "Automatically stops scripts that flood output before they bog down the client.",
 			},
 			{
 				Name:        "Auto-record sessions",
@@ -4346,12 +4346,12 @@ func makeSettingsWindow() {
 	}
 	center.AddItem(psFPSSlider)
 
-	pluginKillCB, pluginKillEvents := eui.NewCheckbox()
-	pluginKillCB.Text = "Auto-kill spammy scripts"
-	pluginKillCB.Size = eui.Point{X: panelWidth, Y: 24}
-	pluginKillCB.Checked = gs.ScriptSpamKill
-	pluginKillCB.SetTooltip("Stop scripts that send too many lines")
-	pluginKillEvents.Handle = func(ev eui.UIEvent) {
+	scriptKillCB, scriptKillEvents := eui.NewCheckbox()
+	scriptKillCB.Text = "Auto-kill spammy scripts"
+	scriptKillCB.Size = eui.Point{X: panelWidth, Y: 24}
+	scriptKillCB.Checked = gs.ScriptSpamKill
+	scriptKillCB.SetTooltip("Stop scripts that send too many lines")
+	scriptKillEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
 			SettingsLock.Lock()
 			gs.ScriptSpamKill = ev.Checked
@@ -4360,7 +4360,7 @@ func makeSettingsWindow() {
 		}
 	}
 
-	center.AddItem(pluginKillCB)
+	center.AddItem(scriptKillCB)
 
 	autoRecCB, autoRecEvents := eui.NewCheckbox()
 	autoRecCB.Text = "Auto-record sessions"
@@ -5557,17 +5557,17 @@ func makeDebugWindow() {
 	}
 	debugFlow.AddItem(pictIDCB)
 
-	pluginOutCB, pluginOutEvents := eui.NewCheckbox()
-	pluginOutCB.Text = "Always show plugin output"
-	pluginOutCB.Size = eui.Point{X: width, Y: 24}
-	pluginOutCB.Checked = gs.pluginOutputDebug
-	pluginOutEvents.Handle = func(ev eui.UIEvent) {
+	scriptOutCB, scriptOutEvents := eui.NewCheckbox()
+	scriptOutCB.Text = "Always show script output"
+	scriptOutCB.Size = eui.Point{X: width, Y: 24}
+	scriptOutCB.Checked = gs.scriptOutputDebug
+	scriptOutEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventCheckboxChanged {
-			gs.pluginOutputDebug = ev.Checked
+			gs.scriptOutputDebug = ev.Checked
 			settingsDirty = true
 		}
 	}
-	debugFlow.AddItem(pluginOutCB)
+	debugFlow.AddItem(scriptOutCB)
 
 	altNetCB, altNetEvents := eui.NewCheckbox()
 	altNetCB.Text = "Alt Networking"

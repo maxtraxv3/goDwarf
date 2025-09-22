@@ -3,9 +3,9 @@ package main
 import "strings"
 
 func init() {
-	pluginRegisterCommand("client", "block", handleBlockCommand)
-	pluginRegisterCommand("client", "ignore", handleIgnoreCommand)
-	pluginRegisterCommand("client", "forget", handleForgetCommand)
+	scriptRegisterCommand("client", "block", handleBlockCommand)
+	scriptRegisterCommand("client", "ignore", handleIgnoreCommand)
+	scriptRegisterCommand("client", "forget", handleForgetCommand)
 }
 
 func handleBlockCommand(args string) {

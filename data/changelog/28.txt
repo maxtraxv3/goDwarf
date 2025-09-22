@@ -1,5 +1,5 @@
-Macros and triggers windows now show macros and triggers loaded from plugins, and which plugin.
-Plugins window is sorted by mod category and sub-category.
+Macros and triggers windows now show macros and triggers loaded from scripts, and which script.
+scripts window is sorted by mod category and sub-category.
 equip and unequip commands that are redundant are automatically skipped.
 Hotkeys now support modifier keys for right and middle click
 exit now works at main menu with confirm dialog.

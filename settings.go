@@ -223,8 +223,8 @@ var gsdef settings = settings{
 	smoothingDebug:    false,
 	pictAgainDebug:    false,
 	pictIDDebug:       false,
-	pluginOutputDebug: false,
-	pluginEventDebug:  false,
+	scriptOutputDebug: false,
+	scriptEventDebug:  false,
 	forceNightLevel:   -1,
 }
 
@@ -358,7 +358,7 @@ type settings struct {
 	ShaderGlowStrength  float64
 
 	PotatoGPU              bool
-	EnabledPlugins         map[string]any
+	Enabledscripts         map[string]any
 	BarColorByValue        bool
 	ThrottleSounds         bool
 	SoundEnhancement       bool
@@ -370,8 +370,8 @@ type settings struct {
 	smoothingDebug    bool
 	pictAgainDebug    bool
 	pictIDDebug       bool
-	pluginOutputDebug bool
-	pluginEventDebug  bool
+	scriptOutputDebug bool
+	scriptEventDebug  bool
 	altNetMode        bool
 	altNetDelay       int
 	hideMoving        bool
@@ -433,7 +433,7 @@ func loadSettings() bool {
 
 	type settingsFile struct {
 		settings
-		EnabledPlugins    map[string]any `json:"EnabledPlugins"`
+		Enabledscripts    map[string]any `json:"Enabledscripts"`
 		LegacySoundReverb *bool          `json:"SoundReverb"`
 		LegacyMusicReverb *bool          `json:"MusicReverb"`
 	}
@@ -456,14 +456,14 @@ func loadSettings() bool {
 		gs = tmp.settings
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		// Normalize and retain whatever was in the file; migrate into runtime scope map.
-		gs.EnabledPlugins = make(map[string]any)
-		for k, v := range tmp.EnabledPlugins {
-			gs.EnabledPlugins[k] = v
+		gs.Enabledscripts = make(map[string]any)
+		for k, v := range tmp.Enabledscripts {
+			gs.Enabledscripts[k] = v
 			s := scopeFromSettingValue(v)
 			if !s.empty() {
-				pluginMu.Lock()
-				pluginEnabledFor[k] = s
-				pluginMu.Unlock()
+				scriptMu.Lock()
+				scriptEnabledFor[k] = s
+				scriptMu.Unlock()
 			}
 		}
 		settingsLoaded = true
@@ -479,8 +479,8 @@ func loadSettings() bool {
 		return false
 	}
 
-	if gs.EnabledPlugins == nil {
-		gs.EnabledPlugins = make(map[string]any)
+	if gs.Enabledscripts == nil {
+		gs.Enabledscripts = make(map[string]any)
 	}
 
 	if gs.ChatTTSBlocklist == nil {
@@ -620,12 +620,12 @@ func saveSettings() {
 		// Skip disk writes in WASM; silently ignore.
 		return
 	}
-	pluginMu.RLock()
+	scriptMu.RLock()
 	// Rebuild the persisted map from the current scope set.
-	gs.EnabledPlugins = make(map[string]any, len(pluginEnabledFor))
-	for k, s := range pluginEnabledFor {
+	gs.Enabledscripts = make(map[string]any, len(scriptEnabledFor))
+	for k, s := range scriptEnabledFor {
 		if s.All {
-			gs.EnabledPlugins[k] = "all"
+			gs.Enabledscripts[k] = "all"
 			continue
 		}
 		if len(s.Chars) > 0 {
@@ -635,10 +635,10 @@ func saveSettings() {
 				names = append(names, n)
 			}
 			sort.Strings(names)
-			gs.EnabledPlugins[k] = names
+			gs.Enabledscripts[k] = names
 		}
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 
 	data, err := json.MarshalIndent(gs, "", "  ")
 	if err != nil {

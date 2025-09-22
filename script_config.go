@@ -2,29 +2,29 @@ package main
 
 import "sync"
 
-type pluginConfigEntry struct {
+type scriptConfigEntry struct {
 	Name string
 	Type string
 }
 
 var (
-	pluginConfigMu      sync.RWMutex
-	pluginConfigEntries = map[string][]pluginConfigEntry{}
+	scriptConfigMu      sync.RWMutex
+	scriptConfigEntries = map[string][]scriptConfigEntry{}
 )
 
-func pluginAddConfig(owner, name, typ string) {
+func scriptAddConfig(owner, name, typ string) {
 	if name == "" || typ == "" {
 		return
 	}
-	pluginConfigMu.Lock()
-	pluginConfigEntries[owner] = append(pluginConfigEntries[owner], pluginConfigEntry{Name: name, Type: typ})
-	pluginConfigMu.Unlock()
-	refreshPluginsWindow()
+	scriptConfigMu.Lock()
+	scriptConfigEntries[owner] = append(scriptConfigEntries[owner], scriptConfigEntry{Name: name, Type: typ})
+	scriptConfigMu.Unlock()
+	refreshscriptsWindow()
 }
 
-func pluginRemoveConfig(owner string) {
-	pluginConfigMu.Lock()
-	delete(pluginConfigEntries, owner)
-	pluginConfigMu.Unlock()
-	refreshPluginsWindow()
+func scriptRemoveConfig(owner string) {
+	scriptConfigMu.Lock()
+	delete(scriptConfigEntries, owner)
+	scriptConfigMu.Unlock()
+	refreshscriptsWindow()
 }

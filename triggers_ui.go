@@ -92,7 +92,7 @@ func refreshTriggersList() {
 		triggers []string
 	}
 	byOwner := map[string]*entry{}
-	for phrase, hs := range pluginTriggers {
+	for phrase, hs := range scriptTriggers {
 		for _, h := range hs {
 			e := byOwner[h.owner]
 			if e == nil {
@@ -108,13 +108,13 @@ func refreshTriggersList() {
 		entries = append(entries, *e)
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].owner < entries[j].owner })
-    for _, e := range entries {
-        disp := getPluginDisplayName(e.owner)
-        ht, _ := eui.NewText()
-        ht.Text = disp + ":"
-        ht.FontSize = float32(fontSize)
-        ht.Size = eui.Point{X: clientWAvail, Y: rowUnits}
-        triggersList.AddItem(ht)
+	for _, e := range entries {
+		disp := getscriptDisplayName(e.owner)
+		ht, _ := eui.NewText()
+		ht.Text = disp + ":"
+		ht.FontSize = float32(fontSize)
+		ht.Size = eui.Point{X: clientWAvail, Y: rowUnits}
+		triggersList.AddItem(ht)
 		sort.Strings(e.triggers)
 		for _, t := range e.triggers {
 			tt, _ := eui.NewText()

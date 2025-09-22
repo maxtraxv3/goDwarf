@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -8,14 +8,14 @@ import "gt"
 //
 // Notes for non‑technical players:
 // - Use /r message to send: /thinkto <name> message
-// - The plugin remembers only the most recent thinker.
+// - The script remembers only the most recent thinker.
 
-// Plugin metadata
-var PluginName = "Quick Reply"
-var PluginAuthor = "Examples"
-var PluginCategory = "Quality Of Life"
+// script metadata
+var scriptName = "Quick Reply"
+var scriptAuthor = "Examples"
+var scriptCategory = "Quality Of Life"
 
-const PluginAPIVersion = 1
+const scriptAPIVersion = 1
 
 var lastThinker string // remembers who last thought to us
 

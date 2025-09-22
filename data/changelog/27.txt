@@ -1,5 +1,5 @@
 Allow drop-down menus to be larger so you don't need to scroll them in most cases.
-Moved macros, hotkeys, plugins to "actions" button in toolbar.
+Moved macros, hotkeys, scripts to "actions" button in toolbar.
 Tab now cycles text input fields and enter activates a default action (bold text) 
 Added spell check, with red underlines with hover menu to choose suggested spelling.
 Feel free to submit common terms and names in clan lord we can put into the dictionary! 

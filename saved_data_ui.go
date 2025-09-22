@@ -53,31 +53,31 @@ func refreshSavedDataList() {
 	}
 	savedDataList.Contents = savedDataList.Contents[:0]
 
-	pluginMu.RLock()
-	owners := make([]string, 0, len(pluginDisplayNames))
-	for o := range pluginDisplayNames {
+	scriptMu.RLock()
+	owners := make([]string, 0, len(scriptDisplayNames))
+	for o := range scriptDisplayNames {
 		owners = append(owners, o)
 	}
-	pluginMu.RUnlock()
+	scriptMu.RUnlock()
 	sort.Strings(owners)
 
 	for _, o := range owners {
-		path := pluginStoragePath(o)
+		path := scriptStoragePath(o)
 		fi, err := os.Stat(path)
 		if err != nil || fi.Size() == 0 {
 			continue
 		}
-		ps := getPluginStore(o)
+		ps := getscriptStore(o)
 		ps.mu.Lock()
 		count := len(ps.data)
 		ps.mu.Unlock()
 		if count == 0 {
 			continue
 		}
-        disp := getPluginDisplayName(o)
-        row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
-        txt, _ := eui.NewText()
-        txt.Text = fmt.Sprintf("%s (%d entries, %s)", disp, count, humanize.Bytes(uint64(fi.Size())))
+		disp := getscriptDisplayName(o)
+		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+		txt, _ := eui.NewText()
+		txt.Text = fmt.Sprintf("%s (%d entries, %s)", disp, count, humanize.Bytes(uint64(fi.Size())))
 		txt.Size = eui.Point{X: 240, Y: 24}
 		row.AddItem(txt)
 		viewBtn, vh := eui.NewButton()
@@ -118,7 +118,7 @@ func showSavedDataEntries(owner string) {
 		}
 		dataEntriesWin.AddWindow(false)
 	}
-    dataEntriesWin.Title = getPluginDisplayName(owner) + " Data"
+	dataEntriesWin.Title = getscriptDisplayName(owner) + " Data"
 	refreshSavedDataEntries(owner)
 	dataEntriesWin.MarkOpen()
 }
@@ -128,7 +128,7 @@ func refreshSavedDataEntries(owner string) {
 		return
 	}
 	dataEntriesList.Contents = dataEntriesList.Contents[:0]
-	ps := getPluginStore(owner)
+	ps := getscriptStore(owner)
 	ps.mu.Lock()
 	keys := make([]string, 0, len(ps.data))
 	for k := range ps.data {

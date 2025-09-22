@@ -168,18 +168,18 @@ func picturesSummary(pics []framePicture) string {
 	return buf.String()
 }
 
-// drawPluginOverlays renders per-plugin overlay operations onto the provided
+// drawScriptOverlays renders per-script overlay operations onto the provided
 // world view image. Coordinates are in world units with a top-left origin
 // matching the base game area (0..gameAreaSizeX, 0..gameAreaSizeY). The
 // provided scale converts world units to worldView pixels.
-func drawPluginOverlays(worldView *ebiten.Image, scale float64) {
+func drawScriptOverlays(worldView *ebiten.Image, scale float64) {
 	if worldView == nil || scale <= 0 {
 		return
 	}
 	overlayMu.RLock()
 	// Snapshot to avoid holding the lock while drawing
 	snap := make([]overlayOp, 0, 64)
-	for _, ops := range pluginOverlayOps {
+	for _, ops := range scriptOverlayOps {
 		snap = append(snap, ops...)
 	}
 	overlayMu.RUnlock()

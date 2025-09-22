@@ -1,14 +1,14 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import "gt"
 
-// Plugin metadata
-const PluginName = "Kudzu Helper"
-const PluginAuthor = "Examples"
-const PluginCategory = "Tools"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Kudzu Helper"
+const scriptAuthor = "Examples"
+const scriptCategory = "Tools"
+const scriptAPIVersion = 1
 
 // Init sets up a few helper commands for planting and moving kudzu seeds.
 func Init() {

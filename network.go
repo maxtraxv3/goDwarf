@@ -110,29 +110,29 @@ var udpReadBuf = make([]byte, 65535)
 // messages may be present in a single datagram. Data is accumulated in
 // udpBuffer until a full message is available.
 func readUDPMessage(connection net.Conn) ([]byte, error) {
-    for {
-        if len(udpBuffer) >= 2 {
-            sz := int(binary.BigEndian.Uint16(udpBuffer[:2]))
-            if len(udpBuffer) >= 2+sz {
-                msg := append([]byte(nil), udpBuffer[2:2+sz]...)
-                udpBuffer = udpBuffer[2+sz:]
-                tag := binary.BigEndian.Uint16(msg[:2])
-                logDebug("recv udp tag %d len %d", tag, len(msg))
-                hexDump("recv", msg)
-                return msg, nil
-            }
-        }
+	for {
+		if len(udpBuffer) >= 2 {
+			sz := int(binary.BigEndian.Uint16(udpBuffer[:2]))
+			if len(udpBuffer) >= 2+sz {
+				msg := append([]byte(nil), udpBuffer[2:2+sz]...)
+				udpBuffer = udpBuffer[2+sz:]
+				tag := binary.BigEndian.Uint16(msg[:2])
+				logDebug("recv udp tag %d len %d", tag, len(msg))
+				hexDump("recv", msg)
+				return msg, nil
+			}
+		}
 
-        n, err := connection.Read(udpReadBuf)
-        if err != nil {
-            //logError("read udp: %v", err)
-            return nil, err
-        }
-        if n == 0 {
-            return nil, fmt.Errorf("short udp packet")
-        }
-        udpBuffer = append(udpBuffer, udpReadBuf[:n]...)
-    }
+		n, err := connection.Read(udpReadBuf)
+		if err != nil {
+			//logError("read udp: %v", err)
+			return nil, err
+		}
+		if n == 0 {
+			return nil, fmt.Errorf("short udp packet")
+		}
+		udpBuffer = append(udpBuffer, udpReadBuf[:n]...)
+	}
 }
 
 // sendPlayerInput sends the provided mouse state to the server. When
@@ -225,8 +225,8 @@ func processServerMessage(msg []byte) {
 	tag := binary.BigEndian.Uint16(msg[:2])
 	if tag == 2 {
 		noteFrame()
-		// Advance plugin tick sleepers on each server frame
-		pluginAdvanceTick()
+		// Advance script tick sleepers on each server frame
+		scriptAdvanceTick()
 		handleDrawState(msg, true)
 		return
 	}

@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -8,11 +8,11 @@ import (
 	"gt"
 )
 
-// Plugin metadata
-const PluginName = "Iron Armor Manager"
-const PluginAuthor = "Examples"
-const PluginCategory = "Equipment"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Iron Armor Manager"
+const scriptAuthor = "Examples"
+const scriptCategory = "Equipment"
+const scriptAPIVersion = 1
 
 var armorCondition string
 

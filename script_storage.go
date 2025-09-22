@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type pluginStore struct {
+type scriptStore struct {
 	path  string
 	data  map[string]any
 	dirty bool
@@ -20,49 +20,49 @@ type pluginStore struct {
 }
 
 var (
-	pluginStores  = map[string]*pluginStore{}
-	pluginStoreMu sync.Mutex
+	scriptStores  = map[string]*scriptStore{}
+	scriptStoreMu sync.Mutex
 )
 
-func pluginStoragePath(owner string) string {
-	pluginMu.RLock()
-	name := pluginDisplayNames[owner]
-	author := pluginAuthors[owner]
-	pluginMu.RUnlock()
+func scriptStoragePath(owner string) string {
+	scriptMu.RLock()
+	name := scriptDisplayNames[owner]
+	author := scriptAuthors[owner]
+	scriptMu.RUnlock()
 	sum := sha256.Sum256([]byte(name + ":" + author))
 	file := hex.EncodeToString(sum[:]) + ".json"
 	return filepath.Join(dataDirPath, "scripts", "storage", file)
 }
 
-func getPluginStore(owner string) *pluginStore {
-	pluginStoreMu.Lock()
-	ps, ok := pluginStores[owner]
+func getscriptStore(owner string) *scriptStore {
+	scriptStoreMu.Lock()
+	ps, ok := scriptStores[owner]
 	if ok {
-		pluginStoreMu.Unlock()
+		scriptStoreMu.Unlock()
 		return ps
 	}
-	path := pluginStoragePath(owner)
+	path := scriptStoragePath(owner)
 	data := map[string]any{}
 	if b, err := os.ReadFile(path); err == nil {
 		if err := json.Unmarshal(b, &data); err != nil {
-			log.Printf("load plugin storage %s: %v", path, err)
+			log.Printf("load script storage %s: %v", path, err)
 		}
 	}
-	ps = &pluginStore{path: path, data: data}
-	pluginStores[owner] = ps
-	pluginStoreMu.Unlock()
+	ps = &scriptStore{path: path, data: data}
+	scriptStores[owner] = ps
+	scriptStoreMu.Unlock()
 	return ps
 }
 
-func pluginStorageGet(owner, key string) any {
-	ps := getPluginStore(owner)
+func scriptStorageGet(owner, key string) any {
+	ps := getscriptStore(owner)
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 	return ps.data[key]
 }
 
-func pluginStorageSet(owner, key string, value any) {
-	ps := getPluginStore(owner)
+func scriptStorageSet(owner, key string, value any) {
+	ps := getscriptStore(owner)
 	ps.mu.Lock()
 	if old, ok := ps.data[key]; !ok || !reflect.DeepEqual(old, value) {
 		if ps.data == nil {
@@ -74,8 +74,8 @@ func pluginStorageSet(owner, key string, value any) {
 	ps.mu.Unlock()
 }
 
-func pluginStorageDelete(owner, key string) {
-	ps := getPluginStore(owner)
+func scriptStorageDelete(owner, key string) {
+	ps := getscriptStore(owner)
 	ps.mu.Lock()
 	if _, ok := ps.data[key]; ok {
 		delete(ps.data, key)
@@ -84,17 +84,17 @@ func pluginStorageDelete(owner, key string) {
 	ps.mu.Unlock()
 }
 
-func savePluginStores() {
+func savescriptStores() {
 	if isWASM {
 		// Skip persistence in WASM.
 		return
 	}
-	pluginStoreMu.Lock()
-	stores := make([]*pluginStore, 0, len(pluginStores))
-	for _, ps := range pluginStores {
+	scriptStoreMu.Lock()
+	stores := make([]*scriptStore, 0, len(scriptStores))
+	for _, ps := range scriptStores {
 		stores = append(stores, ps)
 	}
-	pluginStoreMu.Unlock()
+	scriptStoreMu.Unlock()
 	for _, ps := range stores {
 		ps.mu.Lock()
 		if !ps.dirty {
@@ -104,18 +104,18 @@ func savePluginStores() {
 		data, err := json.MarshalIndent(ps.data, "", "  ")
 		if err != nil {
 			ps.mu.Unlock()
-			log.Printf("save plugin storage %s: %v", ps.path, err)
+			log.Printf("save script storage %s: %v", ps.path, err)
 			continue
 		}
 		ps.dirty = false
 		path := ps.path
 		ps.mu.Unlock()
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			log.Printf("save plugin storage %s: %v", path, err)
+			log.Printf("save script storage %s: %v", path, err)
 			continue
 		}
 		if err := os.WriteFile(path, data, 0o644); err != nil {
-			log.Printf("save plugin storage %s: %v", path, err)
+			log.Printf("save script storage %s: %v", path, err)
 		}
 	}
 }
@@ -124,7 +124,7 @@ func init() {
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		for range ticker.C {
-			savePluginStores()
+			savescriptStores()
 		}
 	}()
 }

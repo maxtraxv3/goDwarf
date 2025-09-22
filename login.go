@@ -340,7 +340,7 @@ func login(ctx context.Context, clVersion int) error {
 		}
 		playerName = utfFold(name)
 		applyLocalLabels()
-		applyEnabledPlugins()
+		applyEnabledScripts()
 		// Reload user-specific shortcuts for the selected character.
 		loadShortcuts()
 

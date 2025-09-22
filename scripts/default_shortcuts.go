@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -11,10 +11,10 @@ import "gt"
 // - If the full command ends with a space, you can continue typing arguments.
 // - You can add or remove entries in the list below; each line is "short": "full".
 
-const PluginAPIVersion = 1
-const PluginName = "Default Shortcuts"
-const PluginAuthor = "Distortions"
-const PluginCategory = "Quality Of Life"
+const scriptAPIVersion = 1
+const scriptName = "Default Shortcuts"
+const scriptAuthor = "Distortions"
+const scriptCategory = "Quality Of Life"
 
 func Init() {
 	// Keys are what you type; values are the full command to send.

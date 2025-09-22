@@ -85,16 +85,16 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 
 	// Compute a row height from actual font metrics (ascent+descent) to
 	// avoid clipping at large sizes. Convert pixels to item units.
-    ui := eui.UIScale()
-    // Match the render-time face size used by EUI text items
-    // (EUI renders with size = fontSize*ui + 2). Using the same value here
-    // ensures wrap measurements align with what actually gets drawn.
-    facePx := float64(float32(fontSize)*ui) + 2
-    var goFace *text.GoTextFace
-    if faceSrc != nil {
-        goFace = &text.GoTextFace{Source: faceSrc, Size: facePx}
-    } else if src := eui.FontSource(); src != nil {
-        goFace = &text.GoTextFace{Source: src, Size: facePx}
+	ui := eui.UIScale()
+	// Match the render-time face size used by EUI text items
+	// (EUI renders with size = fontSize*ui + 2). Using the same value here
+	// ensures wrap measurements align with what actually gets drawn.
+	facePx := float64(float32(fontSize)*ui) + 2
+	var goFace *text.GoTextFace
+	if faceSrc != nil {
+		goFace = &text.GoTextFace{Source: faceSrc, Size: facePx}
+	} else if src := eui.FontSource(); src != nil {
+		goFace = &text.GoTextFace{Source: src, Size: facePx}
 	} else {
 		goFace = &text.GoTextFace{Size: facePx}
 	}
@@ -102,18 +102,18 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 	linePx := math.Ceil(metrics.HAscent + metrics.HDescent + 2) // +2 px padding
 	rowUnits := float32(linePx) / ui
 
-    // Prepare wrapping parameters: use the same face for measurement.
-    var face text.Face = goFace
-    // Reserve a gutter for the vertical scrollbar so wrapped text and
-    // hitboxes never encroach beneath it. This applies broadly to chat,
-    // console, help, and about windows using this helper.
-    sb := eui.ScrollbarWidth()
-    contentW := clientWAvail - sb
-    if contentW < 0 {
-        contentW = 0
-    }
-    // Use the effective content width in pixels for wrapping.
-    wrapWidthPx := float64(contentW - 3*pad)
+	// Prepare wrapping parameters: use the same face for measurement.
+	var face text.Face = goFace
+	// Reserve a gutter for the vertical scrollbar so wrapped text and
+	// hitboxes never encroach beneath it. This applies broadly to chat,
+	// console, help, and about windows using this helper.
+	sb := eui.ScrollbarWidth()
+	contentW := clientWAvail - sb
+	if contentW < 0 {
+		contentW = 0
+	}
+	// Use the effective content width in pixels for wrapping.
+	wrapWidthPx := float64(contentW - 3*pad)
 
 	for i, msg := range msgs {
 		// Word-wrap the message to the available width.
@@ -123,23 +123,23 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 		if linesN < 1 {
 			linesN = 1
 		}
-        if i < len(list.Contents) {
-            if list.Contents[i].Text != wrapped || list.Contents[i].FontSize != float32(fontSize) {
-                list.Contents[i].Text = wrapped
-                list.Contents[i].FontSize = float32(fontSize)
-            }
-            list.Contents[i].Face = face
-            list.Contents[i].Size.Y = rowUnits * float32(linesN)
-            list.Contents[i].Size.X = contentW
-        } else {
-            t, _ := eui.NewText()
-            t.Text = wrapped
-            t.FontSize = float32(fontSize)
-            t.Face = face
-            t.Size = eui.Point{X: contentW, Y: rowUnits * float32(linesN)}
-            // Append to maintain ordering with the msgs index
-            list.AddItem(t)
-        }
+		if i < len(list.Contents) {
+			if list.Contents[i].Text != wrapped || list.Contents[i].FontSize != float32(fontSize) {
+				list.Contents[i].Text = wrapped
+				list.Contents[i].FontSize = float32(fontSize)
+			}
+			list.Contents[i].Face = face
+			list.Contents[i].Size.Y = rowUnits * float32(linesN)
+			list.Contents[i].Size.X = contentW
+		} else {
+			t, _ := eui.NewText()
+			t.Text = wrapped
+			t.FontSize = float32(fontSize)
+			t.Face = face
+			t.Size = eui.Point{X: contentW, Y: rowUnits * float32(linesN)}
+			// Append to maintain ordering with the msgs index
+			list.AddItem(t)
+		}
 	}
 	if len(list.Contents) > len(msgs) {
 		for i := len(msgs); i < len(list.Contents); i++ {
@@ -152,7 +152,7 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 	if input != nil {
 		scrollInput = input.ScrollAtBottom()
 		// Soft-wrap the input message to the available width and grow the input area.
-        _, inLines := wrapText(inputMsg, face, wrapWidthPx)
+		_, inLines := wrapText(inputMsg, face, wrapWidthPx)
 		wrappedIn := strings.Join(inLines, "\n")
 		var miss []eui.TextSpan
 		if inputMsg != "" && !strings.HasPrefix(inputMsg, "[") {
@@ -176,26 +176,26 @@ func updateTextWindow(win *eui.WindowData, list, input *eui.ItemData, msgs []str
 			input.Size.Y = inputContentH
 			input.Scrollable = false
 		}
-        input.Size.X = contentW
-        if len(input.Contents) == 0 {
-            t, _ := eui.NewText()
-            t.Text = wrappedIn
-            t.FontSize = float32(fontSize)
-            t.Face = face
-            t.Size = eui.Point{X: contentW, Y: inputContentH}
-            t.Filled = true
-            t.Underlines = miss
-            input.AddItem(t)
-        } else {
-            if input.Contents[0].Text != wrappedIn || input.Contents[0].FontSize != float32(fontSize) {
-                input.Contents[0].Text = wrappedIn
-                input.Contents[0].FontSize = float32(fontSize)
-            }
-            input.Contents[0].Face = face
-            input.Contents[0].Size.X = contentW
-            input.Contents[0].Size.Y = inputContentH
-            input.Contents[0].Underlines = miss
-        }
+		input.Size.X = contentW
+		if len(input.Contents) == 0 {
+			t, _ := eui.NewText()
+			t.Text = wrappedIn
+			t.FontSize = float32(fontSize)
+			t.Face = face
+			t.Size = eui.Point{X: contentW, Y: inputContentH}
+			t.Filled = true
+			t.Underlines = miss
+			input.AddItem(t)
+		} else {
+			if input.Contents[0].Text != wrappedIn || input.Contents[0].FontSize != float32(fontSize) {
+				input.Contents[0].Text = wrappedIn
+				input.Contents[0].FontSize = float32(fontSize)
+			}
+			input.Contents[0].Face = face
+			input.Contents[0].Size.X = contentW
+			input.Contents[0].Size.Y = inputContentH
+			input.Contents[0].Underlines = miss
+		}
 		if scrollInput {
 			input.Scroll.Y = 1e9
 		}
@@ -289,7 +289,7 @@ func showSpellSuggestions(t *eui.ItemData) {
 				rs := []rune(t.Text)
 				newWrapped := string(rs[:ul.Start]) + replacement + string(rs[ul.End:])
 				plain := strings.ReplaceAll(newWrapped, "\n", "")
-				pluginSetInputText(plain)
+				scriptSetInputText(plain)
 				t.Text = newWrapped
 				t.Underlines = findMisspellings(newWrapped)
 				if t.ParentWindow != nil {

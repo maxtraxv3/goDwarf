@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-// Plugin metadata
-const PluginName = "Prevent Idle"
-const PluginAuthor = "Examples"
-const PluginCategory = "Quality Of Life"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Prevent Idle"
+const scriptAuthor = "Examples"
+const scriptCategory = "Quality Of Life"
+const scriptAPIVersion = 1
 
 const maxKeepAlive = 6 // 5 * 6 = 30min
 

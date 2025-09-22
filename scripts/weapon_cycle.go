@@ -1,14 +1,14 @@
-//go:build plugin
+//go:build script
 
 package main
 
 import "gt"
 
-// Plugin metadata
-const PluginName = "Weapon Cycle"
-const PluginAuthor = "Examples"
-const PluginCategory = "Equipment"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Weapon Cycle"
+const scriptAuthor = "Examples"
+const scriptCategory = "Equipment"
+const scriptAPIVersion = 1
 
 var cycleItems = []string{"Axe", "Short Sword", "Dagger", "Chocolate"}
 
@@ -37,6 +37,6 @@ func cycleWeapon() {
 			break
 		}
 	}
-    // Equip by name using the simplified API
-    gt.Equip(next)
+	// Equip by name using the simplified API
+	gt.Equip(next)
 }

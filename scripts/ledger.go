@@ -1,4 +1,4 @@
-//go:build plugin
+//go:build script
 
 package main
 
@@ -8,11 +8,11 @@ import (
 	"gt"
 )
 
-// Plugin metadata
-const PluginName = "Ledger Actions"
-const PluginAuthor = "Examples"
-const PluginCategory = "Tools"
-const PluginAPIVersion = 1
+// script metadata
+const scriptName = "Ledger Actions"
+const scriptAuthor = "Examples"
+const scriptCategory = "Tools"
+const scriptAPIVersion = 1
 
 var fighters = []string{
 	"Angilsa", "Aktur", "Atkia", "Atkus", "Balthus", "Bodrus", "Darkus",

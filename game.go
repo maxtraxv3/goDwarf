@@ -629,8 +629,8 @@ func (g *Game) Update() error {
 		inputFlow.Contents[0].Focused = false
 	}
 	eui.Update() //We really need this to return eaten clicks
-	// Advance plugin tick waiters once per frame
-	pluginAdvanceTick()
+	// Advance script tick waiters once per frame
+	scriptAdvanceTick()
 	typingElsewhere := typingInUI()
 	if inputActive && inputFlow != nil && len(inputFlow.Contents) > 0 {
 		item := inputFlow.Contents[0]
@@ -638,7 +638,7 @@ func (g *Game) Update() error {
 		plain := strings.ReplaceAll(item.Text, "\n", "")
 		inputText = []rune(plain)
 	}
-	checkPluginMods()
+	checkForScriptEdit()
 	updateNotifications()
 	updateThinkMessages()
 	// Throttle player maintenance to reduce idle CPU (every ~250ms)
@@ -872,7 +872,7 @@ func (g *Game) Update() error {
 						}
 					}()
 				} else {
-					// Try built-in or plugin-registered commands first
+					// Try built-in or script-registered commands first
 					if strings.HasPrefix(txt, "/") {
 						lower := strings.ToLower(txt)
 						if strings.HasPrefix(lower, "/testhooks") {
@@ -886,14 +886,14 @@ func (g *Game) Update() error {
 							if len(parts) > 1 {
 								args = parts[1]
 							}
-							if handler, ok := pluginCommands[name]; ok && handler != nil {
-								owner := pluginCommandOwners[name]
-								if !pluginDisabled[owner] {
+							if handler, ok := scriptCommands[name]; ok && handler != nil {
+								owner := scriptCommandOwners[name]
+								if !scriptDisabled[owner] {
 									consoleMessage("> " + txt)
-									pluginLogEvent(owner, "Command", args)
+									scriptLogEvent(owner, "Command", args)
 									go handler(args)
 								} else {
-									// Disabled plugin commands should fall through so the
+									// Disabled script commands should fall through so the
 									// server still receives the user's input.
 									pendingCommand = txt
 								}
@@ -1426,8 +1426,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if !viewRect.Empty() {
 			worldView := gameImage.SubImage(viewRect).(*ebiten.Image)
 			drawSpeechBubbles(worldView, snap, alpha)
-			// Draw plugin overlays on top of the world view.
-			drawPluginOverlays(worldView, finalScale)
+			// Draw script overlays on top of the world view.
+			drawScriptOverlays(worldView, finalScale)
 			// Recording/Playback badge in top-left of world view
 			drawRecPlayBadge(worldView)
 		}
@@ -2623,7 +2623,7 @@ func initGame() {
 
 	close(gameStarted)
 	go loadSpellcheck()
-	go loadPlugins()
+	go loadScripts()
 }
 
 func makeGameWindow() {

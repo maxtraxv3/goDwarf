@@ -1,7 +1,7 @@
 Better player list refreshing
 fixed interpolations issues at login until changing snells
 adjusted persisting ground/bg sprites disappearing on edge of screen 
-scripts now live in the scripts directory next to the program and not in data/plugins
+scripts now live in the scripts directory next to the program and not in data/scripts
 add api to allow scripts to draw UI elements in the game window
 Improved and optimize image denoising
 Image denoising is now multi-threaded
