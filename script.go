@@ -1585,17 +1585,36 @@ func runChatTriggers(msg string) {
 		msgFlags |= ChatOther
 	}
 	if speaker != "" {
+		classified := false
 		playersMu.RLock()
-		if p, ok := players[speaker]; ok {
-			if p.IsNPC {
-				msgFlags |= ChatNPC
-			} else {
-				msgFlags |= ChatPlayer
-			}
+		p, ok := players[speaker]
+		playersMu.RUnlock()
+		if ok && p != nil && p.IsNPC {
+			msgFlags |= ChatNPC
+			classified = true
 		} else {
+			if isNPCDescriptor(speaker) {
+				msgFlags |= ChatNPC
+				classified = true
+				if ok && p != nil && !p.IsNPC {
+					playersMu.Lock()
+					if np, ok := players[speaker]; ok && np != nil {
+						np.IsNPC = true
+						playersDirty = true
+					}
+					playersMu.Unlock()
+				}
+			} else if ok {
+				msgFlags |= ChatPlayer
+				classified = true
+			} else if strings.EqualFold(speaker, playerName) && playerName != "" {
+				msgFlags |= ChatPlayer
+				classified = true
+			}
+		}
+		if !classified {
 			msgFlags |= ChatCreature
 		}
-		playersMu.RUnlock()
 	} else {
 		msgFlags |= ChatCreature
 	}
@@ -1630,6 +1649,22 @@ func runChatTriggers(msg string) {
 			go h.fn(msg)
 		}
 	}
+}
+
+func isNPCDescriptor(name string) bool {
+	if name == "" {
+		return false
+	}
+	stateMu.Lock()
+	for _, d := range state.descriptors {
+		if d.Name == name {
+			isNPC := d.Type == kDescNPC
+			stateMu.Unlock()
+			return isNPC
+		}
+	}
+	stateMu.Unlock()
+	return false
 }
 
 func runConsoleTriggers(msg string) {
