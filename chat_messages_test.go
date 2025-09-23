@@ -47,3 +47,19 @@ func TestChatMessageIgnored(t *testing.T) {
 		t.Fatalf("expected no messages")
 	}
 }
+
+func TestChatSpeakerNPCWithDescriptor(t *testing.T) {
+	cases := []struct {
+		msg  string
+		want string
+	}{
+		{"(Town Crier) says, hello", "Town Crier"},
+		{"(Boat Seller) yells, boats", "Boat Seller"},
+		{"Goblin says, hi", "Goblin"},
+	}
+	for _, c := range cases {
+		if got := chatSpeaker(c.msg); got != c.want {
+			t.Fatalf("chatSpeaker(%q) = %q; want %q", c.msg, got, c.want)
+		}
+	}
+}
