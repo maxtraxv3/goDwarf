@@ -3,7 +3,6 @@
 package main
 
 import (
-	"strings"
 	"time"
 
 	"gt"
@@ -29,10 +28,6 @@ var (
 func Init() {
 	// React when an NPC message contains this phrase (case‑insensitive).
 	gt.NPCChat("my fine boats", sendYes)
-	// Some ferrymen NPCs fail to register as NPC chat because of how their
-	// names are formatted, so fall back to the general chat stream and
-	// filter by the speaker ourselves.
-	gt.Chat("my fine boats", sendYesIfNPC)
 }
 
 func sendYes(msg string) {
@@ -48,46 +43,4 @@ func sendYes(msg string) {
 	}
 	lastYes = now
 	gt.Run("/whisper yes")
-}
-
-func sendYesIfNPC(msg string) {
-	if !speakerIsNPC(msg) {
-		return
-	}
-	sendYes(msg)
-}
-
-func speakerIsNPC(msg string) bool {
-	name := strings.ToLower(strings.TrimSpace(extractSpeaker(msg)))
-	if name == "" {
-		return false
-	}
-	for _, p := range gt.Players() {
-		if strings.ToLower(p.Name) == name && p.IsNPC {
-			return true
-		}
-	}
-	return false
-}
-
-func extractSpeaker(msg string) string {
-	m := strings.TrimSpace(msg)
-	if m == "" {
-		return ""
-	}
-	if strings.HasPrefix(m, "(") {
-		if end := strings.IndexByte(m, ')'); end > 1 {
-			return strings.TrimSpace(m[1:end])
-		}
-	}
-	lower := strings.ToLower(m)
-	for _, sep := range []string{" says", " yells", " whispers", " asks", " exclaims"} {
-		if idx := strings.Index(lower, sep); idx > 0 {
-			return strings.TrimSpace(m[:idx])
-		}
-	}
-	if i := strings.IndexByte(m, ' '); i > 0 {
-		return strings.TrimSpace(m[:i])
-	}
-	return m
 }
