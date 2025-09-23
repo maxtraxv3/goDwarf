@@ -98,11 +98,20 @@ func isSelfChatMessage(msg string) bool {
 // canonical form. It returns an empty string if no name could be parsed.
 func chatSpeaker(msg string) string {
 	m := strings.TrimSpace(msg)
+	if m == "" {
+		return ""
+	}
 	if strings.HasPrefix(m, "(") {
 		if end := strings.IndexByte(m, ')'); end > 1 {
 			return utfFold(strings.TrimSpace(m[1:end]))
 		}
 		m = strings.TrimPrefix(m, "(")
+	}
+	lower := strings.ToLower(m)
+	for _, sep := range []string{" says", " yells", " whispers", " asks", " exclaims"} {
+		if idx := strings.Index(lower, sep); idx > 0 {
+			return utfFold(strings.TrimSpace(m[:idx]))
+		}
 	}
 	if i := strings.IndexByte(m, ' '); i > 0 {
 		return utfFold(m[:i])

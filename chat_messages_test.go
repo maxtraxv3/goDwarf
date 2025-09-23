@@ -56,6 +56,8 @@ func TestChatSpeakerNPCWithDescriptor(t *testing.T) {
 		{"(Town Crier) says, hello", "Town Crier"},
 		{"(Boat Seller) yells, boats", "Boat Seller"},
 		{"Goblin says, hi", "Goblin"},
+		{"Captain Barnac says Ah, Malcom.", "Captain Barnac"},
+		{"High Priestess Aria whispers, hush.", "High Priestess Aria"},
 	}
 	for _, c := range cases {
 		if got := chatSpeaker(c.msg); got != c.want {
