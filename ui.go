@@ -45,6 +45,7 @@ var loginWin *eui.WindowData
 var downloadWin *eui.WindowData
 var precacheWin *eui.WindowData
 var charactersList *eui.ItemData
+var advancedWin *eui.WindowData
 
 // loginConnectBtn holds the Connect button for potential future tweaks.
 var loginConnectBtn *eui.ItemData
@@ -361,7 +362,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			}
 		})
 	}
-	row1.AddItem(actionsBtn)
+	//row1.AddItem(actionsBtn)
 
 	var recordEvents *eui.EventHandler
 	recordBtn, recordEvents = eui.NewButton()
@@ -393,7 +394,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			toggleRecording()
 		}
 	}
-	row1.AddItem(recordBtn)
+	//row1.AddItem(recordBtn)
 
 	helpBtn, helpEvents := eui.NewButton()
 	helpBtn.Text = "Help"
@@ -442,7 +443,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			mixerWin.ToggleNear(ev.Item)
 		}
 	}
-	row2.AddItem(mixBtn)
+	row1.AddItem(mixBtn)
 
 	/*
 	   stopBtn, stopEvents := eui.NewButton()
@@ -1237,7 +1238,7 @@ func makeToolbar() {
 	hudWin.Closable = false
 	hudWin.Resizable = false
 	hudWin.AutoSize = false
-	hudWin.Size = eui.Point{X: 435, Y: 85}
+	hudWin.Size = eui.Point{X: 360, Y: 85}
 	hudWin.Movable = true
 	hudWin.NoScroll = true
 	hudWin.SetZone(eui.HZoneLeft, eui.VZoneTop)
@@ -1772,7 +1773,7 @@ func makeDownloadsWindow() {
 		sfCB, sfEvents := eui.NewCheckbox()
 		label := "Download soundfont (music)"
 		if status.SoundfontSize > 0 {
-			label = fmt.Sprintf("Download soundfont (%s) (music)", humanize.Bytes(uint64(status.SoundfontSize)))
+			label = fmt.Sprintf("Download soundfont (%s) (Music)", humanize.Bytes(uint64(status.SoundfontSize)))
 		}
 		sfCB.Text = label
 		sfCB.Size = eui.Point{X: 320, Y: 24}
@@ -1793,7 +1794,7 @@ func makeDownloadsWindow() {
 		}
 		pc.Text = label
 		pc.Size = eui.Point{X: 320, Y: 24}
-		pc.Checked = true
+		pc.Checked = false
 		pe.Handle = func(ev eui.UIEvent) {
 			if ev.Type == eui.EventCheckboxChanged {
 				downloadTTS = ev.Checked
@@ -2402,9 +2403,9 @@ func startLogin() {
 			msg,
 			[]popupButton{
 				{Text: "Cancel"},
-				{Text: "Proceed", Action: func() {
+				{Text: "Proceed", Color: &eui.ColorGray, Action: func() {
 					clVersion = status.Version
-					startLogin()
+					//startLogin()
 				}},
 			},
 		)
@@ -3205,41 +3206,12 @@ func makeSettingsWindow() {
 	right := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
 	right.Size = eui.Point{X: panelWidth, Y: 10}
 
-	// (Reset button added at the bottom-right later)
-
-	wizardBtn, wizardEvents := eui.NewButton()
-	wizardBtn.Text = "Rerun Settings Wizard"
-	wizardBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	wizardBtn.SetTooltip("Open a guided explanation of each settings group")
-	wizardEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			openSettingsWizard(true)
-		}
-	}
-	left.AddItem(wizardBtn)
-
 	label, _ := eui.NewText()
 	label.Text = "\nWindow Behavior:"
 	label.FontSize = 15
 	label.Size = eui.Point{X: panelWidth, Y: 50}
 	applyBoldFace(label)
 	left.AddItem(label)
-
-	// Show classic Clan Lord splash image (from CL_Images id 4)
-	splashCB, splashEvents := eui.NewCheckbox()
-	splashCB.Text = "Show Clan Lord splash image"
-	splashCB.Size = eui.Point{X: panelWidth, Y: 24}
-	splashCB.Checked = gs.ShowClanLordSplashImage
-	splashCB.SetTooltip("Use CL_Images picture #4 for the splash screen")
-	splashEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.ShowClanLordSplashImage = ev.Checked
-			settingsDirty = true
-			// Rebuild splash image now so changes are visible immediately.
-			prepareClassicSplash()
-		}
-	}
-	left.AddItem(splashCB)
 
 	/*
 				tilingCB, tilingEvents := eui.NewCheckbox()
@@ -3322,39 +3294,6 @@ func makeSettingsWindow() {
 		}
 	}
 	left.AddItem(fullscreenCB)
-
-	alwaysTopCB, alwaysTopEvents := eui.NewCheckbox()
-	alwaysTopCB.Text = "Always on top"
-	alwaysTopCB.Size = eui.Point{X: panelWidth, Y: 24}
-	alwaysTopCB.Checked = gs.AlwaysOnTop
-	alwaysTopEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			gs.AlwaysOnTop = ev.Checked
-			ebiten.SetWindowFloating(gs.Fullscreen || gs.AlwaysOnTop)
-			settingsDirty = true
-		}
-	}
-	left.AddItem(alwaysTopCB)
-
-	// (Power-save options moved to Advanced section)
-
-	pinLocCB, pinLocEvents := eui.NewCheckbox()
-	pinLocCB.Text = "Show pin-to locations"
-	pinLocCB.Size = eui.Point{X: panelWidth, Y: 24}
-	pinLocCB.Checked = gs.ShowPinToLocations
-	pinLocEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.ShowPinToLocations = ev.Checked
-			SettingsLock.Unlock()
-			eui.SetShowPinLocations(ev.Checked)
-			settingsDirty = true
-		}
-	}
-	left.AddItem(pinLocCB)
 
 	styleDD, styleEvents := eui.NewDropdown()
 	styleDD.Label = "Style Theme"
@@ -3477,80 +3416,6 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(toggle)
 
-	midMove, midMoveEvents := eui.NewCheckbox()
-	midMove.Text = "Middle-click moves windows"
-	midMove.Size = eui.Point{X: panelWidth, Y: 24}
-	midMove.Checked = gs.MiddleClickMoveWindow
-	midMove.SetTooltip("Drag windows using the middle mouse button")
-	midMoveEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.MiddleClickMoveWindow = ev.Checked
-			eui.SetMiddleClickMove(ev.Checked)
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-	left.AddItem(midMove)
-
-	inputOpenCB, inputOpenEvents := eui.NewCheckbox()
-	inputOpenCB.Text = "Input bar always open"
-	inputOpenCB.Size = eui.Point{X: panelWidth, Y: 24}
-	inputOpenCB.Checked = gs.InputBarAlwaysOpen
-	inputOpenCB.SetTooltip("Keep console input active after sending")
-	inputOpenEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.InputBarAlwaysOpen = ev.Checked
-			SettingsLock.Unlock()
-			if gs.InputBarAlwaysOpen {
-				inputActive = true
-			} else {
-				inputActive = false
-				inputText = inputText[:0]
-				inputPos = 0
-				historyPos = len(inputHistory)
-			}
-			updateConsoleWindow()
-			if consoleWin != nil {
-				consoleWin.Refresh()
-			}
-			settingsDirty = true
-		}
-	}
-	left.AddItem(inputOpenCB)
-
-	keySpeedSlider, keySpeedEvents := eui.NewSlider()
-	keySpeedSlider.Label = "Keyboard Walk Speed"
-	keySpeedSlider.MinValue = 0.1
-	keySpeedSlider.MaxValue = 1.0
-	keySpeedSlider.Value = float32(gs.KBWalkSpeed)
-	keySpeedSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	keySpeedEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			gs.KBWalkSpeed = float64(ev.Value)
-			settingsDirty = true
-		}
-	}
-	left.AddItem(keySpeedSlider)
-
-	// Move Gamepad button into the Controls section
-	joystickBtn, joystickEvents := eui.NewButton()
-	joystickBtn.Text = "Gamepad"
-	joystickBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	joystickEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			joystickWin.ToggleNear(ev.Item)
-		}
-	}
-	left.AddItem(joystickBtn)
-
 	label, _ = eui.NewText()
 	label.Text = "\nQuality Options:"
 	label.FontSize = 15
@@ -3567,11 +3432,11 @@ func makeSettingsWindow() {
 		if ev.Type == eui.EventDropdownSelected {
 			switch ev.Index {
 			case 0:
-				applyQualityPreset("Ultra Low")
+				applyQualityPreset("Classic")
 			case 1:
 				applyQualityPreset("Low")
 			case 2:
-				applyQualityPreset("Standard")
+				applyQualityPreset("Medium")
 			case 3:
 				applyQualityPreset("High")
 			}
@@ -3671,24 +3536,6 @@ func makeSettingsWindow() {
 	}
 	left.AddItem(notifCB)
 
-	tsFormatInput, tsFormatEvents := eui.NewInput()
-	tsFormatInput.Label = "Timestamp format"
-	tsFormatInput.Text = gs.TimestampFormat
-	tsFormatInput.TextPtr = &gs.TimestampFormat
-	tsFormatInput.Size = eui.Point{X: panelWidth, Y: 24}
-	tsFormatInput.SetTooltip("mo,day,hour,min,sec,yr:01,02,03...")
-	tsFormatEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventInputChanged {
-			SettingsLock.Lock()
-			gs.TimestampFormat = ev.Text
-			SettingsLock.Unlock()
-			settingsDirty = true
-			updateChatWindow()
-			updateConsoleWindow()
-		}
-	}
-	left.AddItem(tsFormatInput)
-
 	notifBtn, notifBtnEvents := eui.NewButton()
 	notifBtn.Text = "Notification Settings"
 	notifBtn.Size = eui.Point{X: panelWidth, Y: 24}
@@ -3701,21 +3548,6 @@ func makeSettingsWindow() {
 		}
 	}
 	left.AddItem(notifBtn)
-
-	bubbleBtn, bubbleEvents := eui.NewButton()
-	bubbleBtn.Text = "Message Bubbles"
-	bubbleBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	bubbleEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			bubbleWin.ToggleNear(ev.Item)
-		}
-	}
-	left.AddItem(bubbleBtn)
-
-	// (Gamepad button moved above under Controls section)
 
 	label, _ = eui.NewText()
 	label.Text = "\nStatus Bar Options:"
@@ -3897,32 +3729,6 @@ func makeSettingsWindow() {
 	}
 	right.AddItem(bubbleScaleSlider)
 
-	fadePicsCB, fadePicsEvents := eui.NewCheckbox()
-	fadePicsCB.Text = "Fade objects obscuring mobiles"
-	fadePicsCB.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	fadePicsCB.Checked = gs.FadeObscuringPictures
-	fadePicsEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.FadeObscuringPictures = ev.Checked
-			settingsDirty = true
-		}
-	}
-	right.AddItem(fadePicsCB)
-
-	obscureSlider, obscureEvents := eui.NewSlider()
-	obscureSlider.Label = "Obscuring object opacity"
-	obscureSlider.MinValue = 0.25
-	obscureSlider.MaxValue = 0.7
-	obscureSlider.Value = float32(gs.ObscuringPictureOpacity)
-	obscureSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	obscureEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			gs.ObscuringPictureOpacity = float64(ev.Value)
-			settingsDirty = true
-		}
-	}
-	right.AddItem(obscureSlider)
-
 	barOpacitySlider, barOpacityEvents := eui.NewSlider()
 	barOpacitySlider.Label = "Status bar opacity"
 	barOpacitySlider.MinValue = 0.1
@@ -3939,6 +3745,21 @@ func makeSettingsWindow() {
 		}
 	}
 	right.AddItem(barOpacitySlider)
+
+	advancedBtn, advancedEvents := eui.NewButton()
+	advancedBtn.Text = "Advanced Settings"
+	advancedBtn.Size = eui.Point{X: panelWidth, Y: 24}
+	advancedBtn.SetTooltip("Open additional settings and tools")
+	advancedEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			makeAdvancedSettingsWindow()
+			advancedWin.ToggleNear(ev.Item)
+		}
+	}
+	right.AddItem(advancedBtn)
 
 	label, _ = eui.NewText()
 	label.Text = "\nText Sizes:"
@@ -4080,97 +3901,6 @@ func makeSettingsWindow() {
 	applyBoldFace(label)
 	center.AddItem(label)
 
-	// Move Throttle Sounds to Chat & Audio area
-	throttleCB, throttleEvents := eui.NewCheckbox()
-	throttleSoundCB = throttleCB
-	throttleSoundCB.Text = "Throttle Sounds"
-	throttleSoundCB.Size = eui.Point{X: panelWidth, Y: 24}
-	throttleSoundCB.Checked = gs.ThrottleSounds
-	throttleSoundCB.SetTooltip("Prevent same sound from playing every tick.")
-	throttleEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.ThrottleSounds = ev.Checked
-			clearCaches()
-			settingsDirty = true
-		}
-	}
-	center.AddItem(throttleSoundCB)
-
-	enhancementCB, enhancementEvents := eui.NewCheckbox()
-	soundEnhanceCB = enhancementCB
-	enhancementCB.Text = "Audio enhancement for sound effects"
-	enhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
-	enhancementCB.Checked = gs.SoundEnhancement
-	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
-	enhancementStrengthSlider, enhancementStrengthEvents := eui.NewSlider()
-	soundEnhanceSlider = enhancementStrengthSlider
-	enhancementStrengthSlider.Label = "Enhancement Strength"
-	enhancementStrengthSlider.MinValue = 0.1
-	enhancementStrengthSlider.MaxValue = 10
-	enhancementStrengthSlider.Value = float32(gs.SoundEnhancementAmount)
-	enhancementStrengthSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	enhancementStrengthSlider.Disabled = !gs.SoundEnhancement
-	enhancementStrengthSlider.SetTooltip("0.1 is subtle, 10 is very pronounced")
-	enhancementEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.SoundEnhancement = ev.Checked
-			enhancementStrengthSlider.Disabled = !ev.Checked
-			settingsDirty = true
-		}
-	}
-	center.AddItem(enhancementCB)
-
-	enhancementStrengthEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			gs.SoundEnhancementAmount = clampSoundEnhancementAmount(float64(ev.Value))
-			settingsDirty = true
-		}
-	}
-	center.AddItem(enhancementStrengthSlider)
-
-	resampleCB, resampleEvents := eui.NewCheckbox()
-	resampleAudioCB = resampleCB
-	resampleCB.Text = "High quality resampling"
-	resampleCB.Size = eui.Point{X: panelWidth, Y: 24}
-	resampleCB.Checked = gs.HighQualityResampling
-	resampleCB.SetTooltip("Lanczos resampling and dithering for cleaner audio (uses more CPU)")
-	resampleEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.HighQualityResampling = ev.Checked
-			setHighQualityResamplingEnabled(ev.Checked)
-			clearCaches()
-			settingsDirty = true
-		}
-	}
-	center.AddItem(resampleCB)
-
-	musicEnhancementCB, musicEnhancementEvents := eui.NewCheckbox()
-	musicEnhanceCB = musicEnhancementCB
-	musicEnhancementCB.Text = "Audio enhancement for music"
-	musicEnhancementCB.Size = eui.Point{X: panelWidth, Y: 24}
-	musicEnhancementCB.Checked = gs.MusicEnhancement
-	musicEnhancementCB.SetTooltip("Add space and ambience to background music")
-	musicEnhancementEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.MusicEnhancement = ev.Checked
-			settingsDirty = true
-		}
-	}
-	center.AddItem(musicEnhancementCB)
-
-	/*
-		mixBtn, mixEvents := eui.NewButton()
-		mixBtn.Text = "Mixer"
-		mixBtn.Size = eui.Point{X: panelWidth, Y: 24}
-		mixBtn.FontSize = 12
-		mixEvents.Handle = func(ev eui.UIEvent) {
-			if ev.Type == eui.EventClick {
-				mixerWin.ToggleNear(ev.Item)
-			}
-		}
-		center.AddItem(mixBtn)
-	*/
-
 	ttsSpeedSlider, ttsSpeedEvents := eui.NewSlider()
 	ttsSpeedSlider.Label = "TTS Speed"
 	ttsSpeedSlider.MinValue = 0.5
@@ -4186,247 +3916,6 @@ func makeSettingsWindow() {
 		}
 	}
 	center.AddItem(ttsSpeedSlider)
-
-	voiceDD, voiceEvents := eui.NewDropdown()
-	voiceDD.Label = "TTS Voice"
-	if voices, err := listPiperVoices(); err == nil {
-		voiceDD.Options = voices
-		for i, v := range voices {
-			if v == gs.ChatTTSVoice {
-				voiceDD.Selected = i
-				break
-			}
-		}
-	}
-	voiceDD.Action = func() {
-		if !voiceDD.Open {
-			return
-		}
-		if voices, err := listPiperVoices(); err == nil {
-			voiceDD.Options = voices
-			sel := 0
-			for i, v := range voices {
-				if v == gs.ChatTTSVoice {
-					sel = i
-					break
-				}
-			}
-			voiceDD.Selected = sel
-			if gs.ChatTTSVoice != voices[sel] {
-				SettingsLock.Lock()
-				gs.ChatTTSVoice = voices[sel]
-				SettingsLock.Unlock()
-				settingsDirty = true
-			}
-		}
-	}
-	voiceDD.Size = eui.Point{X: panelWidth, Y: 24}
-	voiceEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventDropdownSelected {
-			SettingsLock.Lock()
-			gs.ChatTTSVoice = voiceDD.Options[ev.Index]
-			SettingsLock.Unlock()
-			settingsDirty = true
-			piperModel = ""
-			piperConfig = ""
-			stopAllTTS()
-		}
-	}
-	center.AddItem(voiceDD)
-
-	ttsTestInput, ttsTestEvents := eui.NewInput()
-	ttsTestInput.Text = ttsTestPhrase
-	ttsTestInput.TextPtr = &ttsTestPhrase
-	ttsTestInput.Size = eui.Point{X: panelWidth, Y: 24}
-	ttsTestEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventInputChanged {
-			ttsTestPhrase = ev.Text
-		}
-	}
-	center.AddItem(ttsTestInput)
-
-	ttsTestBtn, ttsTestBtnEvents := eui.NewButton()
-	ttsTestBtn.Text = "Test TTS"
-	ttsTestBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	ttsTestBtnEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			if !gs.ChatTTS {
-				gs.ChatTTS = true
-				settingsDirty = true
-				if ttsMixCB != nil {
-					ttsMixCB.Checked = true
-				}
-				if ttsMixSlider != nil {
-					ttsMixSlider.Disabled = false
-				}
-				updateSoundVolume()
-			}
-			go playChatTTS(chatTTSCtx, ttsTestPhrase)
-		}
-	}
-	center.AddItem(ttsTestBtn)
-
-	ttsEditBtn, ttsEditEvents := eui.NewButton()
-	ttsEditBtn.Text = "Edit TTS corrections"
-	ttsEditBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	ttsEditEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			open.Run(dataDirPath)
-		}
-	}
-	center.AddItem(ttsEditBtn)
-
-	label, _ = eui.NewText()
-	label.Text = "\nAdvanced:"
-	label.FontSize = 15
-	label.Size = eui.Point{X: panelWidth, Y: 50}
-	applyBoldFace(label)
-	center.AddItem(label)
-
-	// Power-save options (Advanced)
-	psBGCB, psBGEvents := eui.NewCheckbox()
-	psBGCB.Text = "Power save in background"
-	psBGCB.Size = eui.Point{X: panelWidth, Y: 24}
-	psBGCB.Checked = gs.PowerSaveBackground
-	psBGCB.SetTooltip("Reduce FPS when window is unfocused")
-	psBGEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.PowerSaveBackground = ev.Checked
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-	center.AddItem(psBGCB)
-
-	psAlwaysCB, psAlwaysEvents := eui.NewCheckbox()
-	psAlwaysCB.Text = "Always power save"
-	psAlwaysCB.Size = eui.Point{X: panelWidth, Y: 24}
-	psAlwaysCB.Checked = gs.PowerSaveAlways
-	psAlwaysCB.SetTooltip("Limit FPS even when focused (useful on laptops)")
-	psAlwaysEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.PowerSaveAlways = ev.Checked
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-	center.AddItem(psAlwaysCB)
-
-	psFPSSlider, psFPSEvents := eui.NewSlider()
-	psFPSSlider.Label = "Power-save FPS"
-	psFPSSlider.MinValue = 1
-	psFPSSlider.MaxValue = 60
-	psFPSSlider.IntOnly = true
-	if gs.PowerSaveFPS < 1 {
-		gs.PowerSaveFPS = 1
-	}
-	if gs.PowerSaveFPS > 60 {
-		gs.PowerSaveFPS = 60
-	}
-	psFPSSlider.Value = float32(gs.PowerSaveFPS)
-	psFPSSlider.Size = eui.Point{X: panelWidth - 10, Y: 24}
-	psFPSSlider.SetTooltip("Target FPS when power saving is active")
-	psFPSEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			SettingsLock.Lock()
-			v := int(ev.Value)
-			if v < 1 {
-				v = 1
-			}
-			if v > 60 {
-				v = 60
-			}
-			gs.PowerSaveFPS = v
-			SettingsLock.Unlock()
-			psFPSSlider.Value = float32(v)
-			settingsDirty = true
-		}
-	}
-	center.AddItem(psFPSSlider)
-
-	scriptKillCB, scriptKillEvents := eui.NewCheckbox()
-	scriptKillCB.Text = "Auto-kill spammy scripts"
-	scriptKillCB.Size = eui.Point{X: panelWidth, Y: 24}
-	scriptKillCB.Checked = gs.ScriptSpamKill
-	scriptKillCB.SetTooltip("Stop scripts that send too many lines")
-	scriptKillEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.ScriptSpamKill = ev.Checked
-			SettingsLock.Unlock()
-			settingsDirty = true
-		}
-	}
-
-	center.AddItem(scriptKillCB)
-
-	autoRecCB, autoRecEvents := eui.NewCheckbox()
-	autoRecCB.Text = "Auto-record sessions"
-	autoRecCB.Size = eui.Point{X: panelWidth, Y: 24}
-	autoRecCB.Checked = gs.AutoRecord
-	autoRecCB.SetTooltip("Start recording on login and stop on logout")
-	autoRecEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.AutoRecord = ev.Checked
-			settingsDirty = true
-		}
-	}
-
-	center.AddItem(autoRecCB)
-
-	debugBtn, debugEvents := eui.NewButton()
-	debugBtn.Text = "Debug Settings"
-	debugBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	debugEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			debugWin.ToggleNear(ev.Item)
-		}
-	}
-	center.AddItem(debugBtn)
-
-	dlBtn, dlEvents := eui.NewButton()
-	dlBtn.Text = "Download Files"
-	dlBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	dlBtn.SetTooltip("Download missing or optional files")
-	dlEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			if s, err := checkDataFiles(clVersion); err == nil {
-				status = s
-			}
-			if downloadWin != nil {
-				downloadWin.Close()
-				downloadWin = nil
-			}
-			makeDownloadsWindow()
-			downloadWin.MarkOpen()
-		}
-	}
-	center.AddItem(dlBtn)
-
-	// Reset All Settings
-	resetBtn, resetEv := eui.NewButton()
-	resetBtn.Text = "Reset All Settings"
-	resetBtn.Size = eui.Point{X: panelWidth, Y: 24}
-	resetBtn.Color = eui.ColorDarkRed
-	resetBtn.HoverColor = eui.ColorRed
-	resetBtn.SetTooltip("Restore defaults and reapply")
-	resetEv.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			SettingsLock.Lock()
-			defer SettingsLock.Unlock()
-
-			confirmResetSettings()
-		}
-	}
-	center.AddItem(resetBtn)
 
 	outer.AddItem(left)
 	outer.AddItem(center)
@@ -4461,6 +3950,10 @@ func resetAllSettings() {
 	if chatWin != nil {
 		chatWin.Close()
 		chatWin = nil
+	}
+	if advancedWin != nil {
+		advancedWin.Close()
+		advancedWin = nil
 	}
 
 	// Recreate windows according to default settings.
@@ -5065,13 +4558,13 @@ func makeQualityWindow() {
 
 	sgSlider, spriteGammaEvents := eui.NewSlider()
 	spriteGammaSlider = sgSlider
-	spriteGammaSlider.Label = "Sprite Gamma: Old Classic Macintosh OS used a gamma of 1.8, and most modern systems use 2.2 or 2.4."
+	spriteGammaSlider.Label = "Sprite Gamma"
 	spriteGammaSlider.MinValue = float32(gammaOptions[0])
 	spriteGammaSlider.MaxValue = float32(gammaOptions[len(gammaOptions)-1])
 	spriteGammaSlider.Value = float32(gs.SpriteGamma)
 	spriteGammaSlider.Size = eui.Point{X: width - 10, Y: 24}
 	spriteGammaSlider.Disabled = !gs.SpriteGammaCorrection
-	spriteGammaSlider.SetTooltip("Expected gamma embedded in sprite artwork")
+	spriteGammaSlider.SetTooltip("Old Classic Macintosh OS used a gamma of 1.8, and most modern systems use 2.2 or sometimes 2.4.")
 	spriteGammaEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventSliderChanged {
 			target := normalizeGamma(float64(ev.Value), gs.SpriteGamma)
@@ -5413,6 +4906,633 @@ func makeNotificationsWindow() {
 	notificationsWin.AddWindow(false)
 }
 
+func makeAdvancedSettingsWindow() {
+	if advancedWin != nil {
+		return
+	}
+	const columnWidth float32 = 260
+
+	advancedWin = eui.NewWindow()
+	advancedWin.Title = "Advanced Settings"
+	advancedWin.Closable = true
+	advancedWin.Resizable = false
+	advancedWin.AutoSize = true
+	advancedWin.Movable = true
+	advancedWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
+
+	addSectionLabel := func(col *eui.ItemData, text string) {
+		label, _ := eui.NewText()
+		label.Text = text
+		label.FontSize = 15
+		label.Size = eui.Point{X: columnWidth, Y: 40}
+		applyBoldFace(label)
+		col.AddItem(label)
+	}
+
+	columns := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
+
+	toolsCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	toolsCol.Size = eui.Point{X: columnWidth, Y: 10}
+	interfaceCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	interfaceCol.Size = eui.Point{X: columnWidth, Y: 10}
+	chatCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	chatCol.Size = eui.Point{X: columnWidth, Y: 10}
+	systemCol := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+	systemCol.Size = eui.Point{X: columnWidth, Y: 10}
+
+	// Tools
+	addSectionLabel(toolsCol, "Tools")
+
+	debugBtn, debugEvents := eui.NewButton()
+	debugBtn.Text = "Debug Settings"
+	debugBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	debugEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+			debugWin.ToggleNear(ev.Item)
+		}
+	}
+	toolsCol.AddItem(debugBtn)
+
+	dlBtn, dlEvents := eui.NewButton()
+	dlBtn.Text = "Download Files"
+	dlBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	dlBtn.SetTooltip("Download missing or optional files")
+	dlEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			if s, err := checkDataFiles(clVersion); err == nil {
+				status = s
+			}
+			if downloadWin != nil {
+				downloadWin.Close()
+				downloadWin = nil
+			}
+			makeDownloadsWindow()
+			downloadWin.MarkOpen()
+		}
+	}
+	toolsCol.AddItem(dlBtn)
+
+	resetBtn, resetEv := eui.NewButton()
+	resetBtn.Text = "Reset All Settings"
+	resetBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	resetBtn.Color = eui.ColorDarkRed
+	resetBtn.HoverColor = eui.ColorRed
+	resetBtn.SetTooltip("Restore defaults and reapply")
+	resetEv.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+			confirmResetSettings()
+		}
+	}
+	toolsCol.AddItem(resetBtn)
+
+	addSectionLabel(toolsCol, "Automation")
+
+	scriptKillCB, scriptKillEvents := eui.NewCheckbox()
+	scriptKillCB.Text = "Auto-kill spammy scripts"
+	scriptKillCB.Size = eui.Point{X: columnWidth, Y: 24}
+	scriptKillCB.Checked = gs.ScriptSpamKill
+	scriptKillCB.SetTooltip("Stop scripts that send too many lines")
+	scriptKillEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.ScriptSpamKill = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	toolsCol.AddItem(scriptKillCB)
+
+	autoRecCB, autoRecEvents := eui.NewCheckbox()
+	autoRecCB.Text = "Auto-record sessions"
+	autoRecCB.Size = eui.Point{X: columnWidth, Y: 24}
+	autoRecCB.Checked = gs.AutoRecord
+	autoRecCB.SetTooltip("Start recording on login and stop on logout")
+	autoRecEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.AutoRecord = ev.Checked
+			settingsDirty = true
+		}
+	}
+	toolsCol.AddItem(autoRecCB)
+
+	// Interface column
+	addSectionLabel(interfaceCol, "Interface")
+
+	splashCB, splashEvents := eui.NewCheckbox()
+	splashCB.Text = "Show Clan Lord splash image"
+	splashCB.Size = eui.Point{X: columnWidth, Y: 24}
+	splashCB.Checked = gs.ShowClanLordSplashImage
+	splashCB.SetTooltip("Use CL_Images picture #4 for the splash screen")
+	splashEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.ShowClanLordSplashImage = ev.Checked
+			settingsDirty = true
+			prepareClassicSplash()
+		}
+	}
+	interfaceCol.AddItem(splashCB)
+
+	alwaysTopCB, alwaysTopEvents := eui.NewCheckbox()
+	alwaysTopCB.Text = "Always on top"
+	alwaysTopCB.Size = eui.Point{X: columnWidth, Y: 24}
+	alwaysTopCB.Checked = gs.AlwaysOnTop
+	alwaysTopEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+
+			gs.AlwaysOnTop = ev.Checked
+			ebiten.SetWindowFloating(gs.Fullscreen || gs.AlwaysOnTop)
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(alwaysTopCB)
+
+	inputOpenCB, inputOpenEvents := eui.NewCheckbox()
+	inputOpenCB.Text = "Input bar always open"
+	inputOpenCB.Size = eui.Point{X: columnWidth, Y: 24}
+	inputOpenCB.Checked = gs.InputBarAlwaysOpen
+	inputOpenCB.SetTooltip("Keep console input active after sending")
+	inputOpenEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.InputBarAlwaysOpen = ev.Checked
+			SettingsLock.Unlock()
+			if gs.InputBarAlwaysOpen {
+				inputActive = true
+			} else {
+				inputActive = false
+				inputText = inputText[:0]
+				inputPos = 0
+				historyPos = len(inputHistory)
+			}
+			updateConsoleWindow()
+			if consoleWin != nil {
+				consoleWin.Refresh()
+			}
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(inputOpenCB)
+
+	midMove, midMoveEvents := eui.NewCheckbox()
+	midMove.Text = "Middle-click moves windows"
+	midMove.Size = eui.Point{X: columnWidth, Y: 24}
+	midMove.Checked = gs.MiddleClickMoveWindow
+	midMove.SetTooltip("Drag windows using the middle mouse button")
+	midMoveEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.MiddleClickMoveWindow = ev.Checked
+			eui.SetMiddleClickMove(ev.Checked)
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(midMove)
+
+	pinLocCB, pinLocEvents := eui.NewCheckbox()
+	pinLocCB.Text = "Show pin-to locations"
+	pinLocCB.Size = eui.Point{X: columnWidth, Y: 24}
+	pinLocCB.Checked = gs.ShowPinToLocations
+	pinLocCB.SetTooltip("Show pin affordances on floating windows")
+	pinLocEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.ShowPinToLocations = ev.Checked
+			SettingsLock.Unlock()
+			eui.SetShowPinLocations(ev.Checked)
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(pinLocCB)
+
+	keySpeedSlider, keySpeedEvents := eui.NewSlider()
+	keySpeedSlider.Label = "Keyboard Walk Speed"
+	keySpeedSlider.MinValue = 0.1
+	keySpeedSlider.MaxValue = 1.0
+	keySpeedSlider.Value = float32(gs.KBWalkSpeed)
+	keySpeedSlider.Size = eui.Point{X: columnWidth - 10, Y: 24}
+	keySpeedEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+			gs.KBWalkSpeed = float64(ev.Value)
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(keySpeedSlider)
+
+	joystickBtn, joystickEvents := eui.NewButton()
+	joystickBtn.Text = "Gamepad"
+	joystickBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	joystickEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+			joystickWin.ToggleNear(ev.Item)
+		}
+	}
+	interfaceCol.AddItem(joystickBtn)
+
+	addSectionLabel(interfaceCol, "Visual Tweaks")
+
+	fadePicsCB, fadePicsEvents := eui.NewCheckbox()
+	fadePicsCB.Text = "Fade objects obscuring mobiles"
+	fadePicsCB.Size = eui.Point{X: columnWidth, Y: 24}
+	fadePicsCB.Checked = gs.FadeObscuringPictures
+	fadePicsEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.FadeObscuringPictures = ev.Checked
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(fadePicsCB)
+
+	obscureSlider, obscureEvents := eui.NewSlider()
+	obscureSlider.Label = "Obscuring object opacity"
+	obscureSlider.MinValue = 0.25
+	obscureSlider.MaxValue = 0.7
+	obscureSlider.Value = float32(gs.ObscuringPictureOpacity)
+	obscureSlider.Size = eui.Point{X: columnWidth - 10, Y: 24}
+	obscureEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.ObscuringPictureOpacity = float64(ev.Value)
+			settingsDirty = true
+		}
+	}
+	interfaceCol.AddItem(obscureSlider)
+
+	// Chat & TTS column
+	addSectionLabel(chatCol, "Chat & TTS")
+
+	tsFormatInput, tsFormatEvents := eui.NewInput()
+	tsFormatInput.Label = "Timestamp format"
+	tsFormatInput.Text = gs.TimestampFormat
+	tsFormatInput.TextPtr = &gs.TimestampFormat
+	tsFormatInput.Size = eui.Point{X: columnWidth, Y: 24}
+	tsFormatInput.SetTooltip("mo,day,hour,min,sec,yr:01,02,03...")
+	tsFormatEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventInputChanged {
+			SettingsLock.Lock()
+			gs.TimestampFormat = ev.Text
+			SettingsLock.Unlock()
+			settingsDirty = true
+			updateChatWindow()
+			updateConsoleWindow()
+		}
+	}
+	chatCol.AddItem(tsFormatInput)
+
+	bubbleBtn, bubbleEvents := eui.NewButton()
+	bubbleBtn.Text = "Message Bubbles"
+	bubbleBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	bubbleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			defer SettingsLock.Unlock()
+			bubbleWin.ToggleNear(ev.Item)
+		}
+	}
+	chatCol.AddItem(bubbleBtn)
+
+	voiceDD, voiceEvents := eui.NewDropdown()
+	voiceDD.Label = "TTS Voice"
+	if voices, err := listPiperVoices(); err == nil {
+		voiceDD.Options = voices
+		for i, v := range voices {
+			if v == gs.ChatTTSVoice {
+				voiceDD.Selected = i
+				break
+			}
+		}
+	}
+	voiceDD.Action = func() {
+		if !voiceDD.Open {
+			return
+		}
+		if voices, err := listPiperVoices(); err == nil {
+			voiceDD.Options = voices
+			sel := 0
+			for i, v := range voices {
+				if v == gs.ChatTTSVoice {
+					sel = i
+					break
+				}
+			}
+			voiceDD.Selected = sel
+			if gs.ChatTTSVoice != voices[sel] {
+				SettingsLock.Lock()
+				gs.ChatTTSVoice = voices[sel]
+				SettingsLock.Unlock()
+				settingsDirty = true
+			}
+		}
+	}
+	voiceDD.Size = eui.Point{X: columnWidth, Y: 24}
+	voiceEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventDropdownSelected {
+			SettingsLock.Lock()
+			gs.ChatTTSVoice = voiceDD.Options[ev.Index]
+			SettingsLock.Unlock()
+			settingsDirty = true
+			piperModel = ""
+			piperConfig = ""
+			stopAllTTS()
+		}
+	}
+	chatCol.AddItem(voiceDD)
+
+	ttsTestInput, ttsTestEvents := eui.NewInput()
+	ttsTestInput.Text = ttsTestPhrase
+	ttsTestInput.TextPtr = &ttsTestPhrase
+	ttsTestInput.Size = eui.Point{X: columnWidth, Y: 24}
+	ttsTestEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventInputChanged {
+			ttsTestPhrase = ev.Text
+		}
+	}
+	chatCol.AddItem(ttsTestInput)
+
+	ttsTestBtn, ttsTestBtnEvents := eui.NewButton()
+	ttsTestBtn.Text = "Test TTS"
+	ttsTestBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	ttsTestBtnEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			if !gs.ChatTTS {
+				gs.ChatTTS = true
+				settingsDirty = true
+				if ttsMixCB != nil {
+					ttsMixCB.Checked = true
+				}
+				if ttsMixSlider != nil {
+					ttsMixSlider.Disabled = false
+				}
+				updateSoundVolume()
+			}
+			go playChatTTS(chatTTSCtx, ttsTestPhrase)
+		}
+	}
+	chatCol.AddItem(ttsTestBtn)
+
+	ttsEditBtn, ttsEditEvents := eui.NewButton()
+	ttsEditBtn.Text = "Edit TTS corrections"
+	ttsEditBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	ttsEditEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			open.Run(dataDirPath)
+		}
+	}
+	chatCol.AddItem(ttsEditBtn)
+
+	// System column (audio, network, performance)
+	addSectionLabel(chatCol, "Audio")
+
+	throttleCB, throttleEvents := eui.NewCheckbox()
+	throttleSoundCB = throttleCB
+	throttleSoundCB.Text = "Throttle Sounds"
+	throttleSoundCB.Size = eui.Point{X: columnWidth, Y: 24}
+	throttleSoundCB.Checked = gs.ThrottleSounds
+	throttleSoundCB.SetTooltip("Prevent same sound from playing every tick")
+	throttleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.ThrottleSounds = ev.Checked
+			clearCaches()
+			settingsDirty = true
+		}
+	}
+	chatCol.AddItem(throttleSoundCB)
+
+	enhancementCB, enhancementEvents := eui.NewCheckbox()
+	soundEnhanceCB = enhancementCB
+	enhancementCB.Text = "Audio enhancement for sound effects"
+	enhancementCB.Size = eui.Point{X: columnWidth, Y: 24}
+	enhancementCB.Checked = gs.SoundEnhancement
+	enhancementCB.SetTooltip("Stereo width, ambience, and tone polish for in-game sounds")
+	enhancementStrengthSlider, enhancementStrengthEvents := eui.NewSlider()
+	soundEnhanceSlider = enhancementStrengthSlider
+	enhancementStrengthSlider.Label = "Enhancement Strength"
+	enhancementStrengthSlider.MinValue = 0.1
+	enhancementStrengthSlider.MaxValue = 10
+	enhancementStrengthSlider.Value = float32(gs.SoundEnhancementAmount)
+	enhancementStrengthSlider.Size = eui.Point{X: columnWidth - 10, Y: 24}
+	enhancementStrengthSlider.Disabled = !gs.SoundEnhancement
+	enhancementStrengthSlider.SetTooltip("0.1 is subtle, 10 is very pronounced")
+	enhancementEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.SoundEnhancement = ev.Checked
+			enhancementStrengthSlider.Disabled = !ev.Checked
+			settingsDirty = true
+		}
+	}
+	chatCol.AddItem(enhancementCB)
+
+	enhancementStrengthEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.SoundEnhancementAmount = clampSoundEnhancementAmount(float64(ev.Value))
+			settingsDirty = true
+		}
+	}
+	chatCol.AddItem(enhancementStrengthSlider)
+
+	resampleCB, resampleEvents := eui.NewCheckbox()
+	resampleAudioCB = resampleCB
+	resampleCB.Text = "High quality resampling"
+	resampleCB.Size = eui.Point{X: columnWidth, Y: 24}
+	resampleCB.Checked = gs.HighQualityResampling
+	resampleCB.SetTooltip("Lanczos resampling and dithering for cleaner audio (uses more CPU)")
+	resampleEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.HighQualityResampling = ev.Checked
+			setHighQualityResamplingEnabled(ev.Checked)
+			clearCaches()
+			settingsDirty = true
+		}
+	}
+	chatCol.AddItem(resampleCB)
+
+	musicEnhancementCB, musicEnhancementEvents := eui.NewCheckbox()
+	musicEnhanceCB = musicEnhancementCB
+	musicEnhancementCB.Text = "Audio enhancement for music"
+	musicEnhancementCB.Size = eui.Point{X: columnWidth, Y: 24}
+	musicEnhancementCB.Checked = gs.MusicEnhancement
+	musicEnhancementCB.SetTooltip("Add space and ambience to background music")
+	musicEnhancementEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.MusicEnhancement = ev.Checked
+			settingsDirty = true
+		}
+	}
+	chatCol.AddItem(musicEnhancementCB)
+
+	addSectionLabel(systemCol, "Network")
+
+	altNetCB, altNetEvents := eui.NewCheckbox()
+	altNetCB.Text = "Alt Networking"
+	altNetCB.Size = eui.Point{X: columnWidth, Y: 24}
+	altNetCB.Checked = gs.altNetMode
+	altNetCB.SetTooltip("Send input after a delay following server packets")
+	altNetEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			gs.altNetMode = ev.Checked
+			settingsDirty = true
+		}
+	}
+	systemCol.AddItem(altNetCB)
+
+	netDelaySlider, netDelayEvents := eui.NewSlider()
+	netDelaySlider.Label = "Net Delay (ms)"
+	netDelaySlider.MinValue = 0
+	netDelaySlider.MaxValue = 190
+	netDelaySlider.Value = float32(gs.altNetDelay)
+	netDelaySlider.Size = eui.Point{X: columnWidth - 10, Y: 24}
+	netDelayEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			gs.altNetDelay = int(ev.Value)
+			settingsDirty = true
+		}
+	}
+	systemCol.AddItem(netDelaySlider)
+
+	serverInput, serverEvents := eui.NewInput()
+	serverInput.Label = "Server address"
+	serverInput.Text = gs.ServerAddress
+	serverInput.TextPtr = &gs.ServerAddress
+	serverInput.Size = eui.Point{X: columnWidth, Y: 24}
+	serverInput.SetTooltip("Hostname and port used for the primary server")
+	serverEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventInputChanged {
+			SettingsLock.Lock()
+			gs.ServerAddress = strings.TrimSpace(ev.Text)
+			SettingsLock.Unlock()
+			settingsDirty = true
+			applyServerAddressSetting()
+		}
+	}
+	systemCol.AddItem(serverInput)
+
+	pingLabel, _ := eui.NewText()
+	pingLabel.Text = ""
+	pingLabel.Size = eui.Point{X: columnWidth, Y: 24}
+	pingLabel.FontSize = 10
+	systemCol.AddItem(pingLabel)
+
+	pingBtn, pingEvents := eui.NewButton()
+	pingBtn.Text = "Ping Server"
+	pingBtn.Size = eui.Point{X: columnWidth, Y: 24}
+	pingEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			SettingsLock.Lock()
+			connected := tcpConn != nil
+			SettingsLock.Unlock()
+			if !connected {
+				pingLabel.Text = "not connected to server"
+				pingLabel.Dirty = true
+				advancedWin.Refresh()
+				return
+			}
+			pingLabel.Text = "Pinging..."
+			pingLabel.Dirty = true
+			advancedWin.Refresh()
+			go func() {
+				worst := time.Duration(0)
+				for i := 0; i < 5; i++ {
+					rtt := pingServer()
+					if rtt > worst {
+						worst = rtt
+					}
+					if i < 4 {
+						time.Sleep(200 * time.Millisecond)
+					}
+				}
+				pingLabel.Text = fmt.Sprintf("Ping: %d ms", worst.Milliseconds())
+				pingLabel.Dirty = true
+				advancedWin.Refresh()
+			}()
+		}
+	}
+	systemCol.AddItem(pingBtn)
+
+	addSectionLabel(systemCol, "Performance")
+
+	psBGCB, psBGEvents := eui.NewCheckbox()
+	psBGCB.Text = "Power save in background"
+	psBGCB.Size = eui.Point{X: columnWidth, Y: 24}
+	psBGCB.Checked = gs.PowerSaveBackground
+	psBGCB.SetTooltip("Reduce FPS when window is unfocused")
+	psBGEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveBackground = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	systemCol.AddItem(psBGCB)
+
+	psAlwaysCB, psAlwaysEvents := eui.NewCheckbox()
+	psAlwaysCB.Text = "Always power save"
+	psAlwaysCB.Size = eui.Point{X: columnWidth, Y: 24}
+	psAlwaysCB.Checked = gs.PowerSaveAlways
+	psAlwaysCB.SetTooltip("Limit FPS even when focused (useful on laptops)")
+	psAlwaysEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.PowerSaveAlways = ev.Checked
+			SettingsLock.Unlock()
+			settingsDirty = true
+		}
+	}
+	systemCol.AddItem(psAlwaysCB)
+
+	psFPSSlider, psFPSEvents := eui.NewSlider()
+	psFPSSlider.Label = "Power-save FPS"
+	psFPSSlider.MinValue = 1
+	psFPSSlider.MaxValue = 60
+	psFPSSlider.IntOnly = true
+	if gs.PowerSaveFPS < 1 {
+		gs.PowerSaveFPS = 1
+	}
+	if gs.PowerSaveFPS > 60 {
+		gs.PowerSaveFPS = 60
+	}
+	psFPSSlider.Value = float32(gs.PowerSaveFPS)
+	psFPSSlider.Size = eui.Point{X: columnWidth - 10, Y: 24}
+	psFPSSlider.SetTooltip("Target FPS when power saving is active")
+	psFPSEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventSliderChanged {
+			SettingsLock.Lock()
+			v := int(ev.Value)
+			if v < 1 {
+				v = 1
+			}
+			if v > 60 {
+				v = 60
+			}
+			gs.PowerSaveFPS = v
+			SettingsLock.Unlock()
+			psFPSSlider.Value = float32(v)
+			settingsDirty = true
+		}
+	}
+	systemCol.AddItem(psFPSSlider)
+
+	columns.AddItem(toolsCol)
+	columns.AddItem(interfaceCol)
+	columns.AddItem(chatCol)
+	columns.AddItem(systemCol)
+
+	advancedWin.AddItem(columns)
+	advancedWin.AddWindow(false)
+}
+
 func makeBubbleWindow() {
 	if bubbleWin != nil {
 		return
@@ -5568,66 +5688,6 @@ func makeDebugWindow() {
 		}
 	}
 	debugFlow.AddItem(scriptOutCB)
-
-	altNetCB, altNetEvents := eui.NewCheckbox()
-	altNetCB.Text = "Alt Networking"
-	altNetCB.Size = eui.Point{X: width, Y: 24}
-	altNetCB.Checked = gs.altNetMode
-	altNetCB.SetTooltip("Send input after a delay following server packets")
-	altNetEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			gs.altNetMode = ev.Checked
-			settingsDirty = true
-		}
-	}
-	debugFlow.AddItem(altNetCB)
-
-	netDelaySlider, netDelayEvents := eui.NewSlider()
-	netDelaySlider.Label = "Net Delay (ms)"
-	netDelaySlider.MinValue = 0
-	netDelaySlider.MaxValue = 190
-	netDelaySlider.Value = float32(gs.altNetDelay)
-	netDelaySlider.Size = eui.Point{X: width - 10, Y: 24}
-	netDelayEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventSliderChanged {
-			gs.altNetDelay = int(ev.Value)
-			settingsDirty = true
-		}
-	}
-	debugFlow.AddItem(netDelaySlider)
-
-	pingLabel, _ = eui.NewText()
-	pingLabel.Text = ""
-	pingLabel.Size = eui.Point{X: width, Y: 24}
-	pingLabel.FontSize = 10
-	debugFlow.AddItem(pingLabel)
-
-	pingBtn, pingEvents := eui.NewButton()
-	pingBtn.Text = "Ping Server"
-	pingBtn.Size = eui.Point{X: width, Y: 24}
-	pingEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick {
-			pingLabel.Text = "Pinging..."
-			pingLabel.Dirty = true
-			debugWin.Refresh()
-			go func() {
-				worst := time.Duration(0)
-				for i := 0; i < 5; i++ {
-					rtt := pingServer()
-					if rtt > worst {
-						worst = rtt
-					}
-					if i < 4 {
-						time.Sleep(200 * time.Millisecond)
-					}
-				}
-				pingLabel.Text = fmt.Sprintf("Ping: %d ms", worst.Milliseconds())
-				pingLabel.Dirty = true
-				debugWin.Refresh()
-			}()
-		}
-	}
-	debugFlow.AddItem(pingBtn)
 
 	// Add a small "Reload" button beside the shader checkbox for hot-reload.
 	reloadBtn, reloadEv := eui.NewButton()

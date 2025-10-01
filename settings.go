@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
 
 	"gothoom/climg"
@@ -15,7 +16,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const SETTINGS_VERSION = 2
+const SETTINGS_VERSION = 3
 
 type BarPlacement int
 
@@ -152,7 +153,7 @@ var gsdef settings = settings{
 	ChatTTSVolume:         0.33,
 	ChatTTSSpeed:          1.25,
 	ChatTTSVoice:          "en_US-hfc_female-medium",
-	Notifications:         true,
+	Notifications:         false,
 	NotifyWhenBackground:  false,
 	// Power saving defaults: limit FPS in background
 	PowerSaveBackground:   true,
@@ -165,7 +166,7 @@ var gsdef settings = settings{
 	NotifyFriendOnline:    true,
 	NotifyCopyText:        true,
 	NotificationVolume:    0.6,
-	NotificationBeep:      true,
+	NotificationBeep:      false,
 	NotificationDuration:  6,
 	ScriptSpamKill:        true,
 	PromptOnSaveRecording: true,
@@ -203,6 +204,7 @@ var gsdef settings = settings{
 	SoundEnhancementAmount: 1.5,
 	MusicEnhancement:       true,
 	HighQualityResampling:  false,
+	ServerAddress:          defaultServerHostName + ":5010",
 
 	NightEffect:    true,
 	ShaderLighting: false,
@@ -374,6 +376,7 @@ type settings struct {
 	scriptEventDebug  bool
 	altNetMode        bool
 	altNetDelay       int
+	ServerAddress     string
 	hideMoving        bool
 	hideMobiles       bool
 	vsync             bool
@@ -421,13 +424,16 @@ func loadSettings() bool {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		gs = gsdef
-		preset := "High"
-		if isWASM {
-			preset = "Standard"
-		}
+		preset := "Classic"
+		/*
+		*if isWASM {
+		*	preset = "Medium"
+		*}
+		 */
 		applyQualityPreset(preset)
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
+		applyServerAddressSetting()
 		return false
 	}
 
@@ -476,6 +482,7 @@ func loadSettings() bool {
 		applyQualityPreset(preset)
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
+		applyServerAddressSetting()
 		return false
 	}
 
@@ -515,6 +522,8 @@ func loadSettings() bool {
 		gs.ChatTTSVoice = gsdef.ChatTTSVoice
 	}
 
+	applyServerAddressSetting()
+
 	if gs.ShaderLightStrength < 0 || gs.ShaderLightStrength > 2 {
 		gs.ShaderLightStrength = gsdef.ShaderLightStrength
 	}
@@ -544,6 +553,15 @@ func loadSettings() bool {
 		gs.PowerSaveFPS = 45
 	}
 	return settingsLoaded
+}
+
+func applyServerAddressSetting() {
+	addr := strings.TrimSpace(gs.ServerAddress)
+	if addr == "" {
+		addr = gsdef.ServerAddress
+	}
+	gs.ServerAddress = addr
+	host = addr
 }
 
 func applySettings() {
@@ -840,7 +858,7 @@ var (
 		SpriteUpscaleFilter:    false,
 		HighQualityResampling:  false,
 		SoundEnhancement:       false,
-		SoundEnhancementAmount: 1.25,
+		SoundEnhancementAmount: 1.0,
 		MusicEnhancement:       true,
 	}
 	highPreset = qualityPreset{
@@ -860,11 +878,11 @@ var (
 func applyQualityPreset(name string) {
 	var p qualityPreset
 	switch name {
-	case "Ultra Low":
+	case "Classic":
 		p = ultraLowPreset
 	case "Low":
 		p = lowPreset
-	case "Standard":
+	case "Medium":
 		p = standardPreset
 	case "High":
 		p = highPreset

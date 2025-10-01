@@ -46,18 +46,6 @@ func initAboutUI() {
 		}
 	}
 
-	patreonBox = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
-	patreonBox.Size.Y = 80
-	header, _ := eui.NewText()
-	header.Text = "Patreon Supporters"
-	header.FontSize = 15
-	header.Fixed = true
-	patreonList = &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Scrollable: true, Fixed: true}
-	patreonList.Size.Y = 60
-	patreonBox.AddItem(header)
-	patreonBox.AddItem(patreonList)
-
-	flow.PrependItem(patreonBox)
 	flow.PrependItem(linkBtn)
 
 	aboutLines = strings.Split(strings.ReplaceAll(aboutText, "\r\n", "\n"), "\n")

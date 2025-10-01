@@ -1,0 +1,4 @@
+Cleaned up settings, moved many settings to new "Advanced Settings" window.
+Added IP address fallback for deltatao.com.
+Added server address setting to advanced settings.
+Temporarily removed "record" and "action" buttons, as the features are incomplete.

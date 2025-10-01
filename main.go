@@ -25,6 +25,11 @@ import (
 	_ "embed"
 )
 
+const (
+	defaultServerHostName = "server.deltatao.com"
+	fallbackServerIP      = "104.239.142.81"
+)
+
 var (
 	//go:embed logo.png
 	windowIconPNG []byte
@@ -32,7 +37,7 @@ var (
 	// Default movie playback FPS; classic client updates ~10Hz.
 	clMovFPS int = 5
 
-	host     string = "server.deltatao.com:5010"
+	host     string = defaultServerHostName + ":5010"
 	name     string
 	pass     string
 	passHash string

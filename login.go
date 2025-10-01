@@ -21,6 +21,37 @@ var (
 	loginMu     sync.Mutex
 )
 
+func dialServer(network string) (net.Conn, error) {
+	conn, err := net.Dial(network, host)
+	if err == nil {
+		return conn, nil
+	}
+
+	fallbackAddr, ok := fallbackAddress(host)
+	if !ok {
+		return nil, err
+	}
+
+	fallbackConn, fallbackErr := net.Dial(network, fallbackAddr)
+	if fallbackErr == nil {
+		logWarn("dial %s %s failed (%v); using fallback %s", network, host, err, fallbackAddr)
+		return fallbackConn, nil
+	}
+
+	return nil, fmt.Errorf("dial %s: %v (fallback %s: %v)", host, err, fallbackAddr, fallbackErr)
+}
+
+func fallbackAddress(addr string) (string, bool) {
+	hostName, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", false
+	}
+	if !strings.EqualFold(hostName, defaultServerHostName) {
+		return "", false
+	}
+	return net.JoinHostPort(fallbackServerIP, port), true
+}
+
 func handleDisconnect() {
 	loginMu.Lock()
 	if loginCancel == nil {
@@ -111,13 +142,13 @@ func fetchRandomDemoCharacter(clVersion int) (string, error) {
 		sendVersion = clVersion - 1
 	}
 
-	tcpConn, err := net.Dial("tcp", host)
+	tcpConn, err := dialServer("tcp")
 	if err != nil {
 		return "", fmt.Errorf("tcp connect: %w", err)
 	}
 	defer tcpConn.Close()
 
-	udpConn, err := net.Dial("udp", host)
+	udpConn, err := dialServer("udp")
 	if err != nil {
 		tcpConn.Close()
 		return "", fmt.Errorf("udp connect: %w", err)
@@ -270,11 +301,11 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		var errDial error
-		tcpConn, errDial = net.Dial("tcp", host)
+		tcpConn, errDial = dialServer("tcp")
 		if errDial != nil {
 			return fmt.Errorf("tcp connect: %w", errDial)
 		}
-		udpConn, err := net.Dial("udp", host)
+		udpConn, err := dialServer("udp")
 		if err != nil {
 			tcpConn.Close()
 			return fmt.Errorf("udp connect: %w", err)

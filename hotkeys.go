@@ -479,7 +479,7 @@ func openHotkeyEditor(idx int) {
 			startHotkeyRecording(hotkeyComboText)
 		}
 	}
-	row.AddItem(hotkeyRecordBtn)
+	//row.AddItem(hotkeyRecordBtn)
 	flow.AddItem(row)
 
 	nameRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
