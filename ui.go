@@ -46,6 +46,8 @@ var downloadWin *eui.WindowData
 var precacheWin *eui.WindowData
 var charactersList *eui.ItemData
 var advancedWin *eui.WindowData
+var connectWin *eui.WindowData
+var connectStatusText *eui.ItemData
 
 // loginConnectBtn holds the Connect button for potential future tweaks.
 var loginConnectBtn *eui.ItemData
@@ -2413,20 +2415,101 @@ func startLogin() {
 	}
 
 	loginWin.Close()
+	showConnectDialog(fmt.Sprintf("Connecting to %s...", host))
 	go func() {
 		ctx, cancel := context.WithCancel(gameCtx)
 		loginMu.Lock()
 		loginCancel = cancel
 		loginMu.Unlock()
 		if err := login(ctx, clVersion); err != nil {
+			closeConnectDialog()
 			logError("login: %v", err)
 			pass = ""
 			// Bring login forward first so the popup stays on top
 			loginWin.MarkOpen()
 			updateCharacterButtons()
 			makeErrorWindow("Error: Login: " + err.Error())
+			return
 		}
+		closeConnectDialog()
 	}()
+}
+
+func ensureConnectDialog() {
+	if connectWin != nil {
+		return
+	}
+
+	connectWin = eui.NewWindow()
+	connectWin.Title = "Connecting"
+	connectWin.Closable = false
+	connectWin.Resizable = false
+	connectWin.AutoSize = true
+	connectWin.Movable = true
+	connectWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
+	connectWin.Padding = 8
+	connectWin.BorderPad = 4
+
+	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
+
+	status, _ := eui.NewText()
+	status.FontSize = 13
+	status.Size = eui.Point{X: 360, Y: 24}
+	status.Text = ""
+	connectStatusText = status
+	flow.AddItem(status)
+
+	pb, _ := eui.NewProgressBar()
+	pb.Size = eui.Point{X: 360, Y: 14}
+	pb.MinValue = 0
+	pb.MaxValue = 1
+	pb.Value = 0
+	eui.SetProgressIndeterminate(pb, true)
+	flow.AddItem(pb)
+
+	btnRow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Alignment: eui.ALIGN_RIGHT}
+	btnRow.Size = eui.Point{X: 360, Y: 28}
+	cancelBtn, cancelEvents := eui.NewButton()
+	cancelBtn.Text = "Cancel"
+	cancelBtn.Size = eui.Point{X: 100, Y: 24}
+	cancelEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventClick {
+			handleDisconnect()
+			closeConnectDialog()
+		}
+	}
+	btnRow.AddItem(cancelBtn)
+	flow.AddItem(btnRow)
+
+	connectWin.AddItem(flow)
+	connectWin.AddWindow(false)
+}
+
+func showConnectDialog(initial string) {
+	ensureConnectDialog()
+	updateConnectDialog(initial)
+	if connectWin != nil {
+		connectWin.MarkOpen()
+		connectWin.Refresh()
+	}
+}
+
+func updateConnectDialog(msg string) {
+	if connectStatusText != nil {
+		connectStatusText.Text = msg
+		connectStatusText.Dirty = true
+	}
+	if connectWin != nil {
+		connectWin.Refresh()
+	}
+}
+
+func closeConnectDialog() {
+	if connectWin != nil {
+		connectWin.Close()
+	}
+	connectWin = nil
+	connectStatusText = nil
 }
 
 func makeLoginWindow() {
