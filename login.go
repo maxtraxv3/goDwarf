@@ -21,8 +21,11 @@ var (
 	loginMu     sync.Mutex
 )
 
+const connectAttemptTimeout = 15 * time.Second
+
 func dialServer(network string) (net.Conn, error) {
-	conn, err := net.Dial(network, host)
+	dialer := &net.Dialer{Timeout: connectAttemptTimeout}
+	conn, err := dialer.Dial(network, host)
 	if err == nil {
 		return conn, nil
 	}
@@ -32,7 +35,13 @@ func dialServer(network string) (net.Conn, error) {
 		return nil, err
 	}
 
-	fallbackConn, fallbackErr := net.Dial(network, fallbackAddr)
+	if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+		updateConnectDialog(fmt.Sprintf("No response from %s, trying %s...", host, fallbackAddr))
+	} else {
+		updateConnectDialog(fmt.Sprintf("Unable to reach %s (%v); trying %s...", host, err, fallbackAddr))
+	}
+
+	fallbackConn, fallbackErr := dialer.Dial(network, fallbackAddr)
 	if fallbackErr == nil {
 		logWarn("dial %s %s failed (%v); using fallback %s", network, host, err, fallbackAddr)
 		return fallbackConn, nil
@@ -263,6 +272,7 @@ func login(ctx context.Context, clVersion int) error {
 	}
 	go setupSynthOnce.Do(setupSynth)
 	for {
+		updateConnectDialog(fmt.Sprintf("Connecting to %s...", host))
 		imagesVersion, err := readKeyFileVersion(filepath.Join(dataDirPath, CL_ImagesFile))
 		imagesMissing := false
 		if err != nil {
@@ -305,12 +315,14 @@ func login(ctx context.Context, clVersion int) error {
 		if errDial != nil {
 			return fmt.Errorf("tcp connect: %w", errDial)
 		}
+		updateConnectDialog("TCP connected; opening UDP channel...")
 		udpConn, err := dialServer("udp")
 		if err != nil {
 			tcpConn.Close()
 			return fmt.Errorf("udp connect: %w", err)
 		}
 
+		updateConnectDialog("Waiting for server handshake...")
 		var idBuf [4]byte
 		if _, err := io.ReadFull(tcpConn, idBuf[:]); err != nil {
 			tcpConn.Close()
@@ -319,6 +331,7 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		handshake := append([]byte{0xff, 0xff}, idBuf[:]...)
+		updateConnectDialog("Sending handshake...")
 		if _, err := udpConn.Write(handshake); err != nil {
 			tcpConn.Close()
 			udpConn.Close()
@@ -326,11 +339,13 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		var confirm [2]byte
+		updateConnectDialog("Confirming handshake...")
 		if _, err := io.ReadFull(tcpConn, confirm[:]); err != nil {
 			tcpConn.Close()
 			udpConn.Close()
 			return fmt.Errorf("confirm handshake: %w", err)
 		}
+		updateConnectDialog("Identifying client...")
 		if err := sendClientIdentifiers(tcpConn, encodeFullVersion(sendVersion), imagesVersion, soundsVersion); err != nil {
 			tcpConn.Close()
 			udpConn.Close()
@@ -338,6 +353,7 @@ func login(ctx context.Context, clVersion int) error {
 		}
 		logDebug("connected to %v", host)
 
+		updateConnectDialog("Waiting for server challenge...")
 		msg, err := readTCPMessage(tcpConn)
 		if err != nil {
 			tcpConn.Close()
@@ -377,6 +393,7 @@ func login(ctx context.Context, clVersion int) error {
 
 		var resp []byte
 		var result int16
+		updateConnectDialog("Authenticating...")
 		for {
 			var answer []byte
 			if pass != "" {
@@ -403,12 +420,14 @@ func login(ctx context.Context, clVersion int) error {
 			copy(buf[17+len(nameBytes):], answer)
 			simpleEncrypt(buf[16:])
 
+			updateConnectDialog("Sending credentials...")
 			if err := sendTCPMessage(tcpConn, buf); err != nil {
 				tcpConn.Close()
 				udpConn.Close()
 				return fmt.Errorf("send login: %w", err)
 			}
 
+			updateConnectDialog("Waiting for login response...")
 			resp, err = readTCPMessage(tcpConn)
 			if err != nil {
 				tcpConn.Close()
@@ -441,6 +460,7 @@ func login(ctx context.Context, clVersion int) error {
 			// Some servers omit version fields; autoUpdate handles this by
 			// still attempting to fetch assets from the base path. Regardless
 			// of outcome, retry the login once assets may have been updated.
+			updateConnectDialog("Server requested update; retrying...")
 			_, _ = autoUpdate(resp, dataDirPath)
 			tcpConn.Close()
 			udpConn.Close()
@@ -462,6 +482,8 @@ func login(ctx context.Context, clVersion int) error {
 		}
 
 		logDebug("login succeeded, reading messages (Ctrl-C to quit)...")
+		updateConnectDialog("Login successful!")
+		closeConnectDialog()
 
 		// Reset low FPS warning state for the new session.
 		shaderWarnShown = false
