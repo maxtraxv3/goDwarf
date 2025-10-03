@@ -955,21 +955,28 @@ func checkHotkeys() {
 	if recording {
 		return
 	}
+	typing := typingInUI()
 	// Detect any just-pressed combo first.
 	if combo := detectCombo(); combo != "" {
 		// If the console/input or another UI text field is active, allow
 		// only non-text triggers (e.g., function keys, arrows, mouse, wheel).
 		// This keeps typing unaffected while still letting F12, etc. work.
-		if inputActive || typingInUI() {
+		if inputActive || typing {
 			parts := strings.Split(combo, "-")
 			trig := ""
 			if len(parts) > 0 {
 				trig = parts[len(parts)-1]
 			}
-			// Treat single-character triggers (e.g., "c", "1") as text keys
-			// and ignore them while typing. Everything else (e.g., "F12",
-			// "ArrowUp", "RightClick", "WheelUp") is allowed.
-			if len([]rune(trig)) == 1 {
+			block := false
+			if inputActive && gs.InputBarAlwaysOpen && !typing {
+				block = shouldBlockComboWhenAlwaysOpen(parts)
+			} else if len([]rune(trig)) == 1 {
+				// Treat single-character triggers (e.g., "c", "1") as text keys
+				// and ignore them while typing. Everything else (e.g., "F12",
+				// "ArrowUp", "RightClick", "WheelUp") is allowed.
+				block = true
+			}
+			if block {
 				return
 			}
 		}
@@ -1027,6 +1034,63 @@ func checkHotkeys() {
 		}
 	}
 
+}
+
+func shouldBlockComboWhenAlwaysOpen(parts []string) bool {
+	if len(parts) == 0 {
+		return false
+	}
+	if comboHasModifier(parts[:len(parts)-1]) {
+		return false
+	}
+	trig := strings.ToLower(parts[len(parts)-1])
+	return isTypingTrigger(trig)
+}
+
+func comboHasModifier(parts []string) bool {
+	for _, part := range parts {
+		switch strings.ToLower(part) {
+		case "ctrl", "control", "alt", "shift":
+			return true
+		}
+	}
+	return false
+}
+
+func isTypingTrigger(trig string) bool {
+	if trig == "" {
+		return false
+	}
+	if trig == "space" || trig == "enter" {
+		return true
+	}
+	if len(trig) == 1 {
+		b := trig[0]
+		if (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') {
+			return true
+		}
+	}
+	if strings.HasPrefix(trig, "digit") {
+		suffix := trig[len("digit"):]
+		if len(suffix) == 1 {
+			b := suffix[0]
+			if b >= '0' && b <= '9' {
+				return true
+			}
+		}
+	}
+	if strings.HasPrefix(trig, "numpad") {
+		suffix := trig[len("numpad"):]
+		if len(suffix) == 1 {
+			b := suffix[0]
+			if b >= '0' && b <= '9' {
+				return true
+			}
+		} else if suffix == "enter" || suffix == "space" {
+			return true
+		}
+	}
+	return false
 }
 
 // sameCombo compares two combo strings case-insensitively while ignoring the
