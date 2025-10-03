@@ -133,6 +133,7 @@ var (
 	motionCB           *eui.ItemData
 	animCB             *eui.ItemData
 	pictBlendCB        *eui.ItemData
+	shaderLightingCB   *eui.ItemData
 	upscaleFilterCB    *eui.ItemData
 	throttleSoundCB    *eui.ItemData
 	soundEnhanceCB     *eui.ItemData
@@ -364,7 +365,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			}
 		})
 	}
-	//row1.AddItem(actionsBtn)
+	row1.AddItem(actionsBtn)
 
 	var recordEvents *eui.EventHandler
 	recordBtn, recordEvents = eui.NewButton()
@@ -396,7 +397,7 @@ func buildToolbar(toolFontSize, buttonWidth, buttonHeight float32) *eui.ItemData
 			toggleRecording()
 		}
 	}
-	//row1.AddItem(recordBtn)
+	row2.AddItem(recordBtn)
 
 	helpBtn, helpEvents := eui.NewButton()
 	helpBtn.Text = "Help"
@@ -1240,7 +1241,7 @@ func makeToolbar() {
 	hudWin.Closable = false
 	hudWin.Resizable = false
 	hudWin.AutoSize = false
-	hudWin.Size = eui.Point{X: 360, Y: 85}
+	hudWin.Size = eui.Point{X: buttonWidth * 5.5, Y: 85}
 	hudWin.Movable = true
 	hudWin.NoScroll = true
 	hudWin.SetZone(eui.HZoneLeft, eui.VZoneTop)
@@ -3549,6 +3550,33 @@ func makeSettingsWindow() {
 	applyBoldFace(label)
 	left.AddItem(label)
 
+	inputOpenCB, inputOpenEvents := eui.NewCheckbox()
+	inputOpenCB.Text = "Input bar always open"
+	inputOpenCB.Size = eui.Point{X: panelWidth, Y: 24}
+	inputOpenCB.Checked = gs.InputBarAlwaysOpen
+	inputOpenCB.SetTooltip("Keep console input active after sending")
+	inputOpenEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			SettingsLock.Lock()
+			gs.InputBarAlwaysOpen = ev.Checked
+			SettingsLock.Unlock()
+			if gs.InputBarAlwaysOpen {
+				inputActive = true
+			} else {
+				inputActive = false
+				inputText = inputText[:0]
+				inputPos = 0
+				historyPos = len(inputHistory)
+			}
+			updateConsoleWindow()
+			if consoleWin != nil {
+				consoleWin.Refresh()
+			}
+			settingsDirty = true
+		}
+	}
+	left.AddItem(inputOpenCB)
+
 	bubbleMsgCB, bubbleMsgEvents := eui.NewCheckbox()
 	bubbleMsgCB.Text = "Combine chat + console"
 	bubbleMsgCB.Size = eui.Point{X: panelWidth, Y: 24}
@@ -4537,6 +4565,7 @@ func makeQualityWindow() {
 
 	// Shader lighting toggle in the Quality window
 	shaderQualityCB, shaderQualityEv := eui.NewCheckbox()
+	shaderLightingCB = shaderQualityCB
 	shaderQualityCB.Text = "Shader Lighting Effects"
 	shaderQualityCB.Size = eui.Point{X: width, Y: 24}
 	shaderQualityCB.Checked = gs.ShaderLighting
@@ -5137,33 +5166,6 @@ func makeAdvancedSettingsWindow() {
 		}
 	}
 	interfaceCol.AddItem(alwaysTopCB)
-
-	inputOpenCB, inputOpenEvents := eui.NewCheckbox()
-	inputOpenCB.Text = "Input bar always open"
-	inputOpenCB.Size = eui.Point{X: columnWidth, Y: 24}
-	inputOpenCB.Checked = gs.InputBarAlwaysOpen
-	inputOpenCB.SetTooltip("Keep console input active after sending")
-	inputOpenEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventCheckboxChanged {
-			SettingsLock.Lock()
-			gs.InputBarAlwaysOpen = ev.Checked
-			SettingsLock.Unlock()
-			if gs.InputBarAlwaysOpen {
-				inputActive = true
-			} else {
-				inputActive = false
-				inputText = inputText[:0]
-				inputPos = 0
-				historyPos = len(inputHistory)
-			}
-			updateConsoleWindow()
-			if consoleWin != nil {
-				consoleWin.Refresh()
-			}
-			settingsDirty = true
-		}
-	}
-	interfaceCol.AddItem(inputOpenCB)
 
 	midMove, midMoveEvents := eui.NewCheckbox()
 	midMove.Text = "Middle-click moves windows"

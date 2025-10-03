@@ -120,7 +120,7 @@ var gsdef settings = settings{
 	BubbleNarration:         true,
 
 	MotionSmoothing:       false,
-	ObjectPinning:         false,
+	ObjectPinning:         true,
 	BlendMobiles:          false,
 	BlendPicts:            false,
 	BlendAmount:           1.0,
@@ -251,7 +251,7 @@ type settings struct {
 	BubbleScale        float64
 	NameBgOpacity      float64
 	NameTagLabelColors bool
-	// NameTagsOnHoverOnly hides name-tags unless the cursor is over a mobile.
+	// NameTagsOnHoverOnly hides name tags unless the cursor is over a mobile.
 	NameTagsOnHoverOnly     bool
 	BarOpacity              float64
 	ObscuringPictureOpacity float64
@@ -425,11 +425,6 @@ func loadSettings() bool {
 	if err != nil {
 		gs = gsdef
 		preset := "Classic"
-		/*
-		*if isWASM {
-		*	preset = "Medium"
-		*}
-		 */
 		applyQualityPreset(preset)
 		setHighQualityResamplingEnabled(gs.HighQualityResampling)
 		settingsLoaded = false
@@ -825,7 +820,7 @@ type qualityPreset struct {
 }
 
 var (
-	ultraLowPreset = qualityPreset{
+	classicPreset = qualityPreset{
 		DenoiseImages:          false,
 		MotionSmoothing:        false,
 		BlendMobiles:           false,
@@ -849,7 +844,7 @@ var (
 		SoundEnhancementAmount: 1.0,
 		MusicEnhancement:       false,
 	}
-	standardPreset = qualityPreset{
+	mediumPreset = qualityPreset{
 		DenoiseImages:          true,
 		MotionSmoothing:        true,
 		BlendMobiles:           false,
@@ -879,11 +874,11 @@ func applyQualityPreset(name string) {
 	var p qualityPreset
 	switch name {
 	case "Classic":
-		p = ultraLowPreset
+		p = classicPreset
 	case "Low":
 		p = lowPreset
 	case "Medium":
-		p = standardPreset
+		p = mediumPreset
 	case "High":
 		p = highPreset
 	default:
@@ -914,6 +909,9 @@ func applyQualityPreset(name string) {
 	}
 	if pictBlendCB != nil {
 		pictBlendCB.Checked = gs.BlendPicts
+	}
+	if shaderLightingCB != nil {
+		shaderLightingCB.Checked = gs.ShaderLighting
 	}
 	if upscaleFilterCB != nil {
 		upscaleFilterCB.Checked = gs.SpriteUpscaleFilter
@@ -973,11 +971,11 @@ func matchesPreset(p qualityPreset) bool {
 
 func detectQualityPreset() int {
 	switch {
-	case matchesPreset(ultraLowPreset):
+	case matchesPreset(classicPreset):
 		return 0
 	case matchesPreset(lowPreset):
 		return 1
-	case matchesPreset(standardPreset):
+	case matchesPreset(mediumPreset):
 		return 2
 	case matchesPreset(highPreset):
 		return 3
