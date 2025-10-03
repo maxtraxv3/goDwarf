@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -44,7 +43,7 @@ func serverTargets(addr string) []serverTarget {
 		fallback: true,
 	}
 
-	if preferIPFallback.Load() {
+	if preferIPFallback {
 		return []serverTarget{fallback}
 	}
 	return []serverTarget{primary, fallback}
@@ -62,14 +61,21 @@ func dialServer(network string, target serverTarget) (net.Conn, error) {
 	return conn, nil
 }
 
-var preferIPFallback atomic.Bool
+var (
+	preferIPFallback         bool
+	preferIPFallbackDueToDNS bool
+)
 
 func recordFallbackFailure(target serverTarget, err error) {
 	if err == nil || target.fallback || errors.Is(err, errRetryLogin) {
 		return
 	}
 	if shouldPreferFallback(err) {
-		preferIPFallback.Store(true)
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) {
+			preferIPFallbackDueToDNS = true
+		}
+		preferIPFallback = true
 	}
 }
 
@@ -83,6 +89,29 @@ func shouldPreferFallback(err error) bool {
 		return true
 	}
 	return errors.Is(err, context.DeadlineExceeded)
+}
+
+func connectStatusMessage(target serverTarget) string {
+	base := fmt.Sprintf("Connecting to %s...", target.display)
+	if !target.fallback {
+		return base
+	}
+	if preferIPFallbackDueToDNS {
+		return fmt.Sprintf("%s DNS lookup failed; using fallback IP.", base)
+	}
+	return fmt.Sprintf("%s Using fallback IP.", base)
+}
+
+func retryConnectStatusMessage(current, next serverTarget, err error) string {
+	base := fmt.Sprintf("Unable to reach %s (%v);", current.display, err)
+	if next.fallback {
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) || preferIPFallbackDueToDNS {
+			return fmt.Sprintf("%s DNS lookup failed; trying fallback IP %s...", base, next.display)
+		}
+		return fmt.Sprintf("%s trying fallback %s...", base, next.display)
+	}
+	return fmt.Sprintf("%s trying %s...", base, next.display)
 }
 
 func fallbackAddress(addr string) (string, bool) {
@@ -365,7 +394,7 @@ outer:
 		targets := serverTargets(host)
 		var lastErr error
 		for i, target := range targets {
-			updateConnectDialog(fmt.Sprintf("Connecting to %s...", target.display))
+			updateConnectDialog(connectStatusMessage(target))
 			err := runLoginAttempt(ctx, target, sendVersion, imagesVersion, soundsVersion)
 			if err == nil {
 				return nil
@@ -376,7 +405,7 @@ outer:
 			lastErr = err
 			if i < len(targets)-1 {
 				next := targets[i+1]
-				updateConnectDialog(fmt.Sprintf("Unable to reach %s (%v); trying %s...", target.display, err, next.display))
+				updateConnectDialog(retryConnectStatusMessage(target, next, err))
 				logWarn("login via %s failed (%v); trying %s", target.display, err, next.display)
 				continue
 			}

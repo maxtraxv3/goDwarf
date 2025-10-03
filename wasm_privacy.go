@@ -1,24 +1,24 @@
 package main
 
-import "sync/atomic"
-
-var wasmPrivacyFlag atomic.Bool
+var wasmPrivacyFlag bool
 
 func enterWasmPrivacyMode() {
 	if !isWASM {
 		return
 	}
-	if wasmPrivacyFlag.CompareAndSwap(false, true) {
+	if !wasmPrivacyFlag {
+		wasmPrivacyFlag = true
 		killNameTagCache()
 	}
 }
 
 func exitWasmPrivacyMode() {
-	if wasmPrivacyFlag.Swap(false) {
+	if wasmPrivacyFlag {
+		wasmPrivacyFlag = false
 		killNameTagCache()
 	}
 }
 
 func wasmPrivacyActive() bool {
-	return wasmPrivacyFlag.Load()
+	return wasmPrivacyFlag
 }
