@@ -43,3 +43,5 @@ themes/
 data/shortcuts/
 data/Movies/
 binaries/goThoom-Web/
+.gomodcache_tmp/*
+.cache/
