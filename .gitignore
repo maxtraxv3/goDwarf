@@ -45,3 +45,4 @@ data/Movies/
 binaries/goThoom-Web/
 .gomodcache_tmp/*
 .cache/
+go/.gomodcache_tmp/

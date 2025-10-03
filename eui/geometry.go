@@ -20,11 +20,8 @@ func (r rect) getRectangle() image.Rectangle {
 
 func pointAdd(a, b point) point { return point{X: a.X + b.X, Y: a.Y + b.Y} }
 func pointSub(a, b point) point { return point{X: a.X - b.X, Y: a.Y - b.Y} }
-func pointMul(a, b point) point { return point{X: a.X * b.X, Y: a.Y * b.Y} }
-func pointDiv(a, b point) point { return point{X: a.X / b.X, Y: a.Y / b.Y} }
 
 func pointScaleMul(a point) point { return point{X: a.X * uiScale, Y: a.Y * uiScale} }
-func pointScaleDiv(a point) point { return point{X: a.X / uiScale, Y: a.Y / uiScale} }
 
 func rectAdd(r rect, p point) rect {
 	return rect{X0: r.X0 + p.X, Y0: r.Y0 + p.Y, X1: r.X1 + p.X, Y1: r.Y1 + p.Y}

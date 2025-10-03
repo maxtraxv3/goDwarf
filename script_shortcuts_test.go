@@ -82,31 +82,6 @@ func TestscriptAddShortcutSingleHandler(t *testing.T) {
 	}
 }
 
-// Test that AutoReply triggers the specified command when the message starts with the trigger.
-func TestscriptAutoReplyRunsCommand(t *testing.T) {
-	shortcutMu = sync.RWMutex{}
-	shortcutMaps = map[string]map[string]string{}
-	inputHandlersMu = sync.RWMutex{}
-	scriptInputHandlers = nil
-	triggerHandlersMu = sync.RWMutex{}
-	scriptTriggers = map[string][]triggerHandler{}
-	scriptConsoleTriggers = map[string][]triggerHandler{}
-	consoleLog = messageLog{max: maxMessages}
-	commandQueue = nil
-	pendingCommand = ""
-	scriptSendHistory = map[string][]time.Time{}
-
-	scriptAutoReply("bot", "hi", "/wave")
-	runChatTriggers("Hi there")
-
-	if msgs := getConsoleMessages(); len(msgs) != 0 {
-		t.Fatalf("unexpected console messages %v", msgs)
-	}
-	if pendingCommand != "/wave" {
-		t.Fatalf("pending command %q, want %q", pendingCommand, "/wave")
-	}
-}
-
 // Test that disabling a script removes any macros it registered.
 func TestscriptRemoveShortcutsOnDisable(t *testing.T) {
 	// Reset shared state.

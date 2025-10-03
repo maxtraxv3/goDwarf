@@ -875,9 +875,6 @@ func applySaturation(samples []float64, drive, mix float64) {
 		samples[i] = ((dryMix * xf) + (mix * sat)) * fromFloat
 	}
 }
-func dbToLinear(db float64) float64 {
-	return math.Pow(10, db/20)
-}
 
 // loadSound retrieves a sound by ID, resamples it to match the audio context's
 // sample rate, and caches the resulting PCM bytes. The CL_Sounds archive is

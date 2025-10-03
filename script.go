@@ -1519,29 +1519,6 @@ func scriptRegisterConsoleTriggers(owner string, phrases []string, fn func()) {
 	scriptRegisterConsole(owner, phrases, func(string) { fn() })
 }
 
-// scriptAutoReply sends a command when a chat message contains trigger.
-func scriptAutoReply(owner, trigger, command string) {
-	if scriptIsDisabled(owner) || trigger == "" || command == "" {
-		return
-	}
-	scriptRegisterTriggers(owner, "", []string{trigger}, func() {
-		scriptEnqueueCommand(owner, command)
-	})
-}
-
-func scriptRegisterTrigger(owner string, phrase string, fn func(string)) {
-	if scriptIsDisabled(owner) || fn == nil {
-		return
-	}
-	if len(phrase) < 2 {
-		return
-	}
-	triggerHandlersMu.Lock()
-	phrase = strings.ToLower(phrase)
-	scriptTriggers[phrase] = append(scriptTriggers[phrase], triggerHandler{owner: owner, fn: fn})
-	triggerHandlersMu.Unlock()
-}
-
 func scriptRegisterPlayerHandler(owner string, fn func(Player)) {
 	if scriptIsDisabled(owner) || fn == nil {
 		return

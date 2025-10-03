@@ -271,13 +271,6 @@ func toggleInventoryEquipAt(id uint16, idx int) {
 	}
 }
 
-// toggleInventoryEquip equips the specified item without specifying an index.
-// It retains the previous behavior and is kept for compatibility with
-// existing script APIs.
-func toggleInventoryEquip(id uint16) {
-	toggleInventoryEquipAt(id, -1)
-}
-
 func renameInventoryItem(id uint16, idx int, name string) {
 	inventoryMu.Lock()
 	if idx >= 0 {
@@ -376,24 +369,6 @@ func inventoryItemByIndex(idx int) (InventoryItem, bool) {
 		return InventoryItem{}, false
 	}
 	return inventoryItems[idx], true
-}
-
-// triggerInventoryShortcut activates the inventory item assigned to idx.
-// Wearable items toggle equip state; others are used.
-func triggerInventoryShortcut(idx int) {
-	it, ok := inventoryItemByIndex(idx)
-	if !ok {
-		return
-	}
-	if clImages != nil {
-		slot := clImages.ItemSlot(uint32(it.ID))
-		if slot >= kItemSlotFirstReal && slot <= kItemSlotLastReal {
-			toggleInventoryEquipAt(it.ID, it.IDIndex)
-			return
-		}
-	}
-	enqueueCommand(fmt.Sprintf("/useitem %d", it.ID))
-	nextCommand()
 }
 
 func setFullInventory(ids []uint16, equipped []bool) {

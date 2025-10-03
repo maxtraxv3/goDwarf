@@ -120,7 +120,7 @@ func TestRemoveUserShortcutRefresh(t *testing.T) {
 	}
 
 	shortcutsWin.Dirty = false
-	removeUserShortcut("yy")
+	removeShortcut("user", "yy")
 	if len(shortcutsList.Contents) != 0 {
 		t.Fatalf("shortcuts list not cleared: %d", len(shortcutsList.Contents))
 	}

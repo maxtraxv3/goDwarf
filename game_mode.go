@@ -17,7 +17,6 @@ const (
 )
 
 var gameMode int
-var gameModeName string
 var lastActive time.Time
 
 var gameModeNames []string = []string{
@@ -45,6 +44,5 @@ func MODE_NAME() string {
 
 func CHANGE_MODE(mode int) {
 	gameMode = mode
-	gameModeName = MODE_NAME()
 	updateDiscordMode(mode)
 }

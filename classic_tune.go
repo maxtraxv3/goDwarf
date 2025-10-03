@@ -121,27 +121,27 @@ func classicNotesFromTune(tune string, inst instrument, tempo int, velocity int)
 				val = val*10 + int(s[i]-'0')
 				i++
 			}
-			nt := tempo
 			if val == 0 && sign == 0 {
-				nt = 120
+				tempo = 120
 			} else {
+				newTempo := tempo
 				switch sign {
 				case '+':
-					nt = tempo + val
+					newTempo += val
 				case '-':
-					nt = tempo - val
+					newTempo -= val
 				default:
-					nt = val
+					newTempo = val
 				}
 				// Clamp per CLTF spec to 60..180
-				if nt < 60 {
-					nt = 60
+				if newTempo < 60 {
+					newTempo = 60
 				}
-				if nt > 180 {
-					nt = 180
+				if newTempo > 180 {
+					newTempo = 180
 				}
+				tempo = newTempo
 			}
-			tempo = nt
 			continue
 		}
 		// volume modifiers (% {}): outside chords affect melody volume only

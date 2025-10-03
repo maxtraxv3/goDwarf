@@ -394,15 +394,6 @@ type settings struct {
 var (
 	settingsDirty    bool
 	lastSettingsSave = time.Now()
-	bubbleTypeMask   uint32
-	bubbleSourceMask uint32
-)
-
-const (
-	bubbleSourceSelf = 1 << iota
-	bubbleSourceOtherPlayers
-	bubbleSourceMonsters
-	bubbleSourceNarration
 )
 
 type WindowPoint struct {
@@ -560,7 +551,6 @@ func applyServerAddressSetting() {
 }
 
 func applySettings() {
-	updateBubbleVisibility()
 	eui.SetWindowTiling(gs.WindowTiling)
 	eui.SetWindowSnapping(gs.WindowSnapping)
 	eui.SetShowPinLocations(gs.ShowPinToLocations)
@@ -580,51 +570,6 @@ func applySettings() {
 	updateSoundVolume()
 	if gs.InputBarAlwaysOpen {
 		inputActive = true
-	}
-}
-
-func updateBubbleVisibility() {
-	bubbleTypeMask = 0
-	if gs.BubbleNormal {
-		bubbleTypeMask |= 1 << kBubbleNormal
-	}
-	if gs.BubbleWhisper {
-		bubbleTypeMask |= 1 << kBubbleWhisper
-	}
-	if gs.BubbleYell {
-		bubbleTypeMask |= 1 << kBubbleYell
-	}
-	if gs.BubbleThought {
-		bubbleTypeMask |= 1 << kBubbleThought
-	}
-	if gs.BubbleRealAction {
-		bubbleTypeMask |= 1 << kBubbleRealAction
-	}
-	if gs.BubbleMonster {
-		bubbleTypeMask |= 1 << kBubbleMonster
-	}
-	if gs.BubblePlayerAction {
-		bubbleTypeMask |= 1 << kBubblePlayerAction
-	}
-	if gs.BubblePonder {
-		bubbleTypeMask |= 1 << kBubblePonder
-	}
-	if gs.BubbleNarrate {
-		bubbleTypeMask |= 1 << kBubbleNarrate
-	}
-
-	bubbleSourceMask = 0
-	if gs.BubbleSelf {
-		bubbleSourceMask |= bubbleSourceSelf
-	}
-	if gs.BubbleOtherPlayers {
-		bubbleSourceMask |= bubbleSourceOtherPlayers
-	}
-	if gs.BubbleMonsters {
-		bubbleSourceMask |= bubbleSourceMonsters
-	}
-	if gs.BubbleNarration {
-		bubbleSourceMask |= bubbleSourceNarration
 	}
 }
 

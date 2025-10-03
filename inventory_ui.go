@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	text "github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -29,13 +28,6 @@ type invRef struct {
 }
 
 var inventoryRowRefs = map[*eui.ItemData]invRef{}
-var inventoryCtxWin *eui.WindowData
-var invShortcutWin *eui.WindowData
-var invShortcutDD *eui.ItemData
-var invShortcutTarget int
-var invNameWin *eui.WindowData
-var invNameInput *eui.ItemData
-
 var selectedInvID uint16
 var selectedInvIdx int = -1
 var lastInvClickID uint16
@@ -108,7 +100,6 @@ func updateInventoryWindow() {
 	counts := make(map[invGroupKey]int)
 	first := make(map[invGroupKey]InventoryItem)
 	anyEquipped := make(map[invGroupKey]bool)
-	hasShortcut := make(map[invGroupKey]bool)
 	order := make([]invGroupKey, 0, len(items))
 	for _, it := range items {
 		key := invGroupKey{id: it.ID, name: it.Name}
@@ -125,19 +116,11 @@ func updateInventoryWindow() {
 		if it.Equipped {
 			anyEquipped[key] = true
 		}
-		if r, ok := getInventoryShortcut(it.Index); ok && r != 0 {
-			hasShortcut[key] = true
-		}
 	}
 
 	sort.SliceStable(order, func(i, j int) bool {
 		ai := order[i]
 		aj := order[j]
-		hi := hasShortcut[ai]
-		hj := hasShortcut[aj]
-		if hi != hj {
-			return hi
-		}
 		nameI := officialName(ai, first[ai])
 		nameJ := officialName(aj, first[aj])
 		if nameI != nameJ {
@@ -244,17 +227,13 @@ func updateInventoryWindow() {
 			suffix = base[p:]
 			base = base[:p]
 		}
-		prefix := ""
-		if r, ok := getInventoryShortcut(it.Index); ok && r != 0 {
-			prefix = fmt.Sprintf("[%c] ", unicode.ToUpper(r))
-		}
 		qtySuffix := ""
 		if qty > 1 {
 			qtySuffix = fmt.Sprintf(" (%v)", qty)
 		}
 
 		t, _ := eui.NewText()
-		t.Text = prefix + TitleCaser.String(base) + suffix + qtySuffix
+		t.Text = TitleCaser.String(base) + suffix + qtySuffix
 		t.FontSize = float32(fontSize)
 
 		face := goFace
@@ -520,78 +499,6 @@ func maybeQuoteName(s string) string {
 		return fmt.Sprintf("\"%s\"", s)
 	}
 	return s
-}
-
-func promptInventoryShortcut(idx int) {
-	invShortcutTarget = idx
-	if invShortcutWin == nil {
-		invShortcutWin = eui.NewWindow()
-		invShortcutWin.Title = "Shortcut"
-		invShortcutWin.AutoSize = true
-		invShortcutWin.Closable = true
-		invShortcutWin.Movable = false
-		invShortcutWin.Resizable = false
-		invShortcutWin.NoScroll = true
-	}
-	invShortcutWin.Contents = nil
-	opts := []string{"None"}
-	for r := '0'; r <= '9'; r++ {
-		opts = append(opts, string(r))
-	}
-	for r := 'A'; r <= 'Z'; r++ {
-		opts = append(opts, string(r))
-	}
-	dd, _ := eui.NewDropdown()
-	dd.Options = opts
-	dd.OnSelect = func(n int) {
-		if n > 0 {
-			setInventoryShortcut(idx, rune(opts[n][0]))
-		} else {
-			setInventoryShortcut(idx, 0)
-		}
-		inventoryDirty = true
-		invShortcutWin.Close()
-	}
-	invShortcutWin.AddItem(dd)
-	invShortcutWin.MarkOpen()
-	invShortcutWin.Refresh()
-}
-
-func promptInventoryName(id uint16, idx int) {
-	selectInventoryItem(id, idx)
-	if invNameWin == nil {
-		invNameWin = eui.NewWindow()
-		invNameWin.Title = "Name Item"
-		invNameWin.AutoSize = true
-		invNameWin.Closable = true
-		invNameWin.Movable = false
-		invNameWin.Resizable = false
-		invNameWin.NoScroll = true
-	}
-	invNameWin.Contents = nil
-	input, _ := eui.NewInput()
-	input.Size = eui.Point{X: 160, Y: 20}
-	invNameInput = input
-	apply := func() {
-		name := invNameInput.Text
-		if invNameInput.TextPtr != nil {
-			name = *invNameInput.TextPtr
-		}
-		enqueueCommand(fmt.Sprintf("/name %s", name))
-		nextCommand()
-		invNameWin.Close()
-	}
-	input.Action = apply
-	ok, _ := eui.NewButton()
-	ok.Text = "OK"
-	ok.FontSize = 12
-	ok.Action = apply
-	flow := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL, Fixed: true}
-	flow.AddItem(input)
-	flow.AddItem(ok)
-	invNameWin.AddItem(flow)
-	invNameWin.MarkOpen()
-	invNameWin.Refresh()
 }
 
 func officialName(k invGroupKey, it InventoryItem) string {

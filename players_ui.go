@@ -19,7 +19,6 @@ var playersWin *eui.WindowData
 var playersList *eui.ItemData
 var playersDirty bool
 var playersRowRefs = map[*eui.ItemData]string{}
-var playersCtxWin *eui.WindowData
 var selectedPlayerName string
 var lastPlayerClickName string
 var lastPlayerClickTime time.Time

@@ -134,14 +134,6 @@ func addGlobalShortcut(short, full string) {
 	saveShortcuts()
 }
 
-func removeUserShortcut(short string) {
-	removeShortcut("user", short)
-}
-
-func removeGlobalShortcut(short string) {
-	removeShortcut("global", short)
-}
-
 // loadShortcuts loads persisted user and global shortcuts from disk.
 func loadShortcuts() {
 	// Clear existing user/global maps so we replace previous character’s shortcuts.

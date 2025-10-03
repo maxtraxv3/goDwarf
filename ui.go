@@ -48,9 +48,6 @@ var charactersList *eui.ItemData
 var advancedWin *eui.WindowData
 var connectWin *eui.WindowData
 var connectStatusText *eui.ItemData
-
-// loginConnectBtn holds the Connect button for potential future tweaks.
-var loginConnectBtn *eui.ItemData
 var addCharWin *eui.WindowData
 var addCharName string
 var addCharPass string
@@ -118,7 +115,6 @@ var (
 	mobileBlendLabel       *eui.ItemData
 	pictBlendLabel         *eui.ItemData
 	totalCacheLabel        *eui.ItemData
-	pingLabel              *eui.ItemData
 
 	recordBtn          *eui.ItemData
 	recordStatus       *eui.ItemData
@@ -152,10 +148,8 @@ var (
 	ttsMixSlider       *eui.ItemData
 	notifMixSlider     *eui.ItemData
 	mixMuteBtn         *eui.ItemData
-	gameMixCB          *eui.ItemData
 	musicMixCB         *eui.ItemData
 	ttsMixCB           *eui.ItemData
-	notifMixCB         *eui.ItemData
 )
 
 var ttsTestPhrase = "The quick brown fox jumps over the lazy dog"
@@ -294,7 +288,6 @@ func initUI() {
 	}
 
 	if !settingsLoaded {
-		//openSettingsWizard(true)
 	}
 }
 
@@ -1033,7 +1026,7 @@ func makeMixerWindow() {
 		return s, cb
 	}
 
-	gameMixSlider, gameMixCB = makeMix(gs.GameVolume, gs.GameSound, "Game",
+	gameMixSlider, _ = makeMix(gs.GameVolume, gs.GameSound, "Game",
 		func(ev eui.UIEvent) {
 			if ev.Type == eui.EventSliderChanged {
 				gs.GameVolume = float64(ev.Value)
@@ -1131,7 +1124,7 @@ func makeMixerWindow() {
 
 	addSpacer()
 
-	notifMixSlider, notifMixCB = makeMix(gs.NotificationVolume, gs.NotificationBeep, "Notif",
+	notifMixSlider, _ = makeMix(gs.NotificationVolume, gs.NotificationBeep, "Notif",
 		func(ev eui.UIEvent) {
 			if ev.Type == eui.EventSliderChanged {
 				gs.NotificationVolume = float64(ev.Value)
@@ -1406,12 +1399,6 @@ func startRecording() {
 		return
 	}
 	recorder = mr
-	// If starting mid-session and no cached blocks, synthesize initial mobile
-	// and picture tables separately to ensure the parser applies them.
-	if len(loginGameState) == 0 && len(loginMobileData) == 0 && len(loginPictureTable) == 0 && tcpConn != nil {
-		loginPictureTable = synthesizePictureTableFromState()
-		loginMobileData = synthesizeMobileDataFromState(uint16(clVersion))
-	}
 	wroteLoginBlocks = false
 	consoleMessage(fmt.Sprintf("recording to %s", filepath.Base(recordPath)))
 	updateRecordButton()
@@ -2554,7 +2541,6 @@ func makeLoginWindow() {
 	connBtn.FontSize = 24
 	loginWin.DefaultButton = connBtn
 	// Keep a handle so we can enable/disable it dynamically.
-	loginConnectBtn = connBtn
 	connEvents.Handle = func(ev eui.UIEvent) {
 		if ev.Type == eui.EventClick {
 			if name == "" {
@@ -2849,425 +2835,6 @@ func makeErrorWindow(msg string) {
 }
 
 var SettingsLock sync.Mutex
-
-const settingsWizardWidth float32 = 420
-
-type settingsWizardItem struct {
-	Name        string
-	Description string
-}
-
-type settingsWizardPage struct {
-	Title string
-	Intro string
-	Items []settingsWizardItem
-}
-
-var (
-	settingsWizardWin       *eui.WindowData
-	settingsWizardContent   *eui.ItemData
-	settingsWizardPageIndex int
-)
-
-var settingsWizardPages = []settingsWizardPage{
-	{
-		Title: "Welcome",
-		Intro: "This guided tour walks through some basic settings. The wizard stays open alongside the Settings window so you can experiment and see the effect immediately.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Navigation",
-				Description: "Use Next and Back to move between sections; you can close the wizard at any time without losing changes.",
-			},
-			{
-				Name:        "Relaunch",
-				Description: "Use the \"Rerun Settings Wizard\" button at the top of the Settings window whenever you want to revisit these notes.",
-			},
-		},
-	},
-	{
-		Title: "Window Behavior & Appearance",
-		Intro: "Adjust how the main window looks and docks using the options in the left column.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Fullscreen (F12)",
-				Description: "Switches to borderless fullscreen so the client fills the desktop and matches your monitor resolution.",
-			},
-			{
-				Name:        "Always on top",
-				Description: "Keeps the window above other apps, handy when multitasking or running in windowed mode.",
-			},
-			{
-				Name:        "Show pin-to locations",
-				Description: "Reveals docking guides while you drag windows so layouts snap neatly into place.",
-			},
-			{
-				Name:        "Style Theme & Color Theme",
-				Description: "Swap between bundled UI styles instantly; selections apply the moment you choose a new entry.",
-			},
-			{
-				Name:        "Accent Color",
-				Description: "Pick a highlight color that complements the active theme using the color wheel control.",
-			},
-		},
-	},
-	{
-		Title: "Controls",
-		Intro: "Tune input handling to match how you like to play.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Click-to-toggle movement",
-				Description: "One click starts walking and the next click stops, mirroring the classic client behavior.",
-			},
-			{
-				Name:        "Middle-click moves windows",
-				Description: "Turns the middle mouse button into a drag handle anywhere on a window.",
-			},
-			{
-				Name:        "Input bar always open",
-				Description: "Keeps the command entry active after you send a line so you can keep typing without pressing Return.",
-			},
-			{
-				Name:        "Keyboard Walk Speed",
-				Description: "Controls how quickly your exile moves when you hold movement keys; higher values take longer steps.",
-			},
-			{
-				Name:        "Gamepad",
-				Description: "Opens the controller window for binding buttons, adjusting deadzones, and testing input live.",
-			},
-		},
-	},
-	{
-		Title: "Quality Options",
-		Intro: "Balance clarity and performance before diving into the advanced graphics window.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Quality Preset",
-				Description: "Loads tuned defaults such as Classic, Low, Medium, or High as a starting point you can tweak further.",
-			},
-			{
-				Name:        "\"Quality Settings\" button",
-				Description: "Opens the dedicated graphics window with shader lighting, denoising, smoothing, and GPU options.",
-			},
-		},
-	},
-	{
-		Title: "Chat & Notifications",
-		Intro: "Customize how conversation and alerts appear.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Combine chat + console",
-				Description: "Merges both panes into one log; leave it unchecked for separate chat and console windows.",
-			},
-			{
-				Name:        "Chat timestamps",
-				Description: "Toggle timestamps on chat lines so you can see when each message arrived.",
-			},
-			{
-				Name:        "Console timestamps",
-				Description: "Enable timestamps for console output independently from chat.",
-			},
-			{
-				Name:        "Game Notifications",
-				Description: "Turn toast popups for events on or off depending on how much noise you want.",
-			},
-			{
-				Name:        "Timestamp format",
-				Description: "Accepts Go layout tokens (01, 02, 15, 04, 05) so you control how timestamps render.",
-			},
-			{
-				Name:        "\"Notification Settings\" button",
-				Description: "Opens the detailed notification window with per-event toggles and sounds.",
-			},
-			{
-				Name:        "\"Message Bubbles\" button",
-				Description: "Launches bubble styling controls to adjust outlines, timing, and readability.",
-			},
-		},
-	},
-	{
-		Title: "Status Bar & HUD",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Status bar placement",
-				Description: "Move health, mana, and balance bars to the bottom or cluster them in screen corners.",
-			},
-			{
-				Name:        "Color bars by value",
-				Description: "Fade bar colors toward red as values drop, or leave it off for the classic static palette.",
-			},
-		},
-	},
-	{
-		Title: "Opacity & Bubble Visibility",
-		Intro: "Control how much on-screen elements fade or stand out.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Max Night Level",
-				Description: "Caps how dark night scenes become; lower values keep areas brighter.",
-			},
-			{
-				Name:        "Name tag background",
-				Description: "Set the opacity behind name tags so labels stay readable against busy maps.",
-			},
-			{
-				Name:        "Bubble opacity & lifetime",
-				Description: "Choose how solid speech bubbles appear and how long they linger before fading.",
-			},
-			{
-				Name:        "Name Tag Label Colors",
-				Description: "Toggle extra colors on name tags to show clan or status at a glance.",
-			},
-			{
-				Name:        "Show name-tags only on hover",
-				Description: "Reduce clutter by revealing name tags only when your cursor is over a character.",
-			},
-			{
-				Name:        "Fade objects obscuring mobiles",
-				Description: "Dim scenery that blocks characters; use the slider to pick how transparent it gets.",
-			},
-			{
-				Name:        "Status bar opacity",
-				Description: "Control how strongly the HUD bars stand out against the world view.",
-			},
-		},
-	},
-	{
-		Title: "Text Sizes",
-		Intro: "Each slider updates immediately so you can match fonts to your display.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Name font size",
-				Description: "Changes the labels that appear above characters.",
-			},
-			{
-				Name:        "Inventory font size",
-				Description: "Adjusts item names inside the inventory window.",
-			},
-			{
-				Name:        "Players list font size",
-				Description: "Controls the type in the players roster so long lists stay readable.",
-			},
-			{
-				Name:        "Console font size",
-				Description: "Sets the command console text to a comfortable size.",
-			},
-			{
-				Name:        "Chat window font size",
-				Description: "Tweaks chat messages so conversations remain legible without resizing the entire UI.",
-			},
-			{
-				Name:        "Bubble font size",
-				Description: "Updates the text inside overhead speech bubbles immediately.",
-			},
-		},
-	},
-	{
-		Title: "Audio & Speech",
-		Intro: "Balance sound effects, music, and text-to-speech output.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Throttle sounds",
-				Description: "Prevents repeating effects from playing every frame during hectic scenes.",
-			},
-			{
-				Name:        "Sound enhancement",
-				Description: "Adds stereo width and ambience to effects; pair it with the strength slider for fine tuning.",
-			},
-			{
-				Name:        "Music enhancement",
-				Description: "Applies the same widening effect to music, useful when wearing headphones.",
-			},
-			{
-				Name:        "High quality resampling",
-				Description: "Enables Lanczos filtering and dithering for cleaner playback at the cost of more CPU.",
-			},
-			{
-				Name:        "Text-to-speech options",
-				Description: "Pick voices, adjust speech speed, and use the test phrase to preview output.",
-			},
-			{
-				Name:        "\"Edit TTS corrections\" button",
-				Description: "Opens the correction files so you can tune pronunciations for names or locations.",
-			},
-		},
-	},
-	{
-		Title: "Advanced & Maintenance",
-		Intro: "Automate cleanup tasks and expose diagnostic tools.",
-		Items: []settingsWizardItem{
-			{
-				Name:        "Power-save modes",
-				Description: "Reduce the frame rate while unfocused or even while active to save battery on laptops.",
-			},
-			{
-				Name:        "Auto-kill spammy scripts",
-				Description: "Automatically stops scripts that flood output before they bog down the client.",
-			},
-			{
-				Name:        "Auto-record sessions",
-				Description: "Starts and stops recording when you log in or out so you never forget to capture a hunt.",
-			},
-			{
-				Name:        "\"Debug Settings\" button",
-				Description: "Opens diagnostic toggles that help troubleshoot rendering or input issues.",
-			},
-			{
-				Name:        "\"Download Files\" button",
-				Description: "Checks optional art, sound, and movie archives and downloads anything you're missing.",
-			},
-			{
-				Name:        "\"Reset All Settings\" button",
-				Description: "Restores every preference to defaults, rebuilds windows, and reapplies them immediately.",
-			},
-			{
-				Name:        "\"Rerun Settings Wizard\" button",
-				Description: "Lives at the top of the Settings window so you can open this walkthrough whenever you need a refresher.",
-			},
-		},
-	},
-}
-
-func makeSettingsWizardWindow() {
-	if settingsWizardWin != nil {
-		return
-	}
-	settingsWizardWin = eui.NewWindow()
-	settingsWizardWin.Title = "Settings Wizard"
-	settingsWizardWin.Closable = true
-	settingsWizardWin.Resizable = false
-	settingsWizardWin.AutoSize = true
-	settingsWizardWin.Movable = true
-	settingsWizardWin.Padding = 14
-	settingsWizardWin.Margin = 12
-	settingsWizardWin.SetZone(eui.HZoneCenter, eui.VZoneMiddleTop)
-}
-
-func rebuildSettingsWizardPage() {
-	if settingsWizardWin == nil || len(settingsWizardPages) == 0 {
-		return
-	}
-	if settingsWizardPageIndex < 0 {
-		settingsWizardPageIndex = 0
-	}
-	if settingsWizardPageIndex >= len(settingsWizardPages) {
-		settingsWizardPageIndex = len(settingsWizardPages) - 1
-	}
-	if settingsWizardContent != nil {
-		settingsWizardWin.RemoveItem(settingsWizardContent)
-		settingsWizardContent = nil
-	}
-
-	page := settingsWizardPages[settingsWizardPageIndex]
-	container := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
-	container.Size = eui.Point{X: settingsWizardWidth, Y: 0}
-
-	progress, _ := eui.NewText()
-	progress.FontSize = 12
-	progress.Text = fmt.Sprintf("Step %d of %d", settingsWizardPageIndex+1, len(settingsWizardPages))
-	progress.Size = eui.Point{X: settingsWizardWidth, Y: 18}
-	container.AddItem(progress)
-
-	title, _ := eui.NewText()
-	title.FontSize = 18
-	title.Text = page.Title
-	title.Size = eui.Point{X: settingsWizardWidth, Y: 28}
-	applyBoldFace(title)
-	container.AddItem(title)
-
-	if page.Intro != "" {
-		intro, _ := eui.NewText()
-		intro.FontSize = 13
-		intro.LineSpace = 1.2
-		intro.Text = page.Intro
-		intro.Size = eui.Point{X: settingsWizardWidth, Y: 0}
-		intro.Margin = 4
-		container.AddItem(intro)
-	}
-
-	if len(page.Items) > 0 {
-		list := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_VERTICAL}
-		list.Size = eui.Point{X: settingsWizardWidth, Y: 0}
-		for idx, it := range page.Items {
-			name, _ := eui.NewText()
-			name.FontSize = 14
-			name.Text = it.Name
-			name.Size = eui.Point{X: settingsWizardWidth, Y: 22}
-			applyBoldFace(name)
-			list.AddItem(name)
-
-			desc, _ := eui.NewText()
-			desc.FontSize = 12
-			desc.LineSpace = 1.2
-			desc.Text = it.Description
-			desc.Size = eui.Point{X: settingsWizardWidth, Y: 0}
-			desc.Margin = 2
-			list.AddItem(desc)
-
-			if idx != len(page.Items)-1 {
-				spacer, _ := eui.NewText()
-				spacer.Size = eui.Point{X: settingsWizardWidth, Y: 6}
-				list.AddItem(spacer)
-			}
-		}
-		container.AddItem(list)
-	}
-
-	buttons := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL}
-	buttons.Size = eui.Point{X: settingsWizardWidth, Y: 30}
-
-	backBtn, backEvents := eui.NewButton()
-	backBtn.Text = "Back"
-	backBtn.Size = eui.Point{X: 80, Y: 24}
-	backBtn.Disabled = settingsWizardPageIndex == 0
-	backEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type == eui.EventClick && settingsWizardPageIndex > 0 {
-			settingsWizardPageIndex--
-			rebuildSettingsWizardPage()
-		}
-	}
-	buttons.AddItem(backBtn)
-
-	nextLabel := "Next"
-	if settingsWizardPageIndex == len(settingsWizardPages)-1 {
-		nextLabel = "Finish"
-	}
-
-	nextBtn, nextEvents := eui.NewButton()
-	nextBtn.Text = nextLabel
-	nextBtn.Size = eui.Point{X: 90, Y: 24}
-	nextEvents.Handle = func(ev eui.UIEvent) {
-		if ev.Type != eui.EventClick {
-			return
-		}
-		if settingsWizardPageIndex == len(settingsWizardPages)-1 {
-			settingsWizardWin.Close()
-			return
-		}
-		settingsWizardPageIndex++
-		rebuildSettingsWizardPage()
-	}
-	buttons.AddItem(nextBtn)
-
-	container.AddItem(buttons)
-	settingsWizardContent = container
-	settingsWizardWin.AddItem(container)
-	settingsWizardWin.DefaultButton = nextBtn
-	settingsWizardWin.Refresh()
-}
-
-func openSettingsWizard(reset bool) {
-	if len(settingsWizardPages) == 0 {
-		return
-	}
-	if settingsWizardWin == nil {
-		makeSettingsWizardWindow()
-	}
-	if reset || settingsWizardPageIndex >= len(settingsWizardPages) {
-		settingsWizardPageIndex = 0
-	}
-	rebuildSettingsWizardPage()
-	settingsWizardWin.MarkOpen()
-}
 
 func makeSettingsWindow() {
 	if settingsWin != nil {
@@ -5643,7 +5210,6 @@ func makeBubbleWindow() {
 		if ev.Type == eui.EventCheckboxChanged {
 			gs.SpeechBubbles = ev.Checked
 			settingsDirty = true
-			updateBubbleVisibility()
 		}
 	}
 	flow.AddItem(bubblesQuickCB)
@@ -5657,7 +5223,6 @@ func makeBubbleWindow() {
 			if ev.Type == eui.EventCheckboxChanged {
 				*val = ev.Checked
 				settingsDirty = true
-				updateBubbleVisibility()
 			}
 		}
 		flow.AddItem(cb)

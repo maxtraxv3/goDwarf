@@ -44,7 +44,7 @@ func TestSliderConstrainedWidth(t *testing.T) {
 	}
 
 	mpos := point{X: item.DrawRect.X0 + knobW + trackWidth, Y: 0}
-	item.setSliderValue(mpos)
+	item.setSliderValueWithModifiers(mpos, false, 1)
 	if item.Value != item.MaxValue {
 		t.Fatalf("expected value to be MaxValue, got %f", item.Value)
 	}

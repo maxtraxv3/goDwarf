@@ -21,7 +21,6 @@ var aboutWin *eui.WindowData
 var aboutList *eui.ItemData
 var aboutLines []string
 
-var patreonBox *eui.ItemData
 var patreonList *eui.ItemData
 
 const patreonsURL = "https://m45sci.xyz/u/dist/goThoom/patreons.json"

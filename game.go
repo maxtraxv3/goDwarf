@@ -73,18 +73,6 @@ func updateDimmedScreenBG() {
 	}
 }
 
-func keyForRune(r rune) ebiten.Key {
-	switch {
-	case r >= '0' && r <= '9':
-		return ebiten.KeyDigit0 + ebiten.Key(r-'0')
-	case r >= 'a' && r <= 'z':
-		return ebiten.KeyA + ebiten.Key(r-'a')
-	case r >= 'A' && r <= 'Z':
-		return ebiten.KeyA + ebiten.Key(r-'A')
-	}
-	return ebiten.Key(-1)
-}
-
 func ensureWorldRT(w, h int) {
 	if w < 1 {
 		w = 1
@@ -231,7 +219,6 @@ var (
 	frameInterval   = framems * time.Millisecond
 	intervalHist    = map[int]int{}
 	frameMu         sync.Mutex
-	serverFPS       float64
 	netLatency      time.Duration
 	netJitter       time.Duration
 	lastInputSent   time.Time
@@ -307,7 +294,6 @@ func resetDrawState() {
 	resetInterpolation()
 
 	frameCounter = 0
-	serverFPS = 0
 	frameInterval = framems * time.Millisecond
 
 	// Clear frame timing history so new sessions start fresh without
@@ -663,16 +649,6 @@ func (g *Game) Update() error {
 		}
 		if b, ok := gs.JoystickBindings["click3"]; ok {
 			joyClick3 = inpututil.IsGamepadButtonJustPressed(id, b)
-		}
-	}
-
-	if keys := inpututil.AppendJustPressedKeys(nil); len(keys) > 0 {
-		lastPressedKey := keys[len(keys)-1]
-		inventoryShortcutMu.RLock()
-		idx, ok := shortcutKeyToIndex[lastPressedKey]
-		inventoryShortcutMu.RUnlock()
-		if ok {
-			triggerInventoryShortcut(idx)
 		}
 	}
 
@@ -1440,7 +1416,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Old fixed background sleep replaced by deferred power-save throttle above.
 
 	//if gs.ShowFPS {
-	//	drawServerFPS(screen, screen.Bounds().Dx()-40, 4, serverFPS)
 	//}
 
 	if seekingMov {
@@ -2751,7 +2726,6 @@ func noteFrame() {
 				if fps < 1 {
 					fps = 1
 				}
-				serverFPS = fps
 				frameInterval = time.Second / time.Duration(fps)
 			}
 		}
