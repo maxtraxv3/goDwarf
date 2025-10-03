@@ -1,7 +1,7 @@
 Cleaned up settings, moved many settings to new "Advanced Settings" window.
-Added IP address fallback for deltatao.com
+Added IP address fallback for deltatao.com (15 second timeout)
 Added server address setting to advanced settings.
 Added connection status dialog box.
 The "classic" quality setting preset is now the default.
 Fixed "Input Bar Always Open" blocking hotkeys.
-Show a new connection dialog with status while connecting.
+Shows a connection dialog with status while connecting.
