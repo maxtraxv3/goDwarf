@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -23,28 +24,65 @@ var (
 )
 
 type serverTarget struct {
-	addr    string
-	display string
+	addr     string
+	display  string
+	fallback bool
 }
 
 var errRetryLogin = errors.New("retry login")
 
 func serverTargets(addr string) []serverTarget {
-	targets := []serverTarget{{addr: addr, display: addr}}
-	if fallbackAddr, ok := fallbackAddress(addr); ok {
-		targets = append(targets, serverTarget{
-			addr:    fallbackAddr,
-			display: fmt.Sprintf("%s (fallback)", fallbackAddr),
-		})
+	primary := serverTarget{addr: addr, display: addr}
+	fallbackAddr, ok := fallbackAddress(addr)
+	if !ok {
+		return []serverTarget{primary}
 	}
-	return targets
+
+	fallback := serverTarget{
+		addr:     fallbackAddr,
+		display:  fmt.Sprintf("%s (fallback)", fallbackAddr),
+		fallback: true,
+	}
+
+	if preferIPFallback.Load() {
+		return []serverTarget{fallback}
+	}
+	return []serverTarget{primary, fallback}
 }
 
 const connectAttemptTimeout = 15 * time.Second
 
-func dialServer(network, addr string) (net.Conn, error) {
+func dialServer(network string, target serverTarget) (net.Conn, error) {
 	dialer := &net.Dialer{Timeout: connectAttemptTimeout}
-	return dialer.Dial(network, addr)
+	conn, err := dialer.Dial(network, target.addr)
+	if err != nil {
+		recordFallbackFailure(target, err)
+		return nil, err
+	}
+	return conn, nil
+}
+
+var preferIPFallback atomic.Bool
+
+func recordFallbackFailure(target serverTarget, err error) {
+	if err == nil || target.fallback || errors.Is(err, errRetryLogin) {
+		return
+	}
+	if shouldPreferFallback(err) {
+		preferIPFallback.Store(true)
+	}
+}
+
+func shouldPreferFallback(err error) bool {
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return errors.Is(err, context.DeadlineExceeded)
 }
 
 func fallbackAddress(addr string) (string, bool) {
@@ -168,13 +206,13 @@ func fetchRandomDemoCharacter(clVersion int) (string, error) {
 }
 
 func fetchDemoFromTarget(target serverTarget, sendVersion int, imagesVersion, soundsVersion uint32) (string, error) {
-	tcpConn, err := dialServer("tcp", target.addr)
+	tcpConn, err := dialServer("tcp", target)
 	if err != nil {
 		return "", fmt.Errorf("tcp connect %s: %w", target.addr, err)
 	}
 	defer tcpConn.Close()
 
-	udpConn, err := dialServer("udp", target.addr)
+	udpConn, err := dialServer("udp", target)
 	if err != nil {
 		return "", fmt.Errorf("udp connect %s: %w", target.addr, err)
 	}
@@ -350,67 +388,108 @@ outer:
 	}
 }
 
-func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, imagesVersion, soundsVersion uint32) error {
-	tcpConn, err := dialServer("tcp", target.addr)
+func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, imagesVersion, soundsVersion uint32) (err error) {
+	var tcp net.Conn
+	var udp net.Conn
+	defer func() {
+		recordFallbackFailure(target, err)
+		if err != nil {
+			if tcp != nil {
+				tcp.Close()
+			}
+			if udp != nil {
+				udp.Close()
+			}
+		}
+	}()
+
+	tcp, err = dialServer("tcp", target)
 	if err != nil {
 		return fmt.Errorf("tcp connect %s: %w", target.addr, err)
 	}
+	if err := tcp.SetDeadline(time.Now().Add(connectAttemptTimeout)); err != nil {
+		tcp.Close()
+		tcp = nil
+		return fmt.Errorf("set tcp deadline %s: %w", target.addr, err)
+	}
+
 	updateConnectDialog("TCP connected; opening UDP channel...")
-	udpConn, err := dialServer("udp", target.addr)
+	udp, err = dialServer("udp", target)
 	if err != nil {
-		tcpConn.Close()
+		tcp.Close()
 		return fmt.Errorf("udp connect %s: %w", target.addr, err)
+	}
+	if err := udp.SetDeadline(time.Now().Add(connectAttemptTimeout)); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
+		return fmt.Errorf("set udp deadline %s: %w", target.addr, err)
 	}
 
 	updateConnectDialog("Waiting for server handshake...")
 	var idBuf [4]byte
-	if _, err := io.ReadFull(tcpConn, idBuf[:]); err != nil {
-		tcpConn.Close()
-		udpConn.Close()
+	if _, err := io.ReadFull(tcp, idBuf[:]); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("read id via %s: %w", target.addr, err)
 	}
 
 	handshake := append([]byte{0xff, 0xff}, idBuf[:]...)
 	updateConnectDialog("Sending handshake...")
-	if _, err := udpConn.Write(handshake); err != nil {
-		tcpConn.Close()
-		udpConn.Close()
+	if _, err := udp.Write(handshake); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("send handshake via %s: %w", target.addr, err)
 	}
 
 	var confirm [2]byte
 	updateConnectDialog("Confirming handshake...")
-	if _, err := io.ReadFull(tcpConn, confirm[:]); err != nil {
-		tcpConn.Close()
-		udpConn.Close()
+	if _, err := io.ReadFull(tcp, confirm[:]); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("confirm handshake via %s: %w", target.addr, err)
 	}
 	updateConnectDialog("Identifying client...")
 	sendVersionLocal := sendVersion
-	if err := sendClientIdentifiers(tcpConn, encodeFullVersion(sendVersionLocal), imagesVersion, soundsVersion); err != nil {
-		tcpConn.Close()
-		udpConn.Close()
+	if err := sendClientIdentifiers(tcp, encodeFullVersion(sendVersionLocal), imagesVersion, soundsVersion); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("send identifiers via %s: %w", target.addr, err)
 	}
 	logDebug("connected to %v", target.addr)
 
 	updateConnectDialog("Waiting for server challenge...")
-	msg, err := readTCPMessage(tcpConn)
+	msg, err := readTCPMessage(tcp)
 	if err != nil {
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("read challenge via %s: %w", target.addr, err)
 	}
 	if len(msg) < 16 {
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("short challenge message via %s", target.addr)
 	}
 	const kMsgChallenge = 18
 	tag := binary.BigEndian.Uint16(msg[:2])
 	if tag != kMsgChallenge {
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("unexpected msg tag %d", tag)
 	}
 	serverVersion := int(binary.BigEndian.Uint32(msg[4:8]) >> 8)
@@ -420,8 +499,10 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 	challenge := msg[16 : 16+16]
 
 	if pass == "" && passHash == "" {
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("character password required")
 	}
 	playerName = utfFold(name)
@@ -440,8 +521,10 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 			answer, err = answerChallengeHash(passHash, challenge)
 		}
 		if err != nil {
-			tcpConn.Close()
-			udpConn.Close()
+			tcp.Close()
+			tcp = nil
+			udp.Close()
+			udp = nil
 			return fmt.Errorf("hash: %w", err)
 		}
 
@@ -459,17 +542,21 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 		simpleEncrypt(buf[16:])
 
 		updateConnectDialog("Sending credentials...")
-		if err := sendTCPMessage(tcpConn, buf); err != nil {
-			tcpConn.Close()
-			udpConn.Close()
+		if err := sendTCPMessage(tcp, buf); err != nil {
+			tcp.Close()
+			tcp = nil
+			udp.Close()
+			udp = nil
 			return fmt.Errorf("send login via %s: %w", target.addr, err)
 		}
 
 		updateConnectDialog("Waiting for login response...")
-		resp, err = readTCPMessage(tcpConn)
+		resp, err = readTCPMessage(tcp)
 		if err != nil {
-			tcpConn.Close()
-			udpConn.Close()
+			tcp.Close()
+			tcp = nil
+			udp.Close()
+			udp = nil
 			return fmt.Errorf("read login response via %s: %w", target.addr, err)
 		}
 		resTag := binary.BigEndian.Uint16(resp[:2])
@@ -487,16 +574,20 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 			challenge = resp[16 : 16+16]
 			continue
 		}
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return fmt.Errorf("unexpected response tag %d", resTag)
 	}
 
 	if result == -30972 || result == -30973 {
 		updateConnectDialog("Server requested update; retrying...")
 		_, _ = autoUpdate(resp, dataDirPath)
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		return errRetryLogin
 	}
 
@@ -505,8 +596,10 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 			passHash = ""
 			setCharacterPassHash(name, "", false)
 		}
-		tcpConn.Close()
-		udpConn.Close()
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
 		if name, ok := errorNames[result]; ok {
 			return fmt.Errorf("login failed: %s (%d)", name, result)
 		}
@@ -524,21 +617,49 @@ func runLoginAttempt(ctx context.Context, target serverTarget, sendVersion int, 
 	inputMu.Lock()
 	s := latestInput
 	inputMu.Unlock()
-	if err := sendPlayerInput(udpConn, s.mouseX, s.mouseY, s.mouseDown, false); err != nil {
+	if err := sendPlayerInput(udp, s.mouseX, s.mouseY, s.mouseDown, false); err != nil {
 		logError("send player input: %v", err)
 	}
 
-	go sendInputLoop(ctx, udpConn, tcpConn)
-	go udpReadLoop(ctx, udpConn)
-	go tcpReadLoop(ctx, tcpConn)
+	loginMu.Lock()
+	tcpConn = tcp
+	loginMu.Unlock()
+
+	if err := tcp.SetDeadline(time.Time{}); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
+		loginMu.Lock()
+		tcpConn = nil
+		loginMu.Unlock()
+		return fmt.Errorf("clear tcp deadline %s: %w", target.addr, err)
+	}
+	if err := udp.SetDeadline(time.Time{}); err != nil {
+		tcp.Close()
+		tcp = nil
+		udp.Close()
+		udp = nil
+		loginMu.Lock()
+		tcpConn = nil
+		loginMu.Unlock()
+		return fmt.Errorf("clear udp deadline %s: %w", target.addr, err)
+	}
+
+	go sendInputLoop(ctx, udp, tcp)
+	go udpReadLoop(ctx, udp)
+	go tcpReadLoop(ctx, tcp)
 
 	<-ctx.Done()
-	if tcpConn != nil {
-		tcpConn.Close()
+	if tcp != nil {
+		tcp.Close()
+		loginMu.Lock()
 		tcpConn = nil
+		loginMu.Unlock()
+		tcp = nil
 	}
-	if udpConn != nil {
-		udpConn.Close()
+	if udp != nil {
+		udp.Close()
 	}
 	return nil
 }
