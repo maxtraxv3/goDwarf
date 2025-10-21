@@ -152,6 +152,21 @@ func (parent *ItemData) RemoveItem(child *ItemData) { parent.removeItem(child) }
 // RemoveItem removes a child item from the window.
 func (win *WindowData) RemoveItem(child *ItemData) { win.removeItem(child) }
 
+// InsertItem inserts a child item into the parent item at the provided index.
+func (parent *ItemData) InsertItem(idx int, child *ItemData) { parent.insertItem(idx, child) }
+
+// InsertItem inserts a child item into the window at the provided index.
+func (win *WindowData) InsertItem(idx int, child *ItemData) { win.insertItem(idx, child) }
+
+// ReplaceItem replaces the child item at the provided index with the new item.
+func (parent *ItemData) ReplaceItem(idx int, child *ItemData) { parent.replaceItem(idx, child) }
+
+// ReplaceItem replaces the child item at the provided index in the window.
+func (win *WindowData) ReplaceItem(idx int, child *ItemData) { win.replaceItem(idx, child) }
+
+// UpdateText updates the text content and marks the item dirty when it changes.
+func (item *ItemData) UpdateText(text string) { item.updateText(text) }
+
 // SetProgressIndeterminate updates the indeterminate state of a progress bar
 // and refreshes its parent window's tracking flag.
 func SetProgressIndeterminate(pb *ItemData, ind bool) {
@@ -214,15 +229,15 @@ func ClearFocus(it *ItemData) {
 // is activated. It exists so external tests can simulate an active
 // search without poking unexported symbols.
 func SetActiveSearchForTest(win *WindowData) {
-    activeSearch = win
-    if win != nil {
-        win.searchOpen = true
-    }
+	activeSearch = win
+	if win != nil {
+		win.searchOpen = true
+	}
 }
 
 // ScrollbarWidth returns the pixel width used when rendering scrollbars
 // so callers can reserve space and avoid overlap.
 func ScrollbarWidth() float32 {
-    // Matches the value used in draw routines.
-    return currentStyle.BorderPad.Slider * 2
+	// Matches the value used in draw routines.
+	return currentStyle.BorderPad.Slider * 2
 }
