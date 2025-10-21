@@ -470,8 +470,13 @@ func buildNameTagImage(name string, colorCode uint8, opacity uint8, style uint8,
 	op.ColorScale.ScaleAlpha(float32(opacity) / 255)
 	img.DrawImage(whiteImage, op)
 	releaseDrawOpts(op)
-	// Border
-	vector.StrokeRect(img, 1, 1, float32(iw+4), float32(ih-1), 1, frameClr, false)
+	// Border aligned to the filled background
+	width := float32(iw + 5)
+	height := float32(ih)
+	vector.FillRect(img, 0, 0, width, 1, frameClr, false)
+	vector.FillRect(img, 0, height-1, width, 1, frameClr, false)
+	vector.FillRect(img, 0, 0, 1, height, frameClr, false)
+	vector.FillRect(img, width-1, 0, 1, height, frameClr, false)
 	// Text
 	opTxt := &text.DrawOptions{}
 	opTxt.GeoM.Translate(2, 2)

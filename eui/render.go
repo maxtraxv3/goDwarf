@@ -1839,6 +1839,16 @@ func drawRoundRect(screen *ebiten.Image, rrect *roundRect) {
 	var path vector.Path
 
 	width := float32(math.Round(float64(rrect.Border)))
+	if rrect.Fillet <= 0 {
+		drawColor := color.RGBA(rrect.Color)
+		if rrect.Filled {
+			drawFilledRect(screen, rrect.Position.X, rrect.Position.Y, rrect.Size.X, rrect.Size.Y, drawColor, true)
+		}
+		if width > 0 {
+			strokeRect(screen, rrect.Position.X, rrect.Position.Y, rrect.Size.X, rrect.Size.Y, width, drawColor, true)
+		}
+		return
+	}
 	off := float32(0)
 	if !rrect.Filled {
 		off = pixelOffset(width)

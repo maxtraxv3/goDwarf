@@ -217,10 +217,7 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		vector.FillPath(screen, &body, nil, fillOp)
 	}
 	if !far && !noArrow {
-		tailOp := &vector.DrawPathOptions{
-			AntiAlias: true,
-			Blend:     ebiten.BlendCopy,
-		}
+		tailOp := &vector.DrawPathOptions{AntiAlias: true}
 		tailOp.ColorScale.ScaleWithColor(fillColor)
 		vector.FillPath(screen, &tail, nil, tailOp)
 	}
