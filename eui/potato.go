@@ -17,7 +17,6 @@ func SetPotatoMode(v bool) {
 	potatoMode = v
 	whiteImage = newImage(3, 3)
 	whiteImage.Fill(color.White)
-	whiteSubImage = whiteImage.SubImage(image.Rect(1, 1, 2, 2)).(*ebiten.Image)
 }
 
 func newImage(w, h int) *ebiten.Image {

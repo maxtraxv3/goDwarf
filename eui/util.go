@@ -1462,5 +1462,5 @@ func drawFilledRect(dst *ebiten.Image, x, y, w, h float32, col color.Color, aa b
 	y = float32(math.Round(float64(y)))
 	w = float32(math.Round(float64(w)))
 	h = float32(math.Round(float64(h)))
-	vector.DrawFilledRect(dst, x, y, w, h, col, aa)
+	vector.FillRect(dst, x, y, w, h, col, aa)
 }

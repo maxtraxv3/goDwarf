@@ -1,7 +1,6 @@
 package eui
 
 import (
-	"image"
 	"image/color"
 	"time"
 
@@ -50,8 +49,7 @@ var (
 	// middleClickMove enables moving windows with the middle mouse button when enabled.
 	middleClickMove bool
 
-	whiteImage    = newImage(3, 3)
-	whiteSubImage = whiteImage.SubImage(image.Rect(1, 1, 2, 2)).(*ebiten.Image)
+	whiteImage = newImage(3, 3)
 
 	// AutoHiDPI enables automatic scaling when the device scale factor
 	// changes, keeping the UI size consistent on HiDPI displays. It is

@@ -386,7 +386,7 @@ func placeWindowNear(win *windowData, anchor *itemData) {
 	var bestOverlap float32 = -1
 	for i, c := range candidates {
 		// Attempt to set position (this clamps to screen)
-		win.SetPos(Point{X: c.X, Y: c.Y})
+		win.SetPos(Point(c))
 		// Compute resulting rect
 		wp := win.getPosition()
 		wr := rect{X0: wp.X, Y0: wp.Y, X1: wp.X + size.X, Y1: wp.Y + size.Y}
@@ -416,7 +416,7 @@ func placeWindowNear(win *windowData, anchor *itemData) {
 	// Apply best candidate if we didn't already via SetPos loop
 	if bestIdx >= 0 {
 		c := candidates[bestIdx]
-		win.SetPos(Point{X: c.X, Y: c.Y})
+		win.SetPos(Point(c))
 	}
 }
 

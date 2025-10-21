@@ -27,7 +27,10 @@ var (
 	fracBits     int
 	lzW          [phases][taps]int16
 	int16BufPool = sync.Pool{
-		New: func() any { return make([]int16, 0, sampleRate) },
+		New: func() any {
+			buf := make([]int16, 0, sampleRate)
+			return &buf
+		},
 	}
 )
 
@@ -100,15 +103,20 @@ func initLanczosTable() {
 }
 
 func getInt16Buf(n int) []int16 {
-	buf := int16BufPool.Get().([]int16)
+	bufPtr := int16BufPool.Get().(*[]int16)
+	buf := *bufPtr
 	if cap(buf) < n {
 		buf = make([]int16, n)
+	} else {
+		buf = buf[:n]
 	}
-	return buf[:n]
+	*bufPtr = buf
+	return buf
 }
 
 func putInt16Buf(buf []int16) {
-	int16BufPool.Put(buf[:0])
+	slice := buf[:0]
+	int16BufPool.Put(&slice)
 }
 
 // ResampleLanczosInt16PadDB resamples mono int16 from srcRate→dstRate using

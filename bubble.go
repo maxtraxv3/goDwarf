@@ -124,15 +124,15 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if tailX < 0 || tailX >= sw || tailY < 0 || tailY >= sh {
 		noArrow = true
 	}
-    // Visual scale for bubbles independent of font size
-    s := float64(gs.BubbleScale)
-    pad := int(math.Round(6 * s))
-    tailHeight := int(math.Round(10 * s))
-    tailHalf := int(math.Round(6 * s))
+	// Visual scale for bubbles independent of font size
+	s := float64(gs.BubbleScale)
+	pad := int(math.Round(6 * s))
+	tailHeight := int(math.Round(10 * s))
+	tailHalf := int(math.Round(6 * s))
 	bubbleType := typ & kBubbleTypeMask
 
-    // Allow wider bubbles with larger scale; preserve font size
-    maxLineWidth := int(float64(gameAreaSizeX)/4*s) - 2*pad
+	// Allow wider bubbles with larger scale; preserve font size
+	maxLineWidth := int(float64(gameAreaSizeX)/4*s) - 2*pad
 	font := bubbleFont
 	if bubbleType == kBubbleWhisper {
 		font = bubbleFontRegular
@@ -149,10 +149,10 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	bgR, bgG, bgB, bgA := bgCol.RGBA()
 	bdR, bdG, bdB, bdA := borderCol.RGBA()
 
-    radius := float32(4 * s)
-    if bubbleType == kBubblePonder {
-        radius = float32(8 * s)
-    }
+	radius := float32(4 * s)
+	if bubbleType == kBubblePonder {
+		radius = float32(8 * s)
+	}
 
 	var body vector.Path
 	body.MoveTo(float32(left)+radius, float32(top))
@@ -208,37 +208,21 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		}
 	}
 
-	var vs []ebiten.Vertex
-	var is []uint16
+	fillColor := color.RGBA64{R: uint16(bgR), G: uint16(bgG), B: uint16(bgB), A: uint16(bgA)}
+	borderColor := color.RGBA64{R: uint16(bdR), G: uint16(bdG), B: uint16(bdB), A: uint16(bdA)}
+
 	if bubbleType != kBubblePonder {
-		vs, is = body.AppendVerticesAndIndicesForFilling(nil, nil)
-		op := &ebiten.DrawTrianglesOptions{ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha, AntiAlias: true}
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bgR) / 0xffff
-			vs[i].ColorG = float32(bgG) / 0xffff
-			vs[i].ColorB = float32(bgB) / 0xffff
-			vs[i].ColorA = float32(bgA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
+		fillOp := &vector.DrawPathOptions{AntiAlias: true}
+		fillOp.ColorScale.ScaleWithColor(fillColor)
+		vector.FillPath(screen, &body, nil, fillOp)
 	}
 	if !far && !noArrow {
-		vs, is = tail.AppendVerticesAndIndicesForFilling(vs[:0], is[:0])
-		tailOp := &ebiten.DrawTrianglesOptions{
-			ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha,
-			AntiAlias:      true,
-			Blend:          ebiten.BlendCopy,
+		tailOp := &vector.DrawPathOptions{
+			AntiAlias: true,
+			Blend:     ebiten.BlendCopy,
 		}
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bgR) / 0xffff
-			vs[i].ColorG = float32(bgG) / 0xffff
-			vs[i].ColorB = float32(bgB) / 0xffff
-			vs[i].ColorA = float32(bgA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, tailOp)
+		tailOp.ColorScale.ScaleWithColor(fillColor)
+		vector.FillPath(screen, &tail, nil, tailOp)
 	}
 	if bubbleType != kBubblePonder {
 		var outline vector.Path
@@ -258,42 +242,35 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		outline.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 		outline.Close()
 
-        // Thicken outline a bit with scale
-        strokeW := float32(math.Max(1, s))
-        vs, is = outline.AppendVerticesAndIndicesForStroke(nil, nil, &vector.StrokeOptions{Width: strokeW})
-		op := &ebiten.DrawTrianglesOptions{ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha, AntiAlias: true}
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
+		// Thicken outline a bit with scale
+		strokeW := float32(math.Max(1, s))
+		strokeOp := &vector.StrokeOptions{Width: strokeW}
+		drawOutline := &vector.DrawPathOptions{AntiAlias: true}
+		drawOutline.ColorScale.ScaleWithColor(borderColor)
+		vector.StrokePath(screen, &outline, strokeOp, drawOutline)
 	} else {
 		drawPonderWaves(screen, left, top, right, bottom, bgCol)
 	}
 
-    if bubbleType == kBubbleYell {
-        gapStart, gapEnd := float32(0), float32(0)
-        if !far && !noArrow {
-            gapStart = float32(baseX - tailHalf)
-            gapEnd = float32(baseX + tailHalf)
-        } else {
-            gapStart, gapEnd = -1, -1
-        }
-        drawSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 3*float32(s), borderCol, gapStart, gapEnd)
-    } else if bubbleType == kBubbleMonster {
-        gapStart, gapEnd := float32(0), float32(0)
-        if !far && !noArrow {
-            gapStart = float32(baseX - tailHalf)
-            gapEnd = float32(baseX + tailHalf)
-        } else {
-            gapStart, gapEnd = -1, -1
-        }
-        drawMonsterSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 4*float32(s), borderCol, gapStart, gapEnd)
-    }
+	if bubbleType == kBubbleYell {
+		gapStart, gapEnd := float32(0), float32(0)
+		if !far && !noArrow {
+			gapStart = float32(baseX - tailHalf)
+			gapEnd = float32(baseX + tailHalf)
+		} else {
+			gapStart, gapEnd = -1, -1
+		}
+		drawSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 3*float32(s), borderCol, gapStart, gapEnd)
+	} else if bubbleType == kBubbleMonster {
+		gapStart, gapEnd := float32(0), float32(0)
+		if !far && !noArrow {
+			gapStart = float32(baseX - tailHalf)
+			gapEnd = float32(baseX + tailHalf)
+		} else {
+			gapStart, gapEnd = -1, -1
+		}
+		drawMonsterSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 4*float32(s), borderCol, gapStart, gapEnd)
+	}
 
 	textTop := top + pad
 	textLeft := left + pad
@@ -315,12 +292,22 @@ func drawSpikes(screen *ebiten.Image, left, top, right, bottom, radius, size flo
 	bdR, bdG, bdB, bdA := col.RGBA()
 	step := size
 	phase := float64(time.Now().UnixNano()) / float64(time.Second) * 4
-	spike := size + size*0.3*float32(math.Sin(phase))
-	op := &ebiten.DrawTrianglesOptions{ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha, AntiAlias: true}
+	spikeBase := size + size*0.3*float32(math.Sin(phase))
+
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.Scale(float32(bdR)/0xffff, float32(bdG)/0xffff, float32(bdB)/0xffff, float32(bdA)/0xffff)
+
+	drawTriangle := func(x1, y1, x2, y2, x3, y3 float32) {
+		var p vector.Path
+		p.MoveTo(x1, y1)
+		p.LineTo(x2, y2)
+		p.LineTo(x3, y3)
+		p.Close()
+		vector.FillPath(screen, &p, nil, drawOp)
+	}
 
 	startX := left + radius
 	endX := right - radius
-	// top edge
 	for x := startX; x < endX; x += step {
 		end := x + step
 		mid := x + step/2
@@ -328,186 +315,9 @@ func drawSpikes(screen *ebiten.Image, left, top, right, bottom, radius, size flo
 			end = endX
 			mid = x + (end-x)/2
 		}
-
-		var p vector.Path
-		p.MoveTo(x, top)
-		p.LineTo(mid, top-spike)
-		p.LineTo(end, top)
-		p.Close()
-		vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
+		drawTriangle(x, top, mid, top-spikeBase, end, top)
 	}
 
-	// bottom edge (split around gap)
-	if bottomGapStart < startX {
-		bottomGapStart = startX
-	}
-	if bottomGapEnd < bottomGapStart {
-		bottomGapEnd = bottomGapStart
-	}
-	if bottomGapEnd > endX {
-		bottomGapEnd = endX
-	}
-	drawBottom := func(segStart, segEnd float32) {
-		for x := segStart; x < segEnd; x += step {
-			end := x + step
-			mid := x + step/2
-			if end > segEnd {
-				end = segEnd
-				mid = x + (end-x)/2
-			}
-
-			var p vector.Path
-			p.MoveTo(x, bottom)
-			p.LineTo(mid, bottom+spike)
-			p.LineTo(end, bottom)
-			p.Close()
-			vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-			for i := range vs {
-				vs[i].SrcX = 0
-				vs[i].SrcY = 0
-				vs[i].ColorR = float32(bdR) / 0xffff
-				vs[i].ColorG = float32(bdG) / 0xffff
-				vs[i].ColorB = float32(bdB) / 0xffff
-				vs[i].ColorA = float32(bdA) / 0xffff
-			}
-			screen.DrawTriangles(vs, is, whiteImage, op)
-		}
-	}
-	drawBottom(startX, bottomGapStart)
-	drawBottom(bottomGapEnd, endX)
-
-	startY := top + radius
-	endY := bottom - radius
-	// left and right edges
-	for y := startY; y < endY; y += step {
-		end := y + step
-		mid := y + step/2
-		if end > endY {
-			end = endY
-			mid = y + (end-y)/2
-		}
-
-		var p vector.Path
-		p.MoveTo(left, y)
-		p.LineTo(left-spike, mid)
-		p.LineTo(left, end)
-		p.Close()
-		vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
-
-		p = vector.Path{}
-		p.MoveTo(right, y)
-		p.LineTo(right+spike, mid)
-		p.LineTo(right, end)
-		p.Close()
-		vs, is = p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
-	}
-
-	if radius > 0 {
-		corner := func(cx, cy float32, start, end float64) {
-			stepAngle := float64(step) / float64(radius)
-			for a := start; a < end; a += stepAngle {
-				next := a + stepAngle
-				if next > end {
-					next = end
-				}
-				mid := a + (next-a)/2
-				x1 := cx + radius*float32(math.Cos(a))
-				y1 := cy + radius*float32(math.Sin(a))
-				x2 := cx + radius*float32(math.Cos(next))
-				y2 := cy + radius*float32(math.Sin(next))
-				mx := cx + (radius+spike)*float32(math.Cos(mid))
-				my := cy + (radius+spike)*float32(math.Sin(mid))
-
-				var p vector.Path
-				p.MoveTo(x1, y1)
-				p.LineTo(mx, my)
-				p.LineTo(x2, y2)
-				p.Close()
-				vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-				for i := range vs {
-					vs[i].SrcX = 0
-					vs[i].SrcY = 0
-					vs[i].ColorR = float32(bdR) / 0xffff
-					vs[i].ColorG = float32(bdG) / 0xffff
-					vs[i].ColorB = float32(bdB) / 0xffff
-					vs[i].ColorA = float32(bdA) / 0xffff
-				}
-				screen.DrawTriangles(vs, is, whiteImage, op)
-			}
-		}
-
-		corner(left+radius, top+radius, math.Pi, 1.5*math.Pi)
-		corner(right-radius, top+radius, 1.5*math.Pi, 2*math.Pi)
-		corner(right-radius, bottom-radius, 0, 0.5*math.Pi)
-		corner(left+radius, bottom-radius, 0.5*math.Pi, math.Pi)
-	}
-}
-
-// drawMonsterSpikes renders uneven spikes around a bubble for monster speech.
-// Each spike varies in length to create a more chaotic cartoon effect.
-func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, size float32, col color.Color, bottomGapStart, bottomGapEnd float32) {
-	bdR, bdG, bdB, bdA := col.RGBA()
-	step := size / 2
-	phase := float64(time.Now().UnixNano()) / float64(time.Second)
-	op := &ebiten.DrawTrianglesOptions{ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha, AntiAlias: true}
-
-	startX := left + radius
-	endX := right - radius
-	// top edge
-	for x := startX; x < endX; x += step {
-		spike := size * (0.7 + 0.3*float32(math.Sin(phase+float64(x-startX))))
-		end := x + step
-		mid := x + step/2
-		if end > endX {
-			end = endX
-			mid = x + (end-x)/2
-		}
-
-		var p vector.Path
-		p.MoveTo(x, top)
-		p.LineTo(mid, top-spike)
-		p.LineTo(end, top)
-		p.Close()
-		vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
-	}
-
-	// bottom edge (split around gap)
 	if bottomGapStart < startX {
 		bottomGapStart = startX
 	}
@@ -526,22 +336,7 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 				end = segEnd
 				mid = x + (end-x)/2
 			}
-
-			var p vector.Path
-			p.MoveTo(x, bottom)
-			p.LineTo(mid, bottom+spike)
-			p.LineTo(end, bottom)
-			p.Close()
-			vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-			for i := range vs {
-				vs[i].SrcX = 0
-				vs[i].SrcY = 0
-				vs[i].ColorR = float32(bdR) / 0xffff
-				vs[i].ColorG = float32(bdG) / 0xffff
-				vs[i].ColorB = float32(bdB) / 0xffff
-				vs[i].ColorA = float32(bdA) / 0xffff
-			}
-			screen.DrawTriangles(vs, is, whiteImage, op)
+			drawTriangle(x, bottom, mid, bottom+spike, end, bottom)
 		}
 	}
 	drawBottom(startX, bottomGapStart)
@@ -549,7 +344,6 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 
 	startY := top + radius
 	endY := bottom - radius
-	// left and right edges
 	for y := startY; y < endY; y += step {
 		spike := size * (0.7 + 0.3*float32(math.Sin(phase+float64(y-startY))))
 		end := y + step
@@ -559,88 +353,141 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 			mid = y + (end-y)/2
 		}
 
-		var p vector.Path
-		p.MoveTo(left, y)
-		p.LineTo(left-spike, mid)
-		p.LineTo(left, end)
-		p.Close()
-		vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
-
-		p = vector.Path{}
-		p.MoveTo(right, y)
-		p.LineTo(right+spike, mid)
-		p.LineTo(right, end)
-		p.Close()
-		vs, is = p.AppendVerticesAndIndicesForFilling(nil, nil)
-		for i := range vs {
-			vs[i].SrcX = 0
-			vs[i].SrcY = 0
-			vs[i].ColorR = float32(bdR) / 0xffff
-			vs[i].ColorG = float32(bdG) / 0xffff
-			vs[i].ColorB = float32(bdB) / 0xffff
-			vs[i].ColorA = float32(bdA) / 0xffff
-		}
-		screen.DrawTriangles(vs, is, whiteImage, op)
+		drawTriangle(left, y, left-spike, mid, left, end)
+		drawTriangle(right, y, right+spike, mid, right, end)
 	}
 
-	if radius > 0 {
-		corner := func(cx, cy float32, start, end float64) {
-			stepAngle := float64(step) / float64(radius)
-			for a := start; a < end; a += stepAngle {
-				next := a + stepAngle
-				if next > end {
-					next = end
-				}
-				mid := a + (next-a)/2
-				spike := size * (0.7 + 0.3*float32(math.Sin(phase+mid)))
-				x1 := cx + radius*float32(math.Cos(a))
-				y1 := cy + radius*float32(math.Sin(a))
-				x2 := cx + radius*float32(math.Cos(next))
-				y2 := cy + radius*float32(math.Sin(next))
-				mx := cx + (radius+spike)*float32(math.Cos(mid))
-				my := cy + (radius+spike)*float32(math.Sin(mid))
-
-				var p vector.Path
-				p.MoveTo(x1, y1)
-				p.LineTo(mx, my)
-				p.LineTo(x2, y2)
-				p.Close()
-				vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-				for i := range vs {
-					vs[i].SrcX = 0
-					vs[i].SrcY = 0
-					vs[i].ColorR = float32(bdR) / 0xffff
-					vs[i].ColorG = float32(bdG) / 0xffff
-					vs[i].ColorB = float32(bdB) / 0xffff
-					vs[i].ColorA = float32(bdA) / 0xffff
-				}
-				screen.DrawTriangles(vs, is, whiteImage, op)
+	if radius <= 0 {
+		return
+	}
+	corner := func(cx, cy float32, start, end float64) {
+		stepAngle := float64(step) / float64(radius)
+		for a := start; a < end; a += stepAngle {
+			next := a + stepAngle
+			if next > end {
+				next = end
 			}
-		}
+			mid := a + (next-a)/2
+			spike := size * (0.7 + 0.3*float32(math.Sin(phase+mid)))
+			x1 := cx + radius*float32(math.Cos(a))
+			y1 := cy + radius*float32(math.Sin(a))
+			x2 := cx + radius*float32(math.Cos(next))
+			y2 := cy + radius*float32(math.Sin(next))
+			mx := cx + (radius+spike)*float32(math.Cos(mid))
+			my := cy + (radius+spike)*float32(math.Sin(mid))
 
-		corner(left+radius, top+radius, math.Pi, 1.5*math.Pi)
-		corner(right-radius, top+radius, 1.5*math.Pi, 2*math.Pi)
-		corner(right-radius, bottom-radius, 0, 0.5*math.Pi)
-		corner(left+radius, bottom-radius, 0.5*math.Pi, math.Pi)
+			drawTriangle(x1, y1, mx, my, x2, y2)
+		}
 	}
+
+	corner(left+radius, top+radius, math.Pi, 1.5*math.Pi)
+	corner(right-radius, top+radius, 1.5*math.Pi, 2*math.Pi)
+	corner(right-radius, bottom-radius, 0, 0.5*math.Pi)
+	corner(left+radius, bottom-radius, 0.5*math.Pi, math.Pi)
 }
 
-// drawPonderWaves renders the ponder bubble's body and a subtle animated wavy
-// border made of small circles. Drawing both here ensures consistent
-// compositing and color/alpha handling.
+func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, size float32, col color.Color, bottomGapStart, bottomGapEnd float32) {
+	bdR, bdG, bdB, bdA := col.RGBA()
+	step := size / 2
+	phase := float64(time.Now().UnixNano()) / float64(time.Second)
+
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.Scale(float32(bdR)/0xffff, float32(bdG)/0xffff, float32(bdB)/0xffff, float32(bdA)/0xffff)
+
+	drawTriangle := func(x1, y1, x2, y2, x3, y3 float32) {
+		var p vector.Path
+		p.MoveTo(x1, y1)
+		p.LineTo(x2, y2)
+		p.LineTo(x3, y3)
+		p.Close()
+		vector.FillPath(screen, &p, nil, drawOp)
+	}
+
+	startX := left + radius
+	endX := right - radius
+	for x := startX; x < endX; x += step {
+		spike := size * (0.7 + 0.3*float32(math.Sin(phase+float64(x-startX))))
+		end := x + step
+		mid := x + step/2
+		if end > endX {
+			end = endX
+			mid = x + (end-x)/2
+		}
+		drawTriangle(x, top, mid, top-spike, end, top)
+	}
+
+	if bottomGapStart < startX {
+		bottomGapStart = startX
+	}
+	if bottomGapEnd < bottomGapStart {
+		bottomGapEnd = bottomGapStart
+	}
+	if bottomGapEnd > endX {
+		bottomGapEnd = endX
+	}
+	drawBottom := func(segStart, segEnd float32) {
+		for x := segStart; x < segEnd; x += step {
+			spike := size * (0.7 + 0.3*float32(math.Sin(phase+float64(x-startX))))
+			end := x + step
+			mid := x + step/2
+			if end > segEnd {
+				end = segEnd
+				mid = x + (end-x)/2
+			}
+			drawTriangle(x, bottom, mid, bottom+spike, end, bottom)
+		}
+	}
+	drawBottom(startX, bottomGapStart)
+	drawBottom(bottomGapEnd, endX)
+
+	startY := top + radius
+	endY := bottom - radius
+	for y := startY; y < endY; y += step {
+		spike := size * (0.7 + 0.3*float32(math.Sin(phase+float64(y-startY))))
+		end := y + step
+		mid := y + step/2
+		if end > endY {
+			end = endY
+			mid = y + (end-y)/2
+		}
+
+		drawTriangle(left, y, left-spike, mid, left, end)
+		drawTriangle(right, y, right+spike, mid, right, end)
+	}
+
+	if radius <= 0 {
+		return
+	}
+	corner := func(cx, cy float32, start, end float64) {
+		stepAngle := float64(step) / float64(radius)
+		for a := start; a < end; a += stepAngle {
+			next := a + stepAngle
+			if next > end {
+				next = end
+			}
+			mid := a + (next-a)/2
+			spike := size * (0.7 + 0.3*float32(math.Sin(phase+mid)))
+			x1 := cx + radius*float32(math.Cos(a))
+			y1 := cy + radius*float32(math.Sin(a))
+			x2 := cx + radius*float32(math.Cos(next))
+			y2 := cy + radius*float32(math.Sin(next))
+			mx := cx + (radius+spike)*float32(math.Cos(mid))
+			my := cy + (radius+spike)*float32(math.Sin(mid))
+
+			drawTriangle(x1, y1, mx, my, x2, y2)
+		}
+	}
+
+	corner(left+radius, top+radius, math.Pi, 1.5*math.Pi)
+	corner(right-radius, top+radius, 1.5*math.Pi, 2*math.Pi)
+	corner(right-radius, bottom-radius, 0, 0.5*math.Pi)
+	corner(left+radius, bottom-radius, 0.5*math.Pi, math.Pi)
+}
+
 func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
-    cr, cg, cb, ca := col.RGBA()
-    s := float32(gs.BubbleScale)
-    radius := float32(8) * s
+	cr, cg, cb, ca := col.RGBA()
+	s := float32(gs.BubbleScale)
+	radius := float32(8) * s
 	var body vector.Path
 	body.MoveTo(float32(left)+radius, float32(top))
 	body.LineTo(float32(right)-radius, float32(top))
@@ -652,27 +499,18 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 	body.LineTo(float32(left), float32(top)+radius)
 	body.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 	body.Close()
-
-	vs, is := body.AppendVerticesAndIndicesForFilling(nil, nil)
-	for i := range vs {
-		vs[i].SrcX = 0
-		vs[i].SrcY = 0
-		vs[i].ColorR = float32(cr) / 0xffff
-		vs[i].ColorG = float32(cg) / 0xffff
-		vs[i].ColorB = float32(cb) / 0xffff
-		vs[i].ColorA = float32(ca) / 0xffff
+	fillColor := color.RGBA64{R: uint16(cr), G: uint16(cg), B: uint16(cb), A: uint16(ca)}
+	bodyOp := &vector.DrawPathOptions{
+		AntiAlias: true,
+		Blend:     ebiten.BlendCopy,
 	}
-	op := &ebiten.DrawTrianglesOptions{
-		ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha,
-		AntiAlias:      true,
-		Blend:          ebiten.BlendCopy,
-	}
-	screen.DrawTriangles(vs, is, whiteImage, op)
+	bodyOp.ColorScale.ScaleWithColor(fillColor)
+	vector.FillPath(screen, &body, nil, bodyOp)
 
-    r := float32(6) * s
-    step := r * 1.2
-    phase := float64(time.Now().UnixNano()) / float64(time.Second)
-    corner := float32(10) * s
+	r := float32(6) * s
+	step := r * 1.2
+	phase := float64(time.Now().UnixNano()) / float64(time.Second)
+	corner := float32(10) * s
 	angleStep := float64(step / corner)
 
 	draw := func(cx, cy float32) {
@@ -739,24 +577,14 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 
 // drawBubbleCircle draws a filled circle used by the wavy ponder bubble edges.
 func drawBubbleCircle(screen *ebiten.Image, cx, cy, radius float32, col color.Color) {
-	r, g, b, a := col.RGBA()
 	var p vector.Path
 	p.MoveTo(cx+radius, cy)
 	p.Arc(cx, cy, radius, 0, 2*math.Pi, vector.Clockwise)
 	p.Close()
-	vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
-	for i := range vs {
-		vs[i].SrcX = 0
-		vs[i].SrcY = 0
-		vs[i].ColorR = float32(r) / 0xffff
-		vs[i].ColorG = float32(g) / 0xffff
-		vs[i].ColorB = float32(b) / 0xffff
-		vs[i].ColorA = float32(a) / 0xffff
+	drawOp := &vector.DrawPathOptions{
+		AntiAlias: true,
+		Blend:     ebiten.BlendCopy,
 	}
-	op := &ebiten.DrawTrianglesOptions{
-		ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha,
-		AntiAlias:      true,
-		Blend:          ebiten.BlendCopy,
-	}
-	screen.DrawTriangles(vs, is, whiteImage, op)
+	drawOp.ColorScale.ScaleWithColor(col)
+	vector.FillPath(screen, &p, nil, drawOp)
 }

@@ -269,16 +269,16 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 	inputImg.Clear()
 
 	drawStick := func(cx, cy float32, stick int, label string, dz float64) {
-		vector.DrawFilledCircle(inputImg, cx, cy, 40, color.NRGBA{64, 64, 64, 255}, true)
+		vector.FillCircle(inputImg, cx, cy, 40, color.NRGBA{64, 64, 64, 255}, true)
 		if dz > 0 {
-			vector.DrawFilledCircle(inputImg, cx, cy, float32(dz)*40, color.NRGBA{32, 32, 32, 255}, true)
+			vector.FillCircle(inputImg, cx, cy, float32(dz)*40, color.NRGBA{32, 32, 32, 255}, true)
 		}
 		if stick >= 0 {
 			axisIndex := stick * 2
 			if axisIndex+1 < ebiten.GamepadAxisCount(id) {
 				ax := ebiten.GamepadAxisValue(id, axisIndex)
 				ay := ebiten.GamepadAxisValue(id, axisIndex+1)
-				vector.DrawFilledCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
+				vector.FillCircle(inputImg, cx+float32(ax)*40, cy+float32(ay)*40, 5, color.NRGBA{0, 255, 0, 255}, true)
 			}
 		}
 		metrics := mainFont.Metrics()
@@ -298,7 +298,7 @@ func drawJoystickDisplay(id ebiten.GamepadID) {
 		if ebiten.IsGamepadButtonPressed(id, btn) {
 			col = color.NRGBA{0, 255, 0, 255}
 		}
-		vector.DrawFilledCircle(inputImg, cx, cy, r, col, true)
+		vector.FillCircle(inputImg, cx, cy, r, col, true)
 		metrics := mainFont.Metrics()
 		txtW, _ := text.Measure(lbl, mainFont, 0)
 		scale := 0.5

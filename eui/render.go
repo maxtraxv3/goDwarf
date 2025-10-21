@@ -470,7 +470,7 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			radius := win.GetTitleSize() / 6
 			cx := pr.X0 + (pr.X1-pr.X0)/2
 			cy := pr.Y0 + (pr.Y1-pr.Y0)/2
-			vector.DrawFilledCircle(screen, cx, cy-radius/2, radius, color, true)
+			vector.FillCircle(screen, cx, cy-radius/2, radius, color, true)
 			if win.zone != nil {
 				strokeLine(screen, cx, cy-radius/2, cx, pr.Y1-radius/3, uiScale, color, true)
 			} else {
@@ -1403,8 +1403,8 @@ func (item *itemData) drawItemInternal(parent *itemData, offset point, base poin
 		cy := offset.Y + radius
 		px := cx + float32(math.Cos(h*math.Pi/180))*radius*float32(v)
 		py := cy + float32(math.Sin(h*math.Pi/180))*radius*float32(v)
-		vector.DrawFilledCircle(subImg, px, py, 4*uiScale, color.Black, true)
-		vector.DrawFilledCircle(subImg, px, py, 2*uiScale, color.White, true)
+		vector.FillCircle(subImg, px, py, 4*uiScale, color.Black, true)
+		vector.FillCircle(subImg, px, py, 2*uiScale, color.White, true)
 
 		sw := wheelSize / 5
 		if sw < 10*uiScale {
@@ -1626,18 +1626,9 @@ func drawParallelogram(dst *ebiten.Image, x, y, w, h, slant float32, col color.C
 	path.LineTo(x+w+slant, y+h)
 	path.LineTo(x+slant, y+h)
 	path.Close()
-	vs, is := path.AppendVerticesAndIndicesForFilling(nil, nil)
-	for i := range vs {
-		vs[i].ColorR, vs[i].ColorG, vs[i].ColorB, vs[i].ColorA = colorToVec4(col)
-	}
-	// Use the cached 1x1 white sub-image to avoid allocating
-	// and to keep this path on unmanaged images when configured.
-	dst.DrawTriangles(vs, is, whiteSubImage, &ebiten.DrawTrianglesOptions{})
-}
-
-func colorToVec4(c color.Color) (r, g, b, a float32) {
-	rr, gg, bb, aa := c.RGBA()
-	return float32(rr) / 65535, float32(gg) / 65535, float32(bb) / 65535, float32(aa) / 65535
+	drawOp := &vector.DrawPathOptions{}
+	drawOp.ColorScale.ScaleWithColor(col)
+	vector.FillPath(dst, &path, nil, drawOp)
 }
 
 func (item *itemData) drawItem(parent *itemData, offset point, base point, clip rect, screen *ebiten.Image, dropdowns *[]openDropdown) {
@@ -1845,11 +1836,7 @@ func drawDropShadow(screen *ebiten.Image, rrect *roundRect, size float32, col Co
 }
 
 func drawRoundRect(screen *ebiten.Image, rrect *roundRect) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
 	width := float32(math.Round(float64(rrect.Border)))
 	off := float32(0)
@@ -1865,8 +1852,6 @@ func drawRoundRect(screen *ebiten.Image, rrect *roundRect) {
 	h := y1 - y
 	fillet := rrect.Fillet
 
-	// When stroking, keep the outline fully inside the rectangle so
-	// sub-images do not clip the bottom and right edges.
 	if !rrect.Filled && width > 0 {
 		inset := width / 2
 		x += inset
@@ -1921,35 +1906,26 @@ func drawRoundRect(screen *ebiten.Image, rrect *roundRect) {
 		y)
 	path.Close()
 
+	drawColor := color.RGBA(rrect.Color)
 	if rrect.Filled {
-		vertices, indices = path.AppendVerticesAndIndicesForFilling(vertices[:0], indices[:0])
-	} else {
-		opv := &vector.StrokeOptions{Width: width}
-		vertices, indices = path.AppendVerticesAndIndicesForStroke(vertices[:0], indices[:0], opv)
+		drawOp := &vector.DrawPathOptions{AntiAlias: true}
+		drawOp.ColorScale.ScaleWithColor(drawColor)
+		vector.FillPath(screen, &path, nil, drawOp)
+		return
 	}
 
-	col := rrect.Color
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(col.R) / 255
-		vertices[i].ColorG = float32(col.G) / 255
-		vertices[i].ColorB = float32(col.B) / 255
-		vertices[i].ColorA = float32(col.A) / 255
+	if width <= 0 {
+		return
 	}
-
-	op := &ebiten.DrawTrianglesOptions{FillRule: ebiten.FillRuleNonZero, AntiAlias: true}
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	strokeOp := &vector.StrokeOptions{Width: width}
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.ScaleWithColor(drawColor)
+	vector.StrokePath(screen, &path, strokeOp, drawOp)
 }
 
 func drawTabShape(screen *ebiten.Image, pos point, size point, col Color, fillet float32, slope float32) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
-	// Align to pixel boundaries to avoid artifacts
 	pos.X = float32(math.Round(float64(pos.X)))
 	pos.Y = float32(math.Round(float64(pos.Y)))
 	size.X = float32(math.Round(float64(size.X)))
@@ -1975,31 +1951,14 @@ func drawTabShape(screen *ebiten.Image, pos point, size point, col Color, fillet
 	path.LineTo(pos.X, pos.Y+size.Y)
 	path.Close()
 
-	vertices, indices = path.AppendVerticesAndIndicesForFilling(vertices[:0], indices[:0])
-	c := col
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(c.R) / 255
-		vertices[i].ColorG = float32(c.G) / 255
-		vertices[i].ColorB = float32(c.B) / 255
-		vertices[i].ColorA = float32(c.A) / 255
-	}
-
-	op := &ebiten.DrawTrianglesOptions{AntiAlias: true}
-	op.FillRule = ebiten.FillRuleNonZero
-	op.AntiAlias = origFillet > 0
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	drawOp := &vector.DrawPathOptions{AntiAlias: origFillet > 0}
+	drawOp.ColorScale.ScaleWithColor(color.RGBA(col))
+	vector.FillPath(screen, &path, nil, drawOp)
 }
 
 func strokeTabShape(screen *ebiten.Image, pos point, size point, col Color, fillet float32, slope float32, border float32) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
-	// Align to pixel boundaries
 	border = float32(math.Round(float64(border)))
 	off := pixelOffset(border)
 	pos.X = float32(math.Round(float64(pos.X))) + off
@@ -2025,28 +1984,14 @@ func strokeTabShape(screen *ebiten.Image, pos point, size point, col Color, fill
 	path.LineTo(pos.X, pos.Y+size.Y)
 	path.Close()
 
-	opv := &vector.StrokeOptions{Width: border}
-	vertices, indices = path.AppendVerticesAndIndicesForStroke(vertices[:0], indices[:0], opv)
-	c := col
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(c.R) / 255
-		vertices[i].ColorG = float32(c.G) / 255
-		vertices[i].ColorB = float32(c.B) / 255
-		vertices[i].ColorA = float32(c.A) / 255
-	}
-
-	op := &ebiten.DrawTrianglesOptions{FillRule: ebiten.FillRuleNonZero, AntiAlias: true}
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	strokeOp := &vector.StrokeOptions{Width: border}
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.ScaleWithColor(color.RGBA(col))
+	vector.StrokePath(screen, &path, strokeOp, drawOp)
 }
 
 func strokeTabTop(screen *ebiten.Image, pos point, size point, col Color, fillet float32, slope float32, border float32) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
 	border = float32(math.Round(float64(border)))
 	off := pixelOffset(border)
@@ -2058,43 +2003,30 @@ func strokeTabTop(screen *ebiten.Image, pos point, size point, col Color, fillet
 	if slope <= 0 {
 		slope = size.Y / 4
 	}
-	if fillet < 0 {
+	if fillet <= 0 {
 		fillet = size.Y / 8
 	}
 	fillet = float32(math.Round(float64(fillet)))
 
-	if fillet > 0 {
-		path.MoveTo(pos.X+slope+fillet, pos.Y)
-		path.LineTo(pos.X+size.X-slope-fillet, pos.Y)
-	} else {
-		path.MoveTo(pos.X+slope, pos.Y)
-		path.LineTo(pos.X+size.X-slope, pos.Y)
-	}
+	path.MoveTo(pos.X, pos.Y)
+	path.LineTo(pos.X+slope, pos.Y)
+	path.LineTo(pos.X+slope, pos.Y-fillet)
+	path.QuadTo(pos.X+slope, pos.Y-slope, pos.X+slope+fillet, pos.Y-slope)
+	path.LineTo(pos.X+size.X-slope-fillet, pos.Y-slope)
+	path.QuadTo(pos.X+size.X-slope, pos.Y-slope, pos.X+size.X-slope, pos.Y-fillet)
+	path.LineTo(pos.X+size.X-slope, pos.Y)
+	path.LineTo(pos.X, pos.Y)
+	path.Close()
 
-	opv := &vector.StrokeOptions{Width: border}
-	vertices, indices = path.AppendVerticesAndIndicesForStroke(vertices[:0], indices[:0], opv)
-	c := col
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(c.R) / 255
-		vertices[i].ColorG = float32(c.G) / 255
-		vertices[i].ColorB = float32(c.B) / 255
-		vertices[i].ColorA = float32(c.A) / 255
-	}
-
-	op := &ebiten.DrawTrianglesOptions{FillRule: ebiten.FillRuleNonZero, AntiAlias: true}
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	strokeOp := &vector.StrokeOptions{Width: border}
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.ScaleWithColor(color.RGBA(col))
+	vector.StrokePath(screen, &path, strokeOp, drawOp)
 }
 
 func drawTriangle(screen *ebiten.Image, pos point, size float32, col Color) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
-	// Quantize to pixel boundaries
 	pos.X = float32(math.Round(float64(pos.X)))
 	pos.Y = float32(math.Round(float64(pos.Y)))
 	size = float32(math.Round(float64(size)))
@@ -2104,27 +2036,13 @@ func drawTriangle(screen *ebiten.Image, pos point, size float32, col Color) {
 	path.LineTo(pos.X+size/2, pos.Y+size)
 	path.Close()
 
-	vertices, indices = path.AppendVerticesAndIndicesForFilling(vertices[:0], indices[:0])
-	c := col
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(c.R) / 255
-		vertices[i].ColorG = float32(c.G) / 255
-		vertices[i].ColorB = float32(c.B) / 255
-		vertices[i].ColorA = float32(c.A) / 255
-	}
-
-	op := &ebiten.DrawTrianglesOptions{FillRule: ebiten.FillRuleNonZero, AntiAlias: true}
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.ScaleWithColor(color.RGBA(col))
+	vector.FillPath(screen, &path, nil, drawOp)
 }
 
 func drawCheckmark(screen *ebiten.Image, start, mid, end point, width float32, col Color) {
-	var (
-		path     vector.Path
-		vertices []ebiten.Vertex
-		indices  []uint16
-	)
+	var path vector.Path
 
 	width = float32(math.Round(float64(width)))
 	off := pixelOffset(width)
@@ -2133,20 +2051,10 @@ func drawCheckmark(screen *ebiten.Image, start, mid, end point, width float32, c
 	path.LineTo(float32(math.Round(float64(mid.X)))+off, float32(math.Round(float64(mid.Y)))+off)
 	path.LineTo(float32(math.Round(float64(end.X)))+off, float32(math.Round(float64(end.Y)))+off)
 
-	opv := &vector.StrokeOptions{Width: width, LineJoin: vector.LineJoinRound, LineCap: vector.LineCapRound}
-	vertices, indices = path.AppendVerticesAndIndicesForStroke(vertices[:0], indices[:0], opv)
-	c := col
-	for i := range vertices {
-		vertices[i].SrcX = 1
-		vertices[i].SrcY = 1
-		vertices[i].ColorR = float32(c.R) / 255
-		vertices[i].ColorG = float32(c.G) / 255
-		vertices[i].ColorB = float32(c.B) / 255
-		vertices[i].ColorA = float32(c.A) / 255
-	}
-
-	op := &ebiten.DrawTrianglesOptions{FillRule: ebiten.FillRuleNonZero, AntiAlias: true}
-	screen.DrawTriangles(vertices, indices, whiteSubImage, op)
+	strokeOpts := &vector.StrokeOptions{Width: width, LineJoin: vector.LineJoinRound, LineCap: vector.LineCapRound}
+	drawOp := &vector.DrawPathOptions{AntiAlias: true}
+	drawOp.ColorScale.ScaleWithColor(color.RGBA(col))
+	vector.StrokePath(screen, &path, strokeOpts, drawOp)
 }
 
 func drawArrow(screen *ebiten.Image, x0, y0, x1, y1, width float32, col Color) {

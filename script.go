@@ -53,7 +53,7 @@ func (s *scriptScope) removeChar(name string) {
 	delete(s.Chars, name)
 }
 
-func (s scriptScope) empty() bool { return !s.All && (s.Chars == nil || len(s.Chars) == 0) }
+func (s scriptScope) empty() bool { return !s.All && len(s.Chars) == 0 }
 
 // Expose the script API under both a short and a module-qualified path so
 // Yaegi can resolve imports regardless of how the script refers to it.
