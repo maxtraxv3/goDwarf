@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"golang.org/x/crypto/twofish"
 	"golang.org/x/text/encoding/charmap"
+	"gothoom/internal/twofish"
 )
 
 func simpleEncrypt(data []byte) {

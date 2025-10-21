@@ -1420,7 +1420,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	if seekingMov {
 		x, y := float64(screen.Bounds().Dx())/2, float64(screen.Bounds().Dy())/2
-		vector.DrawFilledRect(screen, float32(x+2), float32(y+2), 90, 40, color.Black, false)
+		vector.FillRect(screen, float32(x+2), float32(y+2), 90, 40, color.Black, false)
 
 		op := acquireTextDrawOpts()
 		op.GeoM.Translate(x, y)
@@ -1457,7 +1457,7 @@ func drawRecPlayBadge(dst *ebiten.Image) {
 	cx := float32(10)
 	cy := float32(10)
 	r := float32(6)
-	vector.DrawFilledCircle(dst, cx+pad, cy+pad, r, col, false)
+	vector.FillCircle(dst, cx+pad, cy+pad, r, col, false)
 	// Text to the right
 	op := acquireTextDrawOpts()
 	op.GeoM.Translate(float64(2*pad+r*2), float64(4+pad))
@@ -1664,7 +1664,7 @@ func drawMobile(screen *ebiten.Image, ox, oy int, m frameMobile, descMap map[uin
 		}
 	} else {
 		// Fallback marker when image missing; no per-frame bounds check.
-		vector.DrawFilledRect(screen, float32(float64(x)-3*gs.GameScale), float32(float64(y)-3*gs.GameScale), float32(6*gs.GameScale), float32(6*gs.GameScale), color.RGBA{0xff, 0, 0, 0xff}, false)
+		vector.FillRect(screen, float32(float64(x)-3*gs.GameScale), float32(float64(y)-3*gs.GameScale), float32(6*gs.GameScale), float32(6*gs.GameScale), color.RGBA{0xff, 0, 0, 0xff}, false)
 		if gs.imgPlanesDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%dm", plane)
@@ -1990,7 +1990,7 @@ func drawPicture(screen *ebiten.Image, ox, oy int, p framePicture, alpha float64
 		if gs.pictAgainDebug && p.Again {
 			clr = color.RGBA{0, 0, 0xff, 0xff}
 		}
-		vector.DrawFilledRect(screen, float32(float64(x)-2*gs.GameScale), float32(float64(y)-2*gs.GameScale), float32(4*gs.GameScale), float32(4*gs.GameScale), clr, false)
+		vector.FillRect(screen, float32(float64(x)-2*gs.GameScale), float32(float64(y)-2*gs.GameScale), float32(4*gs.GameScale), float32(4*gs.GameScale), clr, false)
 		if gs.pictIDDebug {
 			metrics := mainFont.Metrics()
 			lbl := fmt.Sprintf("%d", p.PictID)
