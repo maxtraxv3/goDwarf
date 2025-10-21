@@ -205,3 +205,71 @@ func TestReadUDPMessageMultiple(t *testing.T) {
 		t.Fatalf("expected 1 read, got %d", conn.idx)
 	}
 }
+
+func BenchmarkSendPlayerInputReliableNoAllocs(b *testing.B) {
+	oldCommandNum := commandNum
+	oldPending := pendingCommand
+	oldQueue := commandQueue
+	oldAck := ackFrame
+	oldResend := resendFrame
+	oldLast := lastInputSent
+	defer func() {
+		commandNum = oldCommandNum
+		pendingCommand = oldPending
+		commandQueue = oldQueue
+		ackFrame = oldAck
+		resendFrame = oldResend
+		lastInputSent = oldLast
+	}()
+
+	commandNum = 1
+	pendingCommand = ""
+	commandQueue = nil
+	ackFrame = 0
+	resendFrame = 0
+	lastInputSent = time.Time{}
+
+	conn := &bufConn{}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		conn.Reset()
+		if err := sendPlayerInput(conn, 0, 0, false, true); err != nil {
+			b.Fatalf("sendPlayerInput: %v", err)
+		}
+	}
+}
+
+func BenchmarkSendPlayerInputUnreliableNoAllocs(b *testing.B) {
+	oldCommandNum := commandNum
+	oldPending := pendingCommand
+	oldQueue := commandQueue
+	oldAck := ackFrame
+	oldResend := resendFrame
+	oldLast := lastInputSent
+	defer func() {
+		commandNum = oldCommandNum
+		pendingCommand = oldPending
+		commandQueue = oldQueue
+		ackFrame = oldAck
+		resendFrame = oldResend
+		lastInputSent = oldLast
+	}()
+
+	commandNum = 1
+	pendingCommand = ""
+	commandQueue = nil
+	ackFrame = 0
+	resendFrame = 0
+	lastInputSent = time.Time{}
+
+	conn := &bufConn{}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		conn.Reset()
+		if err := sendPlayerInput(conn, 0, 0, false, false); err != nil {
+			b.Fatalf("sendPlayerInput: %v", err)
+		}
+	}
+}
