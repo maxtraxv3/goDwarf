@@ -71,7 +71,18 @@ Click and drag to move. Type \HELP <COMMAND>. The commands are: \ACTION, \AFFILI
 Running the client without a display (i.e. no `$DISPLAY` variable) will exit
 with an X11 initialization error.
 
-## Deprecated Ebiten calls to avoid
+## Ebitengine 2.9 notes
+
+- We target Ebitengine 2.9.x; the release notes live at
+  <https://ebitengine.org/en/documents/2.9.html>.
+- Prefer the new `vector.Fill*`, `vector.StrokePath`, and `vector.Path.Add*`
+  helpers instead of manually appending vertices.
+- Replace the old resample helpers with the new
+  `audio.ResampleReader{,F32}` helpers when touching audio code.
+
+### Deprecated Ebiten calls to avoid
+
+The older removal list still applies:
 
 - `op.ColorM.Scale`
 - `op.ColorM.Translate`
@@ -103,3 +114,20 @@ with an X11 initialization error.
 - `(*ebiten.Image).Size`
 - `(*ebiten.Shader).Dispose`
 - `ebiten.TouchIDs`
+
+New 2.9-specific deprecations to avoid introducing:
+
+- `ebiten.FillRule`
+- `ebiten.DrawTrianglesOptions.AntiAlias`
+- `ebiten.DrawTrianglesOptions.FillRule`
+- `ebiten.DrawTrianglesShaderOptions.AntiAlias`
+- `ebiten.DrawTrianglesShaderOptions.FillRule`
+- `colorm.DrawTrianglesOptions.AntiAlias`
+- `colorm.DrawTrianglesOptions.FillRule`
+- `audio.Resample`
+- `audio.ResampleF32`
+- `text/v2.GoTextFace.Script`
+- `vector.Path.AppendVerticesAndIndicesForFilling`
+- `vector.Path.AppendVerticesAndIndicesForStroke`
+- `vector.DrawFilledCircle`
+- `vector.DrawFilledRect`
