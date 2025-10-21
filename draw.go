@@ -90,6 +90,48 @@ var skipPictShift = map[uint16]struct{}{
 	3037: {},
 }
 
+type pictureShiftScratch struct {
+	counts     map[[2]int]int
+	idxMap     map[[2]int]map[int]struct{}
+	curIdx     map[uint16][]int
+	pixelCache map[uint16]int
+	idxSetPool []map[int]struct{}
+}
+
+func newPictureShiftScratch() *pictureShiftScratch {
+	return &pictureShiftScratch{
+		counts:     make(map[[2]int]int),
+		idxMap:     make(map[[2]int]map[int]struct{}),
+		curIdx:     make(map[uint16][]int),
+		pixelCache: make(map[uint16]int),
+	}
+}
+
+func (s *pictureShiftScratch) reset() {
+	for k := range s.counts {
+		delete(s.counts, k)
+	}
+	for key, inner := range s.idxMap {
+		for idx := range inner {
+			delete(inner, idx)
+		}
+		s.idxSetPool = append(s.idxSetPool, inner)
+		delete(s.idxMap, key)
+	}
+	for k, v := range s.curIdx {
+		s.curIdx[k] = v[:0]
+	}
+	for k := range s.pixelCache {
+		delete(s.pixelCache, k)
+	}
+}
+
+var pictureShiftScratchPool = sync.Pool{
+	New: func() any {
+		return newPictureShiftScratch()
+	},
+}
+
 func sortPictures(pics []framePicture) {
 	sort.Slice(pics, func(i, j int) bool {
 		if pics[i].Plane != pics[j].Plane {
@@ -492,16 +534,21 @@ func pictureShift(prev, cur []framePicture, max int) (int, int, []int, bool) {
 		return 0, 0, nil, false
 	}
 
+	scratch := pictureShiftScratchPool.Get().(*pictureShiftScratch)
+	scratch.reset()
+	defer pictureShiftScratchPool.Put(scratch)
+
 	const maxWeight = 100000
 
-	counts := make(map[[2]int]int)
-	idxMap := make(map[[2]int]map[int]struct{})
+	counts := scratch.counts
+	idxMap := scratch.idxMap
+	curIdx := scratch.curIdx
+	pixelCache := scratch.pixelCache
 	total := 0
 	maxInt := int(^uint(0) >> 1)
 
 	// Build a map from PictID to indexes in the current frame to avoid
 	// repeatedly scanning the entire list for matches.
-	curIdx := make(map[uint16][]int, len(cur))
 	for i, c := range cur {
 		if _, skip := skipPictShift[c.PictID]; skip {
 			continue
@@ -511,8 +558,6 @@ func pictureShift(prev, cur []framePicture, max int) (int, int, []int, bool) {
 
 	// Cache pixel counts locally so that each PictID is computed at most once
 	// per pictureShift invocation.
-	pixelCache := make(map[uint16]int)
-
 	for _, p := range prev {
 		if _, skip := skipPictShift[p.PictID]; skip {
 			continue
@@ -545,10 +590,17 @@ func pictureShift(prev, cur []framePicture, max int) (int, int, []int, bool) {
 			}
 			key := [2]int{bestDx, bestDy}
 			counts[key] += pixels
-			if idxMap[key] == nil {
-				idxMap[key] = make(map[int]struct{})
+			set := idxMap[key]
+			if set == nil {
+				if n := len(scratch.idxSetPool); n > 0 {
+					set = scratch.idxSetPool[n-1]
+					scratch.idxSetPool = scratch.idxSetPool[:n-1]
+				} else {
+					set = make(map[int]struct{})
+				}
+				idxMap[key] = set
 			}
-			idxMap[key][bestIdx] = struct{}{}
+			set[bestIdx] = struct{}{}
 			total += pixels
 		}
 	}
