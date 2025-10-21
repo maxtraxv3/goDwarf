@@ -6,11 +6,39 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 // tcpConn is the active TCP connection to the game server.
 var tcpConn net.Conn
+
+// messageBufferSize is large enough to hold the most common payloads such as
+// identifiers and player input packets.
+const messageBufferSize = 512
+
+var messageBufferPool = sync.Pool{
+	New: func() any {
+		return make([]byte, messageBufferSize)
+	},
+}
+
+func getMessageBuffer() []byte {
+	if buf := messageBufferPool.Get(); buf != nil {
+		b := buf.([]byte)
+		if cap(b) >= messageBufferSize {
+			return b[:messageBufferSize]
+		}
+	}
+	return make([]byte, messageBufferSize)
+}
+
+func putMessageBuffer(buf []byte) {
+	if cap(buf) < messageBufferSize {
+		return
+	}
+	messageBufferPool.Put(buf[:messageBufferSize])
+}
 
 // sendClientIdentifiers transmits the client, image and sound versions to the server.
 func sendClientIdentifiers(connection net.Conn, clVersion, imagesVersion, soundsVersion uint32) error {
@@ -29,27 +57,49 @@ func sendClientIdentifiers(connection net.Conn, clVersion, imagesVersion, sounds
 	hnameBytes := encodeMacRoman(hname)
 	bootBytes := encodeMacRoman(boot)
 
-	data := make([]byte, 0, 8+6+len(unameBytes)+1+len(hnameBytes)+1+len(bootBytes)+1+1)
-	data = append(data, make([]byte, 8)...) // magic file info placeholder
-	data = append(data, make([]byte, 6)...) // ethernet address placeholder
-	data = append(data, unameBytes...)
-	data = append(data, 0)
-	data = append(data, hnameBytes...)
-	data = append(data, 0)
-	data = append(data, bootBytes...)
-	data = append(data, 0)
-	data = append(data, byte(0)) // language
+	payloadLen := 16 + 8 + 6 + len(unameBytes) + 1 + len(hnameBytes) + 1 + len(bootBytes) + 1 + 1
+	usePool := payloadLen <= messageBufferSize
+	var baseBuf []byte
+	if usePool {
+		baseBuf = getMessageBuffer()
+	} else {
+		baseBuf = make([]byte, payloadLen)
+	}
+	packet := baseBuf[:payloadLen]
+	defer func() {
+		clear(packet)
+		if usePool {
+			putMessageBuffer(baseBuf)
+		}
+	}()
 
-	buf := make([]byte, 16+len(data))
-	binary.BigEndian.PutUint16(buf[0:2], kMsgIdentifiers)
-	binary.BigEndian.PutUint16(buf[2:4], 0)
-	binary.BigEndian.PutUint32(buf[4:8], clVersion)
-	binary.BigEndian.PutUint32(buf[8:12], imagesVersion)
-	binary.BigEndian.PutUint32(buf[12:16], soundsVersion)
-	copy(buf[16:], data)
-	simpleEncrypt(buf[16:])
+	binary.BigEndian.PutUint16(packet[0:2], kMsgIdentifiers)
+	binary.BigEndian.PutUint16(packet[2:4], 0)
+	binary.BigEndian.PutUint32(packet[4:8], clVersion)
+	binary.BigEndian.PutUint32(packet[8:12], imagesVersion)
+	binary.BigEndian.PutUint32(packet[12:16], soundsVersion)
+	offset := 16
+	for i := 0; i < 14; i++ { // magic file info (8) + ethernet address (6)
+		packet[offset+i] = 0
+	}
+	offset += 14
+	copy(packet[offset:], unameBytes)
+	offset += len(unameBytes)
+	packet[offset] = 0
+	offset++
+	copy(packet[offset:], hnameBytes)
+	offset += len(hnameBytes)
+	packet[offset] = 0
+	offset++
+	copy(packet[offset:], bootBytes)
+	offset += len(bootBytes)
+	packet[offset] = 0
+	offset++
+	packet[offset] = byte(0) // language
+
+	simpleEncrypt(packet[16:])
 	logDebug("identifiers client=%d images=%d sounds=%d", clVersion, imagesVersion, soundsVersion)
-	return sendTCPMessage(connection, buf)
+	return sendTCPMessage(connection, packet)
 }
 
 // sendTCPMessage writes a length-prefixed message to the TCP connection.
@@ -72,8 +122,25 @@ func sendTCPMessage(connection net.Conn, payload []byte) error {
 func sendUDPMessage(connection net.Conn, payload []byte) error {
 	var size [2]byte
 	binary.BigEndian.PutUint16(size[:], uint16(len(payload)))
-	buf := append(size[:], payload...)
-	if err := writeAll(connection, buf); err != nil {
+	totalLen := 2 + len(payload)
+	usePool := totalLen <= messageBufferSize
+	var baseBuf []byte
+	if usePool {
+		baseBuf = getMessageBuffer()
+	} else {
+		baseBuf = make([]byte, totalLen)
+	}
+	frame := baseBuf[:totalLen]
+	defer func() {
+		clear(frame)
+		if usePool {
+			putMessageBuffer(baseBuf)
+		}
+	}()
+	frame[0] = size[0]
+	frame[1] = size[1]
+	copy(frame[2:], payload)
+	if err := writeAll(connection, frame); err != nil {
 		return err
 	}
 	tag := binary.BigEndian.Uint16(payload[:2])
@@ -151,8 +218,25 @@ func sendPlayerInput(connection net.Conn, mouseX, mouseY int16, mouseDown bool, 
 		nextCommand()
 		cmd = pendingCommand
 	}
-	cmdBytes := encodeMacRoman(cmd)
-	packet := make([]byte, 20+len(cmdBytes)+1)
+	var cmdBytes []byte
+	if cmd != "" {
+		cmdBytes = encodeMacRoman(cmd)
+	}
+	packetLen := 20 + len(cmdBytes) + 1
+	usePool := packetLen <= messageBufferSize
+	var baseBuf []byte
+	if usePool {
+		baseBuf = getMessageBuffer()
+	} else {
+		baseBuf = make([]byte, packetLen)
+	}
+	packet := baseBuf[:packetLen]
+	defer func() {
+		clear(packet)
+		if usePool {
+			putMessageBuffer(baseBuf)
+		}
+	}()
 	binary.BigEndian.PutUint16(packet[0:2], kMsgPlayerInput)
 	binary.BigEndian.PutUint16(packet[2:4], uint16(mouseX))
 	binary.BigEndian.PutUint16(packet[4:6], uint16(mouseY))
