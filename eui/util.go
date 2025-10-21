@@ -169,6 +169,104 @@ func (parent *windowData) removeItem(child *itemData) {
 	parent.markDirty()
 }
 
+func (parent *itemData) insertItem(idx int, child *itemData) {
+	if parent == nil || child == nil {
+		return
+	}
+	if idx < 0 {
+		idx = 0
+	}
+	if idx > len(parent.Contents) {
+		idx = len(parent.Contents)
+	}
+	child.Parent = parent
+	if child.Theme == nil {
+		child.Theme = parent.Theme
+	}
+	child.setParentWindow(parent.ParentWindow)
+	parent.Contents = append(parent.Contents, nil)
+	copy(parent.Contents[idx+1:], parent.Contents[idx:])
+	parent.Contents[idx] = child
+	if parent.ItemType == ITEM_FLOW {
+		child.resizeFlow(parent.GetSize())
+	}
+	if parent.ParentWindow != nil {
+		parent.ParentWindow.updateHasIndeterminate()
+		parent.ParentWindow.markDirty()
+	}
+}
+
+func (parent *windowData) insertItem(idx int, child *itemData) {
+	if parent == nil || child == nil {
+		return
+	}
+	if child.Theme == nil {
+		child.Theme = parent.Theme
+	}
+	if idx < 0 {
+		idx = 0
+	}
+	if idx > len(parent.Contents) {
+		idx = len(parent.Contents)
+	}
+	parent.Contents = append(parent.Contents, nil)
+	copy(parent.Contents[idx+1:], parent.Contents[idx:])
+	parent.Contents[idx] = child
+	child.setParentWindow(parent)
+	parent.updateHasIndeterminate()
+	parent.markDirty()
+}
+
+func (parent *itemData) replaceItem(idx int, child *itemData) {
+	if parent == nil || child == nil || idx < 0 || idx >= len(parent.Contents) {
+		return
+	}
+	old := parent.Contents[idx]
+	child.Parent = parent
+	if child.Theme == nil {
+		child.Theme = parent.Theme
+	}
+	child.setParentWindow(parent.ParentWindow)
+	parent.Contents[idx] = child
+	if parent.ItemType == ITEM_FLOW {
+		child.resizeFlow(parent.GetSize())
+	}
+	if old != nil {
+		old.setParentWindow(nil)
+	}
+	if parent.ParentWindow != nil {
+		parent.ParentWindow.updateHasIndeterminate()
+		parent.ParentWindow.markDirty()
+	}
+}
+
+func (parent *windowData) replaceItem(idx int, child *itemData) {
+	if parent == nil || child == nil || idx < 0 || idx >= len(parent.Contents) {
+		return
+	}
+	old := parent.Contents[idx]
+	if child.Theme == nil {
+		child.Theme = parent.Theme
+	}
+	parent.Contents[idx] = child
+	child.setParentWindow(parent)
+	if old != nil {
+		old.setParentWindow(nil)
+	}
+	parent.updateHasIndeterminate()
+	parent.markDirty()
+}
+
+func (item *itemData) updateText(text string) {
+	if item == nil || item.Text == text {
+		return
+	}
+	item.Text = text
+	item.tooltipW = 0
+	item.tooltipH = 0
+	item.markDirty()
+}
+
 func (win *windowData) getMainRect() rect {
 	pos := win.getPosition()
 	size := win.GetSize()

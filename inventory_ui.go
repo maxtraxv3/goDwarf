@@ -28,6 +28,51 @@ type invRef struct {
 }
 
 var inventoryRowRefs = map[*eui.ItemData]invRef{}
+
+type inventoryRow struct {
+	key    invGroupKey
+	row    *eui.ItemData
+	icon   *eui.ItemData
+	label  *eui.ItemData
+	slot   *eui.ItemData
+	id     uint16
+	idx    int
+	global int
+}
+
+type inventoryRenderState struct {
+	rows         map[invGroupKey]*inventoryRow
+	order        []invGroupKey
+	spacer       *eui.ItemData
+	fontSize     int
+	uiScale      float32
+	fontSource   *text.GoTextFaceSource
+	facePx       float64
+	baseFace     *text.GoTextFace
+	boldFace     *text.GoTextFace
+	italicFace   *text.GoTextFace
+	rowUnits     float32
+	rowPx        float32
+	iconSize     int
+	clientWAvail float32
+	clientHAvail float32
+}
+
+var invRender inventoryRenderState
+
+type inventoryRowData struct {
+	key       invGroupKey
+	id        uint16
+	idx       int
+	global    int
+	label     string
+	face      *text.GoTextFace
+	slotText  string
+	slotWidth float32
+	icon      *ebiten.Image
+	iconName  string
+}
+
 var selectedInvID uint16
 var selectedInvIdx int = -1
 var lastInvClickID uint16
@@ -87,15 +132,12 @@ func updateInventoryWindow() {
 		return
 	}
 
+	ensureInventoryFontSources()
+
 	accent := eui.AccentColor()
 
 	prevScroll := inventoryList.Scroll
 
-	// Build a unique list of items while counting duplicates and tracking
-	// whether any instance of a given key is equipped. Non-clothing items are
-	// grouped by ID and name so identical items appear once with a quantity,
-	// while clothing items are listed individually to allow swapping similar
-	// pieces (e.g. different pairs of shoes).
 	items := getInventory()
 	counts := make(map[invGroupKey]int)
 	first := make(map[invGroupKey]InventoryItem)
@@ -104,7 +146,6 @@ func updateInventoryWindow() {
 	for _, it := range items {
 		key := invGroupKey{id: it.ID, name: it.Name}
 		if it.IDIndex >= 0 {
-			// Template-data items must remain unique by their per-ID index
 			key.idx = it.IDIndex
 			key.name = ""
 		}
@@ -129,47 +170,22 @@ func updateInventoryWindow() {
 		return first[ai].Index < first[aj].Index
 	})
 
-	// Clear prior contents and rebuild rows as [icon][name (xN)].
-	inventoryList.Contents = nil
-	inventoryRowRefs = map[*eui.ItemData]invRef{}
-	var selectedRow *eui.ItemData
-
-	// Compute row height from actual font metrics (ascent+descent) at the
-	// exact point size used when rendering (+2px fudge for Ebiten).
 	fontSize := gs.InventoryFontSize
 	if fontSize <= 0 {
 		fontSize = gs.ConsoleFontSize
 	}
 	uiScale := eui.UIScale()
-	facePx := float64(float32(fontSize)*uiScale) + 2
-	var goFace *text.GoTextFace
-	if src := eui.FontSource(); src != nil {
-		goFace = &text.GoTextFace{Source: src, Size: facePx}
-	} else {
-		goFace = &text.GoTextFace{Size: facePx}
-	}
-	metrics := goFace.Metrics()
-	if invBoldSrc == nil {
-		invBoldSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansBold))
-	}
-	if invItalicSrc == nil {
-		invItalicSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansItalic))
-	}
-	// Metrics already include the rendering fudge so no extra padding is
-	// needed here.
-	rowPx := float32(math.Ceil(metrics.HAscent + metrics.HDescent))
-	rowUnits := rowPx / uiScale
-	iconSize := int(rowUnits + 0.5)
 
-	// Compute available client width/height similar to updateTextWindow so rows
-	// don't extend into the window padding and get clipped.
+	src := eui.FontSource()
+	geometryChanged := invRender.ensureFaces(fontSize, uiScale, src)
+
 	clientW := inventoryWin.GetSize().X
 	clientH := inventoryWin.GetSize().Y - inventoryWin.GetTitleSize()
-	s := eui.UIScale()
+	scale := eui.UIScale()
 	if inventoryWin.NoScale {
-		s = 1
+		scale = 1
 	}
-	pad := (inventoryWin.Padding + inventoryWin.BorderPad) * s
+	pad := (inventoryWin.Padding + inventoryWin.BorderPad) * scale
 	clientWAvail := clientW - 2*pad
 	if clientWAvail < 0 {
 		clientWAvail = 0
@@ -178,141 +194,20 @@ func updateInventoryWindow() {
 	if clientHAvail < 0 {
 		clientHAvail = 0
 	}
+	invRender.clientWAvail = clientWAvail
+	invRender.clientHAvail = clientHAvail
 
+	rows := make([]inventoryRowData, 0, len(order))
 	for _, key := range order {
-		it := first[key]
-		qty := counts[key]
-		id := key.id
-
-		// Row container for icon + text
-		row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
-		row.Size.X = clientWAvail
-
-		// Icon
-		icon, _ := eui.NewImageItem(iconSize, iconSize)
-		icon.Filled = false
-		icon.Border = 0
-
-		// Choose a pict ID for the item sprite and determine equipped slot.
-		var pict uint32
-		slot := -1
-		if clImages != nil {
-			// Inventory list usually uses the worn pict for display.
-			if p := clImages.ItemWornPict(uint32(id)); p != 0 {
-				pict = p
-			}
-			slot = clImages.ItemSlot(uint32(id))
-		}
-		if pict != 0 {
-			if img := loadImage(uint16(pict)); img != nil {
-				icon.Image = img
-				icon.ImageName = fmt.Sprintf("item:%d", id)
-			}
-		}
-		// Add a small right margin after the icon
-		icon.Margin = 4
-		row.AddItem(icon)
-
-		// Text label: Title-case only base name; preserve bracketed/custom suffix exactly
-		raw := it.Name
-		if raw == "" && clImages != nil {
-			raw = clImages.ItemName(uint32(id))
-		}
-		if raw == "" {
-			raw = fmt.Sprintf("Item %d", id)
-		}
-		base := raw
-		suffix := ""
-		if p := strings.Index(base, " <"); p >= 0 {
-			suffix = base[p:]
-			base = base[:p]
-		}
-		qtySuffix := ""
-		if qty > 1 {
-			qtySuffix = fmt.Sprintf(" (%v)", qty)
-		}
-
-		t, _ := eui.NewText()
-		t.Text = TitleCaser.String(base) + suffix + qtySuffix
-		t.FontSize = float32(fontSize)
-
-		face := goFace
-		if anyEquipped[key] {
-			switch slot {
-			case kItemSlotRightHand, kItemSlotLeftHand, kItemSlotBothHands:
-				if invBoldSrc != nil {
-					face = &text.GoTextFace{Source: invBoldSrc, Size: facePx}
-					t.Face = face
-				}
-			default:
-				if invItalicSrc != nil {
-					face = &text.GoTextFace{Source: invItalicSrc, Size: facePx}
-					t.Face = face
-				}
-			}
-		}
-
-		t.Size.Y = rowUnits
-
-		availName := row.Size.X - float32(iconSize) - icon.Margin
-		var lt *eui.ItemData
-		if anyEquipped[key] && slot >= 0 && slot < len(slotNames) {
-			loc := fmt.Sprintf("[%v]", TitleCaser.String(slotNames[slot]))
-			locW, _ := text.Measure(loc, face, 0)
-			locWU := float32(math.Ceil(locW / float64(uiScale)))
-			if availName > locWU {
-				availName -= locWU
-				lt, _ = eui.NewText()
-				lt.Text = loc
-				lt.FontSize = float32(fontSize)
-				lt.Face = face
-				lt.Size.Y = rowUnits
-				lt.Size.X = locWU
-				lt.Fixed = true
-				lt.Position.X = row.Size.X - locWU
-			}
-		}
-
-		if availName < 0 {
-			availName = 0
-		}
-		t.Size.X = availName
-		row.AddItem(t)
-		if lt != nil {
-			row.AddItem(lt)
-		}
-
-		idCopy := id
-		idxCopy := it.IDIndex
-		if qty > 1 {
-			idxCopy = -1
-		}
-		if idCopy == selectedInvID && idxCopy == selectedInvIdx {
-			selectedRow = row
-		}
-		click := func() { handleInventoryClick(idCopy, idxCopy) }
-		icon.Action = click
-		t.Action = click
-		if lt != nil {
-			lt.Action = click
-		}
-
-		// Row height matches the icon/text height with minimal padding.
-		row.Size.Y = rowUnits
-
-		inventoryList.AddItem(row)
-		inventoryRowRefs[row] = invRef{id: idCopy, idx: idxCopy, global: it.Index}
+		rows = append(rows, invRender.makeRowData(key, first[key], counts[key], anyEquipped[key]))
 	}
 
-	// Add a trailing spacer equal to one row height so the last item is never
-	// clipped at the bottom when fully scrolled.
-	spacer, _ := eui.NewText()
-	spacer.Text = ""
-	spacer.Size = eui.Point{X: 1, Y: rowUnits}
-	spacer.FontSize = float32(fontSize)
-	inventoryList.AddItem(spacer)
+	if geometryChanged {
+		invRender.rebuild(rows)
+	} else {
+		invRender.update(rows)
+	}
 
-	// Size the list and refresh window similar to updateTextWindow behavior.
 	if inventoryWin != nil {
 		if inventoryList.Parent != nil {
 			inventoryList.Parent.Size.X = clientWAvail
@@ -322,11 +217,331 @@ func updateInventoryWindow() {
 		inventoryList.Size.Y = clientHAvail
 		inventoryList.Scroll = prevScroll
 		searchTextWindow(inventoryWin, inventoryList, inventoryWin.SearchText)
-		if selectedRow != nil {
-			selectedRow.Filled = true
-			selectedRow.Color = accent
-		}
+		invRender.applySelection(accent)
 		inventoryWin.Refresh()
+	}
+}
+
+func ensureInventoryFontSources() {
+	if invBoldSrc == nil {
+		invBoldSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansBold))
+	}
+	if invItalicSrc == nil {
+		invItalicSrc, _ = text.NewGoTextFaceSource(bytes.NewReader(notoSansItalic))
+	}
+}
+
+func (s *inventoryRenderState) ensureFaces(fontSize int, uiScale float32, src *text.GoTextFaceSource) bool {
+	facePx := float64(float32(fontSize)*uiScale) + 2
+	changed := s.baseFace == nil || s.fontSize != fontSize || s.uiScale != uiScale || s.fontSource != src || s.facePx != facePx
+	if changed {
+		if src != nil {
+			s.baseFace = &text.GoTextFace{Source: src, Size: facePx}
+		} else {
+			s.baseFace = &text.GoTextFace{Size: facePx}
+		}
+		if invBoldSrc != nil {
+			s.boldFace = &text.GoTextFace{Source: invBoldSrc, Size: facePx}
+		} else {
+			s.boldFace = nil
+		}
+		if invItalicSrc != nil {
+			s.italicFace = &text.GoTextFace{Source: invItalicSrc, Size: facePx}
+		} else {
+			s.italicFace = nil
+		}
+		metrics := s.baseFace.Metrics()
+		s.rowPx = float32(math.Ceil(metrics.HAscent + metrics.HDescent))
+		s.rowUnits = s.rowPx / uiScale
+		s.iconSize = int(s.rowUnits + 0.5)
+		if s.iconSize < 1 {
+			s.iconSize = 1
+		}
+	}
+	s.fontSize = fontSize
+	s.uiScale = uiScale
+	s.fontSource = src
+	s.facePx = facePx
+	return changed
+}
+
+func (s *inventoryRenderState) makeRowData(key invGroupKey, it InventoryItem, qty int, equipped bool) inventoryRowData {
+	id := key.id
+	raw := it.Name
+	if raw == "" && clImages != nil {
+		raw = clImages.ItemName(uint32(id))
+	}
+	if raw == "" {
+		raw = fmt.Sprintf("Item %d", id)
+	}
+	base := raw
+	suffix := ""
+	if p := strings.Index(base, " <"); p >= 0 {
+		suffix = base[p:]
+		base = base[:p]
+	}
+	qtySuffix := ""
+	if qty > 1 {
+		qtySuffix = fmt.Sprintf(" (%v)", qty)
+	}
+	label := TitleCaser.String(base) + suffix + qtySuffix
+
+	var icon *ebiten.Image
+	iconName := ""
+	slot := -1
+	if clImages != nil {
+		if p := clImages.ItemWornPict(uint32(id)); p != 0 {
+			if img := loadImage(uint16(p)); img != nil {
+				icon = img
+				iconName = fmt.Sprintf("item:%d", id)
+			}
+		}
+		slot = clImages.ItemSlot(uint32(id))
+	}
+
+	face := s.baseFace
+	if equipped {
+		switch slot {
+		case kItemSlotRightHand, kItemSlotLeftHand, kItemSlotBothHands:
+			if s.boldFace != nil {
+				face = s.boldFace
+			}
+		default:
+			if s.italicFace != nil {
+				face = s.italicFace
+			}
+		}
+	}
+
+	slotText := ""
+	slotWidth := float32(0)
+	if equipped && slot >= kItemSlotFirstReal && slot <= kItemSlotLastReal {
+		slotText = fmt.Sprintf("[%v]", TitleCaser.String(slotNames[slot]))
+		if face != nil {
+			if w, _ := text.Measure(slotText, face, 0); w > 0 {
+				slotWidth = float32(math.Ceil(w / float64(s.uiScale)))
+			}
+		}
+	}
+
+	idx := it.IDIndex
+	if qty > 1 {
+		idx = -1
+	}
+
+	return inventoryRowData{
+		key:       key,
+		id:        id,
+		idx:       idx,
+		global:    it.Index,
+		label:     label,
+		face:      face,
+		slotText:  slotText,
+		slotWidth: slotWidth,
+		icon:      icon,
+		iconName:  iconName,
+	}
+}
+
+func (s *inventoryRenderState) ensureSpacer() {
+	if s.spacer == nil {
+		spacer, _ := eui.NewText()
+		spacer.Text = ""
+		spacer.Fixed = true
+		s.spacer = spacer
+	}
+	s.spacer.Size = eui.Point{X: 1, Y: s.rowUnits}
+	s.spacer.FontSize = float32(s.fontSize)
+}
+
+func (s *inventoryRenderState) createRow(data inventoryRowData) *inventoryRow {
+	row := &eui.ItemData{ItemType: eui.ITEM_FLOW, FlowType: eui.FLOW_HORIZONTAL, Fixed: true}
+	icon, _ := eui.NewImageItem(s.iconSize, s.iconSize)
+	icon.Filled = false
+	icon.Border = 0
+	icon.Margin = 4
+	row.AddItem(icon)
+	label, _ := eui.NewText()
+	label.FontSize = float32(s.fontSize)
+	row.AddItem(label)
+	res := &inventoryRow{key: data.key, row: row, icon: icon, label: label}
+	s.updateRow(res, data)
+	return res
+}
+
+func (s *inventoryRenderState) updateRow(row *inventoryRow, data inventoryRowData) {
+	if row == nil {
+		return
+	}
+	row.key = data.key
+	row.id = data.id
+	row.idx = data.idx
+	row.global = data.global
+
+	if row.row != nil {
+		row.row.Fixed = true
+		row.row.Size.X = s.clientWAvail
+		row.row.Size.Y = s.rowUnits
+	}
+
+	if row.icon != nil {
+		row.icon.Size = eui.Point{X: float32(s.iconSize), Y: float32(s.iconSize)}
+		row.icon.Margin = 4
+		row.icon.Filled = false
+		row.icon.Border = 0
+		row.icon.Image = data.icon
+		row.icon.ImageName = data.iconName
+	}
+
+	if row.label != nil {
+		row.label.FontSize = float32(s.fontSize)
+		row.label.Face = data.face
+		avail := s.clientWAvail - float32(s.iconSize) - row.icon.Margin - data.slotWidth
+		if avail < 0 {
+			avail = 0
+		}
+		row.label.Size.X = avail
+		row.label.Size.Y = s.rowUnits
+		row.label.UpdateText(data.label)
+	}
+
+	if data.slotText != "" {
+		if row.slot == nil {
+			lt, _ := eui.NewText()
+			lt.Fixed = true
+			row.row.AddItem(lt)
+			row.slot = lt
+		}
+		row.slot.FontSize = float32(s.fontSize)
+		row.slot.Face = data.face
+		row.slot.Size.X = data.slotWidth
+		row.slot.Size.Y = s.rowUnits
+		row.slot.Position.X = row.row.Size.X - data.slotWidth
+		row.slot.UpdateText(data.slotText)
+	} else if row.slot != nil {
+		row.row.RemoveItem(row.slot)
+		row.slot = nil
+	}
+
+	idCopy := data.id
+	idxCopy := data.idx
+	click := func() { handleInventoryClick(idCopy, idxCopy) }
+	if row.icon != nil {
+		row.icon.Action = click
+	}
+	if row.label != nil {
+		row.label.Action = click
+	}
+	if row.slot != nil {
+		row.slot.Action = click
+	}
+}
+
+func (s *inventoryRenderState) rebuild(data []inventoryRowData) {
+	inventoryList.Contents = nil
+	inventoryRowRefs = make(map[*eui.ItemData]invRef, len(data))
+	s.rows = make(map[invGroupKey]*inventoryRow, len(data))
+	s.order = make([]invGroupKey, 0, len(data))
+	for _, d := range data {
+		row := s.createRow(d)
+		s.rows[d.key] = row
+		s.order = append(s.order, d.key)
+		inventoryList.AddItem(row.row)
+		inventoryRowRefs[row.row] = invRef{id: row.id, idx: row.idx, global: row.global}
+	}
+	s.ensureSpacer()
+	inventoryList.AddItem(s.spacer)
+}
+
+func (s *inventoryRenderState) update(data []inventoryRowData) {
+	if s.rows == nil {
+		s.rows = make(map[invGroupKey]*inventoryRow)
+	}
+	nextMap := make(map[invGroupKey]*inventoryRow, len(data))
+	nextOrder := make([]invGroupKey, 0, len(data))
+	rowItems := make([]*inventoryRow, 0, len(data))
+	for _, d := range data {
+		row := s.rows[d.key]
+		if row == nil {
+			row = s.createRow(d)
+		} else {
+			s.updateRow(row, d)
+		}
+		nextMap[d.key] = row
+		nextOrder = append(nextOrder, d.key)
+		rowItems = append(rowItems, row)
+	}
+	s.rows = nextMap
+	s.order = nextOrder
+
+	s.ensureSpacer()
+	desired := make([]*eui.ItemData, 0, len(rowItems)+1)
+	for _, row := range rowItems {
+		desired = append(desired, row.row)
+	}
+	desired = append(desired, s.spacer)
+	s.reconcileContents(desired)
+
+	inventoryRowRefs = make(map[*eui.ItemData]invRef, len(rowItems))
+	for _, row := range rowItems {
+		inventoryRowRefs[row.row] = invRef{id: row.id, idx: row.idx, global: row.global}
+	}
+}
+
+func (s *inventoryRenderState) reconcileContents(desired []*eui.ItemData) {
+	current := append([]*eui.ItemData(nil), inventoryList.Contents...)
+	i := 0
+	for _, target := range desired {
+		if i >= len(current) {
+			inventoryList.InsertItem(i, target)
+			current = append(current[:i], append([]*eui.ItemData{target}, current[i:]...)...)
+			i++
+			continue
+		}
+		if current[i] == target {
+			i++
+			continue
+		}
+		idx := -1
+		for j := i + 1; j < len(current); j++ {
+			if current[j] == target {
+				idx = j
+				break
+			}
+		}
+		if idx >= 0 {
+			item := current[idx]
+			inventoryList.RemoveItem(item)
+			current = append(current[:idx], current[idx+1:]...)
+			inventoryList.InsertItem(i, item)
+			current = append(current[:i], append([]*eui.ItemData{item}, current[i:]...)...)
+			i++
+			continue
+		}
+		inventoryList.ReplaceItem(i, target)
+		current[i] = target
+		i++
+	}
+	for len(current) > len(desired) {
+		item := current[len(current)-1]
+		inventoryList.RemoveItem(item)
+		current = current[:len(current)-1]
+	}
+}
+
+func (s *inventoryRenderState) applySelection(accent eui.Color) {
+	for _, key := range s.order {
+		row := s.rows[key]
+		if row == nil || row.row == nil {
+			continue
+		}
+		if row.id == selectedInvID && row.idx == selectedInvIdx {
+			row.row.Filled = true
+			row.row.Color = accent
+		} else {
+			row.row.Filled = false
+			row.row.Color = eui.Color{}
+		}
 	}
 }
 
