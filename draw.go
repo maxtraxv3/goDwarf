@@ -680,6 +680,11 @@ func pictureShift(prev, cur []framePicture, max int) (int, int, []int, bool) {
 // SimpleEncrypt-obfuscated data.
 var drawStateEncrypted = false
 
+var drawStateScratch = struct {
+	mu  sync.Mutex
+	buf []byte
+}{}
+
 // handleDrawState decodes the packed draw state message. It decrypts the
 // payload when drawStateEncrypted is true.
 //
@@ -693,10 +698,32 @@ func handleDrawState(m []byte, buildCache bool) {
 		return
 	}
 
-	data := append([]byte(nil), m[2:]...)
+	var (
+		data   []byte
+		unlock func()
+	)
+
 	if drawStateEncrypted {
+		need := len(m) - 2
+		if need < 0 {
+			need = 0
+		}
+		drawStateScratch.mu.Lock()
+		if cap(drawStateScratch.buf) < need {
+			drawStateScratch.buf = make([]byte, need)
+		}
+		drawStateScratch.buf = drawStateScratch.buf[:need]
+		copy(drawStateScratch.buf, m[2:])
+		data = drawStateScratch.buf
 		simpleEncrypt(data)
+		unlock = drawStateScratch.mu.Unlock
+	} else {
+		data = m[2:]
 	}
+	if unlock != nil {
+		defer unlock()
+	}
+
 	ack, resend, err := parseDrawState(data, buildCache)
 	if err != nil {
 		logWarn("parseDrawState failed: %v", err)

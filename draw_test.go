@@ -149,3 +149,55 @@ func TestHandleDrawStateParseErrorDoesNotAdvance(t *testing.T) {
 		t.Fatalf("resendFrame = %d, want 6", resendFrame)
 	}
 }
+
+func minimalDrawStatePacket() []byte {
+	const stateLen = 4
+	m := make([]byte, 2+21+stateLen)
+	binary.BigEndian.PutUint16(m[0:2], 2)
+	body := m[2:]
+
+	body[0] = 0
+	binary.BigEndian.PutUint32(body[1:5], 1)
+	binary.BigEndian.PutUint32(body[5:9], 1)
+	body[9] = 0
+	body[10] = 10
+	body[11] = 10
+	body[12] = 10
+	body[13] = 10
+	body[14] = 10
+	body[15] = 10
+	body[16] = 0
+	body[17] = 0
+	body[18] = 0
+	binary.BigEndian.PutUint16(body[19:21], stateLen)
+	copy(body[21:], []byte{0, 0, 0, 0})
+
+	return m
+}
+
+func BenchmarkHandleDrawStateNoEncryption(b *testing.B) {
+	origEncrypted := drawStateEncrypted
+	drawStateEncrypted = false
+	defer func() { drawStateEncrypted = origEncrypted }()
+
+	ackFrame = 0
+	resendFrame = 0
+	lastAckFrame = 0
+	frameCounter = 0
+
+	resetDrawState()
+	packet := minimalDrawStatePacket()
+
+	if testing.Short() {
+		b.Skip("skipping benchmark in short mode")
+	}
+
+	handleDrawState(packet, true)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		handleDrawState(packet, true)
+	}
+}
