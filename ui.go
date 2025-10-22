@@ -3950,6 +3950,9 @@ func makeQualityWindow() {
 		bg := qualityWin.Theme.Window.BGColor
 		bg.A = 0xff
 		qualityWin.BGColor = bg
+		titleBG := qualityWin.Theme.Window.TitleBGColor
+		titleBG.A = 0xff
+		qualityWin.TitleBGColor = titleBG
 	}
 
 	// Split settings into three panes: basic (left), appearance (center) and advanced (right)

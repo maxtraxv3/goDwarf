@@ -340,7 +340,7 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 	// Window Title
 	if win.TitleHeight > 0 {
 		tr := win.getTitleRect()
-		drawFilledRect(screen, tr.X0, tr.Y0, tr.X1-tr.X0, tr.Y1-tr.Y0, win.Theme.Window.TitleBGColor, true)
+		drawFilledRect(screen, tr.X0, tr.Y0, tr.X1-tr.X0, tr.Y1-tr.Y0, win.titleBackgroundColor(), true)
 
 		textSize := ((win.GetTitleSize()) / 2)
 		face := textFace(textSize)
