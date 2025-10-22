@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
-	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -141,6 +140,12 @@ type drawParseScratch struct {
 	mobilePresent map[uint8]struct{}
 }
 
+func clearMap[K comparable, V any](m map[K]V) {
+	for k := range m {
+		delete(m, k)
+	}
+}
+
 func newDrawParseScratch() *drawParseScratch {
 	return &drawParseScratch{
 		mobilePresent: make(map[uint8]struct{}),
@@ -155,7 +160,7 @@ func (s *drawParseScratch) reset() {
 	if s.mobilePresent == nil {
 		s.mobilePresent = make(map[uint8]struct{})
 	} else {
-		maps.Clear(s.mobilePresent)
+		clearMap(s.mobilePresent)
 	}
 }
 
@@ -996,14 +1001,14 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		present = make(map[uint8]struct{})
 		scratch.mobilePresent = present
 	} else {
-		maps.Clear(present)
+		clearMap(present)
 	}
 	defer func() {
 		scratch.descriptors = descs[:0]
 		scratch.pictures = pics[:0]
 		scratch.mobiles = mobiles[:0]
 		scratch.bubbles = bubbles[:0]
-		maps.Clear(present)
+		clearMap(present)
 		releaseDrawParseScratch(scratch)
 	}()
 
@@ -1208,7 +1213,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 			if state.prevDescs == nil {
 				state.prevDescs = make(map[uint8]frameDescriptor, len(state.descriptors))
 			} else {
-				maps.Clear(state.prevDescs)
+				clearMap(state.prevDescs)
 			}
 			for idx, d := range state.descriptors {
 				state.prevDescs[idx] = d
@@ -1396,7 +1401,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		if state.prevMobiles == nil {
 			state.prevMobiles = make(map[uint8]frameMobile, len(state.mobiles))
 		} else {
-			maps.Clear(state.prevMobiles)
+			clearMap(state.prevMobiles)
 		}
 		for idx, m := range state.mobiles {
 			state.prevMobiles[idx] = m
@@ -1421,7 +1426,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	// Carry over previous-frame mobiles that disappear at the edge to avoid
 	// premature culling from interpolation.
 	if len(state.mobiles) > 0 {
-		maps.Clear(present)
+		clearMap(present)
 		for _, m := range mobiles {
 			present[m.Index] = struct{}{}
 		}
@@ -1444,7 +1449,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	if state.mobiles == nil {
 		state.mobiles = make(map[uint8]frameMobile)
 	} else {
-		maps.Clear(state.mobiles)
+		clearMap(state.mobiles)
 	}
 	for _, m := range mobiles {
 		if d, ok := state.descriptors[m.Index]; ok && d.Name != "" {
