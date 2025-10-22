@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
+	"maps"
 	"math"
 	"sort"
 	"strings"
@@ -130,6 +131,53 @@ var pictureShiftScratchPool = sync.Pool{
 	New: func() any {
 		return newPictureShiftScratch()
 	},
+}
+
+type drawParseScratch struct {
+	descriptors   []frameDescriptor
+	pictures      []framePicture
+	mobiles       []frameMobile
+	bubbles       []bubble
+	mobilePresent map[uint8]struct{}
+}
+
+func newDrawParseScratch() *drawParseScratch {
+	return &drawParseScratch{
+		mobilePresent: make(map[uint8]struct{}),
+	}
+}
+
+func (s *drawParseScratch) reset() {
+	s.descriptors = s.descriptors[:0]
+	s.pictures = s.pictures[:0]
+	s.mobiles = s.mobiles[:0]
+	s.bubbles = s.bubbles[:0]
+	if s.mobilePresent == nil {
+		s.mobilePresent = make(map[uint8]struct{})
+	} else {
+		maps.Clear(s.mobilePresent)
+	}
+}
+
+var drawParseScratchPool = sync.Pool{
+	New: func() any {
+		return newDrawParseScratch()
+	},
+}
+
+func acquireDrawParseScratch() *drawParseScratch {
+	scratch, _ := drawParseScratchPool.Get().(*drawParseScratch)
+	if scratch == nil {
+		scratch = newDrawParseScratch()
+	} else {
+		scratch.reset()
+	}
+	return scratch
+}
+
+func releaseDrawParseScratch(scratch *drawParseScratch) {
+	scratch.reset()
+	drawParseScratchPool.Put(scratch)
 }
 
 func sortPictures(pics []framePicture) {
@@ -938,6 +986,27 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	}
 	p := 9
 
+	scratch := acquireDrawParseScratch()
+	descs := scratch.descriptors[:0]
+	pics := scratch.pictures[:0]
+	mobiles := scratch.mobiles[:0]
+	bubbles := scratch.bubbles[:0]
+	present := scratch.mobilePresent
+	if present == nil {
+		present = make(map[uint8]struct{})
+		scratch.mobilePresent = present
+	} else {
+		maps.Clear(present)
+	}
+	defer func() {
+		scratch.descriptors = descs[:0]
+		scratch.pictures = pics[:0]
+		scratch.mobiles = mobiles[:0]
+		scratch.bubbles = bubbles[:0]
+		maps.Clear(present)
+		releaseDrawParseScratch(scratch)
+	}()
+
 	stage = "descriptor count"
 	if len(data) <= p {
 		return ack, resend, errors.New(stage)
@@ -948,7 +1017,9 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		return ack, resend, errors.New(stage)
 	}
 	stage = "descriptor"
-	descs := make([]frameDescriptor, 0, descCount)
+	if descCount > cap(descs) {
+		descs = make([]frameDescriptor, 0, descCount)
+	}
 	for i := 0; i < descCount && p < len(data); i++ {
 		if p+4 > len(data) {
 			return ack, resend, errors.New(stage)
@@ -1032,7 +1103,10 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	}
 
 	stage = "pictures"
-	pics := make([]framePicture, 0, pictAgain+pictCount)
+	totalPics := pictAgain + pictCount
+	if totalPics > cap(pics) {
+		pics = make([]framePicture, 0, totalPics)
+	}
 	br := bitReader{data: data[p:]}
 	for i := 0; i < pictCount; i++ {
 		idBits, ok := br.readBits(14)
@@ -1071,7 +1145,9 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		return ack, resend, errors.New(stage)
 	}
 	stage = "mobiles"
-	mobiles := make([]frameMobile, 0, mobileCount)
+	if mobileCount > cap(mobiles) {
+		mobiles = make([]frameMobile, 0, mobileCount)
+	}
 	for i := 0; i < mobileCount && p+7 <= len(data); i++ {
 		m := frameMobile{}
 		m.Index = data[p]
@@ -1130,9 +1206,10 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 		}
 		if changed {
 			if state.prevDescs == nil {
-				state.prevDescs = make(map[uint8]frameDescriptor)
+				state.prevDescs = make(map[uint8]frameDescriptor, len(state.descriptors))
+			} else {
+				maps.Clear(state.prevDescs)
 			}
-			state.prevDescs = make(map[uint8]frameDescriptor, len(state.descriptors))
 			for idx, d := range state.descriptors {
 				state.prevDescs[idx] = d
 			}
@@ -1317,9 +1394,10 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	needPrev := (gs.MotionSmoothing || gs.BlendMobiles) && !seekingMov && ok
 	if needPrev {
 		if state.prevMobiles == nil {
-			state.prevMobiles = make(map[uint8]frameMobile)
+			state.prevMobiles = make(map[uint8]frameMobile, len(state.mobiles))
+		} else {
+			maps.Clear(state.prevMobiles)
 		}
-		state.prevMobiles = make(map[uint8]frameMobile, len(state.mobiles))
 		for idx, m := range state.mobiles {
 			state.prevMobiles[idx] = m
 		}
@@ -1343,7 +1421,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	// Carry over previous-frame mobiles that disappear at the edge to avoid
 	// premature culling from interpolation.
 	if len(state.mobiles) > 0 {
-		present := make(map[uint8]struct{}, len(mobiles))
+		maps.Clear(present)
 		for _, m := range mobiles {
 			present[m.Index] = struct{}{}
 		}
@@ -1366,10 +1444,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 	if state.mobiles == nil {
 		state.mobiles = make(map[uint8]frameMobile)
 	} else {
-		// clear map while keeping allocation
-		for k := range state.mobiles {
-			delete(state.mobiles, k)
-		}
+		maps.Clear(state.mobiles)
 	}
 	for _, m := range mobiles {
 		if d, ok := state.descriptors[m.Index]; ok && d.Name != "" {
@@ -1598,9 +1673,7 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 					b.H, b.V = h, v
 					b.Far = true
 				}
-				stateMu.Lock()
-				state.bubbles = append(state.bubbles, b)
-				stateMu.Unlock()
+				bubbles = append(bubbles, b)
 			}
 			var msg string
 			switch {
@@ -1683,6 +1756,12 @@ func parseDrawState(data []byte, buildCache bool) (int32, int32, error) {
 			}
 		}
 		stateData = stateData[p+end+1:]
+	}
+
+	if len(bubbles) > 0 {
+		stateMu.Lock()
+		state.bubbles = append(state.bubbles, bubbles...)
+		stateMu.Unlock()
 	}
 
 	stage = "sound count"
