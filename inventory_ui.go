@@ -177,7 +177,7 @@ func updateInventoryWindow() {
 	uiScale := eui.UIScale()
 
 	src := eui.FontSource()
-	geometryChanged := invRender.ensureFaces(fontSize, uiScale, src)
+	geometryChanged := invRender.ensureFaces(int(math.Round(fontSize)), uiScale, src)
 
 	clientW := inventoryWin.GetSize().X
 	clientH := inventoryWin.GetSize().Y - inventoryWin.GetTitleSize()
