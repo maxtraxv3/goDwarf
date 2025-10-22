@@ -3946,6 +3946,11 @@ func makeQualityWindow() {
 	qualityWin.AutoSize = true
 	qualityWin.Movable = true
 	qualityWin.SetZone(eui.HZoneCenterLeft, eui.VZoneMiddleTop)
+	if qualityWin.Theme != nil {
+		bg := qualityWin.Theme.Window.BGColor
+		bg.A = 0xff
+		qualityWin.BGColor = bg
+	}
 
 	// Split settings into three panes: basic (left), appearance (center) and advanced (right)
 	var panelWidth float32 = 270

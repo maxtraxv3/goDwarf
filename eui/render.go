@@ -332,7 +332,7 @@ func (win *windowData) drawBG(screen *ebiten.Image) {
 		Position: point{X: r.X0, Y: r.Y0},
 		Fillet:   win.Fillet,
 		Filled:   true,
-		Color:    win.Theme.Window.BGColor,
+		Color:    win.backgroundColor(),
 	})
 }
 
@@ -502,7 +502,7 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 
 		if win.searchOpen {
 			sb := win.searchBoxRect()
-			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: true, Color: win.Theme.Window.BGColor})
+			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: true, Color: win.backgroundColor()})
 			drawRoundRect(screen, &roundRect{Size: point{X: sb.X1 - sb.X0, Y: sb.Y1 - sb.Y0}, Position: point{X: sb.X0, Y: sb.Y0}, Fillet: 0, Filled: false, Border: uiScale, Color: win.Theme.Window.TitleColor})
 			textSize := win.GetTitleSize() / 2
 			face := textFace(textSize)
