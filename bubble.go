@@ -482,7 +482,8 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 }
 
 func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
-	waveColor := nonPremultipliedRGBA64(col)
+	r, g, b, a := col.RGBA()
+	waveColor := color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
 	s := float32(gs.BubbleScale)
 	radius := float32(8) * s
 	var body vector.Path
@@ -586,25 +587,4 @@ func drawBubbleCircle(screen *ebiten.Image, cx, cy, radius float32, col color.RG
 	}
 	drawOp.ColorScale.ScaleWithColor(col)
 	vector.FillPath(screen, &p, nil, drawOp)
-}
-
-func nonPremultipliedRGBA64(col color.Color) color.RGBA64 {
-	r, g, b, a := col.RGBA()
-	if a == 0 {
-		return color.RGBA64{}
-	}
-
-	unpremul := func(c, alpha uint32) uint16 {
-		if alpha == 0xffff {
-			return uint16(c)
-		}
-		return uint16((uint64(c)*0xffff + uint64(alpha)/2) / uint64(alpha))
-	}
-
-	return color.RGBA64{
-		R: unpremul(r, a),
-		G: unpremul(g, a),
-		B: unpremul(b, a),
-		A: uint16(a),
-	}
 }
