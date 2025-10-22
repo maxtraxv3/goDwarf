@@ -114,6 +114,22 @@ func (win *windowData) backgroundColor() Color {
 	return baseTheme.Window.BGColor
 }
 
+func (win *windowData) titleBackgroundColor() Color {
+	if win == nil {
+		return Color{}
+	}
+	if win.TitleBGColor != (Color{}) {
+		return win.TitleBGColor
+	}
+	if win.Theme != nil {
+		return win.Theme.Window.TitleBGColor
+	}
+	if currentTheme != nil {
+		return currentTheme.Window.TitleBGColor
+	}
+	return baseTheme.Window.TitleBGColor
+}
+
 // Maximize resizes this window to cover the full screen area and moves it to (0,0).
 func (win *windowData) Maximize() {
 	if win == nil {
