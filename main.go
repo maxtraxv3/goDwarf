@@ -123,7 +123,7 @@ func main() {
 	}
 
 	if *genPGO {
-		clmov = filepath.Join("clmovFiles", "test.clMov")
+		clmov = filepath.Join("clmovFiles", "test.clMov.zip")
 	}
 
 	loadSettings()
