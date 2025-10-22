@@ -4030,6 +4030,25 @@ func makeQualityWindow() {
 	}
 	left.AddItem(upscaleFilterCB)
 
+	ppCB, pixelPerfectEvents := eui.NewCheckbox()
+	pixelPerfectCB := ppCB
+	pixelPerfectCB.Text = "Pixel-art scaling"
+	pixelPerfectCB.Size = eui.Point{X: width, Y: 24}
+	pixelPerfectCB.Checked = gs.PixelArtScaling
+	pixelPerfectCB.SetTooltip("Keep crisp pixels when scaling")
+	pixelPerfectEvents.Handle = func(ev eui.UIEvent) {
+		if ev.Type == eui.EventCheckboxChanged {
+			if gs.PixelArtScaling != ev.Checked {
+				gs.PixelArtScaling = ev.Checked
+				settingsDirty = true
+				if gameWin != nil {
+					gameWin.Refresh()
+				}
+			}
+		}
+	}
+	left.AddItem(pixelPerfectCB)
+
 	/*
 		                                showFPSCB, showFPSEvents := eui.NewCheckbox()
 		                                showFPSCB.Text = "Show FPS + UPS"

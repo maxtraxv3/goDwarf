@@ -1364,11 +1364,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	tx := (float64(bufW) - drawW) / 2
 	ty := (float64(bufH) - drawH) / 2
 	op := acquireDrawOpts()
-	// Always use linear filtering for the final window composite.
-	op.Filter = ebiten.FilterLinear
-	op.DisableMipmaps = true
-	// worldView was cleared and fully redrawn; a copy avoids extra blending cost.
-	op.Blend = ebiten.BlendCopy
+	if gs.PixelArtScaling {
+		op.Filter = ebiten.FilterNearest
+	} else {
+		op.Filter = ebiten.FilterLinear
+	}
 	op.GeoM.Scale(sx, sy)
 	op.GeoM.Translate(tx, ty)
 	gameImage.DrawImage(worldView, op)

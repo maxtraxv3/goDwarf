@@ -272,6 +272,7 @@ type settings struct {
 	BubbleNarration         bool
 
 	MotionSmoothing       bool
+	PixelArtScaling       bool
 	ObjectPinning         bool
 	BlendMobiles          bool
 	BlendPicts            bool

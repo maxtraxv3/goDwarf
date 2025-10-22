@@ -29,8 +29,6 @@ func acquireDrawImageOptions() *ebiten.DrawImageOptions {
 	return op
 }
 
-func releaseDrawImageOptions(op *ebiten.DrawImageOptions) {}
-
 func acquireTextDrawOptions() *text.DrawOptions {
 	op := &text.DrawOptions{}
 	op.DrawImageOptions.Filter = ebiten.FilterNearest
@@ -246,7 +244,6 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 		op.GeoM.Translate(float64(basePos.X), float64(basePos.Y))
 		op.ColorScale.Scale(1, 1, 1, win.Opacity)
 		screen.DrawImage(tmp, op)
-		releaseDrawImageOptions(op)
 		// Collect dropdowns for separate overlay rendering and draw debug.
 		win.collectDropdowns(dropdowns)
 		win.drawDebug(screen)
@@ -288,7 +285,6 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 	// Apply per-window opacity when compositing cached image
 	if win.Opacity <= 0 {
 		// Nothing to draw
-		releaseDrawImageOptions(op)
 		win.drawDebug(screen)
 		if CacheCheck {
 			ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
@@ -299,7 +295,6 @@ func (win *windowData) Draw(screen *ebiten.Image, dropdowns *[]openDropdown) {
 		op.ColorScale.Scale(1, 1, 1, win.Opacity)
 	}
 	screen.DrawImage(win.Render, op)
-	releaseDrawImageOptions(op)
 	win.drawDebug(screen)
 	if CacheCheck {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d", win.RenderCount), int(win.getPosition().X), int(win.getPosition().Y))
@@ -364,7 +359,6 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 				float64(win.getPosition().Y+((win.GetTitleSize())/2)))
 
 			top := &text.DrawOptions{DrawImageOptions: *tdop, LayoutOptions: loo}
-			releaseDrawImageOptions(tdop)
 
 			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleTextColor)
 			buf := strings.ReplaceAll(win.Title, "\n", "") //Remove newline
@@ -510,7 +504,6 @@ func (win *windowData) drawWinTitle(screen *ebiten.Image) {
 			tdop := acquireDrawImageOptions()
 			tdop.GeoM.Translate(float64(sb.X0+textSize/2), float64(sb.Y0+(sb.Y1-sb.Y0)/2))
 			top := &text.DrawOptions{DrawImageOptions: *tdop, LayoutOptions: loo}
-			releaseDrawImageOptions(tdop)
 			top.ColorScale.ScaleWithColor(win.Theme.Window.TitleColor)
 			text.Draw(screen, win.SearchText, face, top)
 			cr := win.searchCloseRect()
@@ -1435,7 +1428,7 @@ func (item *itemData) drawItemInternal(parent *itemData, offset point, base poin
 	} else if item.ItemType == ITEM_IMAGE_FAST {
 		if item.Image != nil {
 			iw, ih := item.Image.Bounds().Dx(), item.Image.Bounds().Dy()
-			op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, DisableMipmaps: true}
+			op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
 			scale := math.Min(float64(maxSize.X)/float64(iw), float64(maxSize.Y)/float64(ih))
 			if scale != 1.0 {
 				op.GeoM.Scale(scale, scale)
@@ -1747,7 +1740,6 @@ func drawDropdownOptions(item *itemData, offset point, clip rect, screen *ebiten
 		}
 		text.Draw(subImg, item.Options[i], face, tdo)
 		releaseTextDrawOptions(tdo)
-		releaseDrawImageOptions(td)
 	}
 
 	if len(item.Options) > visible {

@@ -75,9 +75,9 @@ func loadHotkeys() {
 			Commands []HotkeyCommand `json:"commands"`
 			Command  string          `json:"command"`
 			Text     string          `json:"text,omitempty"`
-			script   string          `json:"script,omitempty"`
-			Disabled *bool           `json:"disabled,omitempty"`
-			Enabled  *bool           `json:"enabled,omitempty"`
+			script   string
+			Disabled *bool `json:"disabled,omitempty"`
+			Enabled  *bool `json:"enabled,omitempty"`
 		}
 		var raw []hotkeyJSON
 		if err := json.Unmarshal(data, &raw); err != nil {
