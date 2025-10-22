@@ -98,6 +98,22 @@ func NewWindow() *windowData {
 	return &newWindow
 }
 
+func (win *windowData) backgroundColor() Color {
+	if win == nil {
+		return Color{}
+	}
+	if win.BGColor != (Color{}) {
+		return win.BGColor
+	}
+	if win.Theme != nil {
+		return win.Theme.Window.BGColor
+	}
+	if currentTheme != nil {
+		return currentTheme.Window.BGColor
+	}
+	return baseTheme.Window.BGColor
+}
+
 // Maximize resizes this window to cover the full screen area and moves it to (0,0).
 func (win *windowData) Maximize() {
 	if win == nil {
