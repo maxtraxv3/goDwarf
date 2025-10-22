@@ -482,7 +482,7 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 }
 
 func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
-	cr, cg, cb, ca := col.RGBA()
+	waveColor := nonPremultipliedRGBA64(col)
 	s := float32(gs.BubbleScale)
 	radius := float32(8) * s
 	var body vector.Path
@@ -496,12 +496,11 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 	body.LineTo(float32(left), float32(top)+radius)
 	body.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 	body.Close()
-	fillColor := color.RGBA64{R: uint16(cr), G: uint16(cg), B: uint16(cb), A: uint16(ca)}
 	bodyOp := &vector.DrawPathOptions{
 		AntiAlias: true,
 		Blend:     ebiten.BlendCopy,
 	}
-	bodyOp.ColorScale.ScaleWithColor(fillColor)
+	bodyOp.ColorScale.ScaleWithColor(waveColor)
 	vector.FillPath(screen, &body, nil, bodyOp)
 
 	r := float32(6) * s
@@ -511,7 +510,7 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 	angleStep := float64(step / corner)
 
 	draw := func(cx, cy float32) {
-		drawBubbleCircle(screen, cx, cy, r, col)
+		drawBubbleCircle(screen, cx, cy, r, waveColor)
 	}
 
 	// top edge
@@ -573,7 +572,10 @@ func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col col
 }
 
 // drawBubbleCircle draws a filled circle used by the wavy ponder bubble edges.
-func drawBubbleCircle(screen *ebiten.Image, cx, cy, radius float32, col color.Color) {
+func drawBubbleCircle(screen *ebiten.Image, cx, cy, radius float32, col color.RGBA64) {
+	if col.A == 0 {
+		return
+	}
 	var p vector.Path
 	p.MoveTo(cx+radius, cy)
 	p.Arc(cx, cy, radius, 0, 2*math.Pi, vector.Clockwise)
@@ -584,4 +586,25 @@ func drawBubbleCircle(screen *ebiten.Image, cx, cy, radius float32, col color.Co
 	}
 	drawOp.ColorScale.ScaleWithColor(col)
 	vector.FillPath(screen, &p, nil, drawOp)
+}
+
+func nonPremultipliedRGBA64(col color.Color) color.RGBA64 {
+	r, g, b, a := col.RGBA()
+	if a == 0 {
+		return color.RGBA64{}
+	}
+
+	unpremul := func(c, alpha uint32) uint16 {
+		if alpha == 0xffff {
+			return uint16(c)
+		}
+		return uint16((uint64(c)*0xffff + uint64(alpha)/2) / uint64(alpha))
+	}
+
+	return color.RGBA64{
+		R: unpremul(r, a),
+		G: unpremul(g, a),
+		B: unpremul(b, a),
+		A: uint16(a),
+	}
 }
