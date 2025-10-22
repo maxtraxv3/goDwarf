@@ -482,8 +482,8 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 }
 
 func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
-	r, g, b, a := col.RGBA()
-	waveColor := color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
+	colR, colG, colB, colA := col.RGBA()
+	waveColor := color.RGBA64{R: uint16(colR), G: uint16(colG), B: uint16(colB), A: uint16(colA)}
 	s := float32(gs.BubbleScale)
 	radius := float32(8) * s
 	var body vector.Path
