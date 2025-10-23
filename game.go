@@ -2263,9 +2263,9 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64, w
 	if bubbleScale < 0.1 {
 		bubbleScale = 0.1
 	}
-	textScale := windowScale
-	if textScale < 0.1 {
-		textScale = 0.1
+	fontScale := windowScale
+	if fontScale < 0.1 {
+		fontScale = 0.1
 	}
 	descMap := snap.descriptors
 	maxDist := maxMobileInterpPixels * (snap.dropped + 1)
@@ -2342,7 +2342,7 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64, w
 			}
 		}
 		borderCol, bgCol, textCol := bubbleColors(b.Type)
-		drawBubble(screen, b.Text, x, y, b.Type, b.Far, b.NoArrow, borderCol, bgCol, textCol, bubbleScale, textScale)
+		drawBubble(screen, b.Text, x, y, b.Type, b.Far, b.NoArrow, borderCol, bgCol, textCol, bubbleScale, fontScale)
 	}
 }
 
