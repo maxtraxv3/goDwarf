@@ -1395,13 +1395,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	} else {
 		worldViewRect = viewRect
 	}
+	var finalScale float64
 	if haveSnap {
 		prev := gs.GameScale
-		finalScale := float64(offIntScale) * scaleDown
+		finalScale = float64(offIntScale) * scaleDown
 		gs.GameScale = finalScale
 		if !viewRect.Empty() {
 			worldView := gameImage.SubImage(viewRect).(*ebiten.Image)
-			drawSpeechBubbles(worldView, snap, alpha)
 			// Draw script overlays on top of the world view.
 			drawScriptOverlays(worldView, finalScale)
 			// Recording/Playback badge in top-left of world view
@@ -1412,6 +1412,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
+
+	if haveSnap && !worldViewRect.Empty() {
+		viewBounds := image.Rect(worldOriginX, worldOriginY, worldOriginX+worldViewRect.Dx(), worldOriginY+worldViewRect.Dy())
+		viewBounds = viewBounds.Intersect(screen.Bounds())
+		if !viewBounds.Empty() {
+			if worldViewOnScreen, ok := screen.SubImage(viewBounds).(*ebiten.Image); ok {
+				prev := gs.GameScale
+				if finalScale <= 0 {
+					finalScale = worldScale
+				}
+				gs.GameScale = finalScale
+				drawSpeechBubbles(worldViewOnScreen, snap, alpha)
+				gs.GameScale = prev
+			}
+		}
+	}
 
 	// Old fixed background sleep replaced by deferred power-save throttle above.
 
