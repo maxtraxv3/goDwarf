@@ -117,10 +117,16 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if txt == "" {
 		return
 	}
-	tailX, tailY := x, y
+	bounds := screen.Bounds()
+	offsetX := bounds.Min.X
+	offsetY := bounds.Min.Y
+	sw := bounds.Dx()
+	sh := bounds.Dy()
+	if sw <= 0 || sh <= 0 {
+		return
+	}
 
-	sw := int(float64(gameAreaSizeX) * gs.GameScale)
-	sh := int(float64(gameAreaSizeY) * gs.GameScale)
+	tailX, tailY := x, y
 	if tailX < 0 || tailX >= sw || tailY < 0 || tailY >= sh {
 		noArrow = true
 	}
@@ -154,16 +160,19 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		radius = float32(8 * s)
 	}
 
+	fx := float32(offsetX)
+	fy := float32(offsetY)
+
 	var body vector.Path
-	body.MoveTo(float32(left)+radius, float32(top))
-	body.LineTo(float32(right)-radius, float32(top))
-	body.Arc(float32(right)-radius, float32(top)+radius, radius, -math.Pi/2, 0, vector.Clockwise)
-	body.LineTo(float32(right), float32(bottom)-radius)
-	body.Arc(float32(right)-radius, float32(bottom)-radius, radius, 0, math.Pi/2, vector.Clockwise)
-	body.LineTo(float32(left)+radius, float32(bottom))
-	body.Arc(float32(left)+radius, float32(bottom)-radius, radius, math.Pi/2, math.Pi, vector.Clockwise)
-	body.LineTo(float32(left), float32(top)+radius)
-	body.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
+	body.MoveTo(float32(left)+radius+fx, float32(top)+fy)
+	body.LineTo(float32(right)-radius+fx, float32(top)+fy)
+	body.Arc(float32(right)-radius+fx, float32(top)+radius+fy, radius, -math.Pi/2, 0, vector.Clockwise)
+	body.LineTo(float32(right)+fx, float32(bottom)-radius+fy)
+	body.Arc(float32(right)-radius+fx, float32(bottom)-radius+fy, radius, 0, math.Pi/2, vector.Clockwise)
+	body.LineTo(float32(left)+radius+fx, float32(bottom)+fy)
+	body.Arc(float32(left)+radius+fx, float32(bottom)-radius+fy, radius, math.Pi/2, math.Pi, vector.Clockwise)
+	body.LineTo(float32(left)+fx, float32(top)+radius+fy)
+	body.Arc(float32(left)+radius+fx, float32(top)+radius+fy, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 	body.Close()
 
 	var tail vector.Path
@@ -172,7 +181,7 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 			r1 := float32(tailHalf)
 			phase := float64(time.Now().UnixNano()) / float64(time.Second)
 			offset1 := r1 * 0.3 * float32(math.Sin(phase))
-			cx1 := float32(baseX)
+			cx1 := float32(baseX) + fx
 			// Bias ponder tail circles closer to the mobile so the origin is
 			// easier to see. Space the first (largest) circle at ~20% of the
 			// way from the bubble bottom to the tail tip instead of directly
@@ -181,29 +190,29 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 			if dist < 0 {
 				dist = 0
 			}
-			cy1 := float32(bottom) + r1 + dist*0.2 - offset1
+			cy1 := float32(bottom) + r1 + dist*0.2 - offset1 + fy
 			tail.MoveTo(cx1+r1, cy1)
 			tail.Arc(cx1, cy1, r1, 0, 2*math.Pi, vector.Clockwise)
 			tail.Close()
 			rMid := r1 * 0.6
 			offsetMid := rMid * 0.5 * float32(math.Sin(phase+math.Pi/4))
-			cxMid := float32(baseX+tailX) / 2
+			cxMid := float32(baseX+tailX)/2 + fx
 			// Place the middle circle at ~65% down the path toward the tail.
-			cyMid := float32(bottom) + dist*0.65 - offsetMid
+			cyMid := float32(bottom) + dist*0.65 - offsetMid + fy
 			tail.MoveTo(cxMid+rMid, cyMid)
 			tail.Arc(cxMid, cyMid, rMid, 0, 2*math.Pi, vector.Clockwise)
 			tail.Close()
 			r2 := float32(tailHalf) / 2
 			offset2 := r2 * 0.6 * float32(math.Sin(phase+math.Pi/2))
-			cx2 := float32(tailX)
-			cy2 := float32(tailY) - offset2
+			cx2 := float32(tailX) + fx
+			cy2 := float32(tailY) - offset2 + fy
 			tail.MoveTo(cx2+r2, cy2)
 			tail.Arc(cx2, cy2, r2, 0, 2*math.Pi, vector.Clockwise)
 			tail.Close()
 		} else {
-			tail.MoveTo(float32(baseX-tailHalf), float32(bottom))
-			tail.LineTo(float32(tailX), float32(tailY))
-			tail.LineTo(float32(baseX+tailHalf), float32(bottom))
+			tail.MoveTo(float32(baseX-tailHalf)+fx, float32(bottom)+fy)
+			tail.LineTo(float32(tailX)+fx, float32(tailY)+fy)
+			tail.LineTo(float32(baseX+tailHalf)+fx, float32(bottom)+fy)
 			tail.Close()
 		}
 	}
@@ -223,20 +232,20 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	}
 	if bubbleType != kBubblePonder {
 		var outline vector.Path
-		outline.MoveTo(float32(left)+radius, float32(top))
-		outline.LineTo(float32(right)-radius, float32(top))
-		outline.Arc(float32(right)-radius, float32(top)+radius, radius, -math.Pi/2, 0, vector.Clockwise)
-		outline.LineTo(float32(right), float32(bottom)-radius)
-		outline.Arc(float32(right)-radius, float32(bottom)-radius, radius, 0, math.Pi/2, vector.Clockwise)
+		outline.MoveTo(float32(left)+radius+fx, float32(top)+fy)
+		outline.LineTo(float32(right)-radius+fx, float32(top)+fy)
+		outline.Arc(float32(right)-radius+fx, float32(top)+radius+fy, radius, -math.Pi/2, 0, vector.Clockwise)
+		outline.LineTo(float32(right)+fx, float32(bottom)-radius+fy)
+		outline.Arc(float32(right)-radius+fx, float32(bottom)-radius+fy, radius, 0, math.Pi/2, vector.Clockwise)
 		if !far && !noArrow {
-			outline.LineTo(float32(baseX+tailHalf), float32(bottom))
-			outline.LineTo(float32(tailX), float32(tailY))
-			outline.LineTo(float32(baseX-tailHalf), float32(bottom))
+			outline.LineTo(float32(baseX+tailHalf)+fx, float32(bottom)+fy)
+			outline.LineTo(float32(tailX)+fx, float32(tailY)+fy)
+			outline.LineTo(float32(baseX-tailHalf)+fx, float32(bottom)+fy)
 		}
-		outline.LineTo(float32(left)+radius, float32(bottom))
-		outline.Arc(float32(left)+radius, float32(bottom)-radius, radius, math.Pi/2, math.Pi, vector.Clockwise)
-		outline.LineTo(float32(left), float32(top)+radius)
-		outline.Arc(float32(left)+radius, float32(top)+radius, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
+		outline.LineTo(float32(left)+radius+fx, float32(bottom)+fy)
+		outline.Arc(float32(left)+radius+fx, float32(bottom)-radius+fy, radius, math.Pi/2, math.Pi, vector.Clockwise)
+		outline.LineTo(float32(left)+fx, float32(top)+radius+fy)
+		outline.Arc(float32(left)+radius+fx, float32(top)+radius+fy, radius, math.Pi, 3*math.Pi/2, vector.Clockwise)
 		outline.Close()
 
 		// Thicken outline a bit with scale
@@ -246,31 +255,27 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		drawOutline.ColorScale.ScaleWithColor(borderColor)
 		vector.StrokePath(screen, &outline, strokeOp, drawOutline)
 	} else {
-		drawPonderWaves(screen, left, top, right, bottom, bgCol)
+		drawPonderWaves(screen, left+offsetX, top+offsetY, right+offsetX, bottom+offsetY, bgCol)
 	}
 
 	if bubbleType == kBubbleYell {
-		gapStart, gapEnd := float32(0), float32(0)
+		gapStart, gapEnd := float32(-1), float32(-1)
 		if !far && !noArrow {
-			gapStart = float32(baseX - tailHalf)
-			gapEnd = float32(baseX + tailHalf)
-		} else {
-			gapStart, gapEnd = -1, -1
+			gapStart = float32(baseX-tailHalf) + fx
+			gapEnd = float32(baseX+tailHalf) + fx
 		}
-		drawSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 3*float32(s), borderCol, gapStart, gapEnd)
+		drawSpikes(screen, float32(left)+fx, float32(top)+fy, float32(right)+fx, float32(bottom)+fy, radius, 3*float32(s), borderCol, gapStart, gapEnd)
 	} else if bubbleType == kBubbleMonster {
-		gapStart, gapEnd := float32(0), float32(0)
+		gapStart, gapEnd := float32(-1), float32(-1)
 		if !far && !noArrow {
-			gapStart = float32(baseX - tailHalf)
-			gapEnd = float32(baseX + tailHalf)
-		} else {
-			gapStart, gapEnd = -1, -1
+			gapStart = float32(baseX-tailHalf) + fx
+			gapEnd = float32(baseX+tailHalf) + fx
 		}
-		drawMonsterSpikes(screen, float32(left), float32(top), float32(right), float32(bottom), radius, 4*float32(s), borderCol, gapStart, gapEnd)
+		drawMonsterSpikes(screen, float32(left)+fx, float32(top)+fy, float32(right)+fx, float32(bottom)+fy, radius, 4*float32(s), borderCol, gapStart, gapEnd)
 	}
 
-	textTop := top + pad
-	textLeft := left + pad
+	textTop := top + pad + offsetY
+	textLeft := left + pad + offsetX
 	for i, line := range lines {
 		op := &text.DrawOptions{}
 		op.GeoM.Translate(float64(textLeft), float64(textTop+i*lineHeight))
