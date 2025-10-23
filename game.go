@@ -1399,9 +1399,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if haveSnap {
 		prev := gs.GameScale
 		finalScale = float64(offIntScale) * scaleDown
+		if finalScale <= 0 {
+			finalScale = worldScale
+		}
+		if finalScale <= 0 {
+			finalScale = 1
+		}
+		windowScale := finalScale / gsdef.GameScale
+		if windowScale <= 0 {
+			windowScale = 1
+		}
 		gs.GameScale = finalScale
 		if !viewRect.Empty() {
 			worldView := gameImage.SubImage(viewRect).(*ebiten.Image)
+			drawSpeechBubbles(worldView, snap, alpha, windowScale)
 			// Draw script overlays on top of the world view.
 			drawScriptOverlays(worldView, finalScale)
 			// Recording/Playback badge in top-left of world view
@@ -1412,22 +1423,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Finally, draw UI (which includes the game window image)
 	eui.Draw(screen)
-
-	if haveSnap && !worldViewRect.Empty() {
-		viewBounds := image.Rect(worldOriginX, worldOriginY, worldOriginX+worldViewRect.Dx(), worldOriginY+worldViewRect.Dy())
-		viewBounds = viewBounds.Intersect(screen.Bounds())
-		if !viewBounds.Empty() {
-			if worldViewOnScreen, ok := screen.SubImage(viewBounds).(*ebiten.Image); ok {
-				prev := gs.GameScale
-				if finalScale <= 0 {
-					finalScale = worldScale
-				}
-				gs.GameScale = finalScale
-				drawSpeechBubbles(worldViewOnScreen, snap, alpha)
-				gs.GameScale = prev
-			}
-		}
-	}
 
 	// Old fixed background sleep replaced by deferred power-save throttle above.
 
@@ -2254,12 +2249,23 @@ func drawMobileNameTag(screen *ebiten.Image, snap drawSnapshot, m frameMobile, a
 }
 
 // drawSpeechBubbles renders speech bubbles at native resolution.
-func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
+func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64, windowScale float64) {
 	if !gs.SpeechBubbles {
 		return
 	}
 	if wasmPrivacyActive() {
 		return
+	}
+	if windowScale <= 0 {
+		windowScale = 1
+	}
+	bubbleScale := gs.BubbleScale * windowScale
+	if bubbleScale < 0.1 {
+		bubbleScale = 0.1
+	}
+	textScale := windowScale
+	if textScale < 0.1 {
+		textScale = 0.1
 	}
 	descMap := snap.descriptors
 	maxDist := maxMobileInterpPixels * (snap.dropped + 1)
@@ -2330,13 +2336,13 @@ func drawSpeechBubbles(screen *ebiten.Image, snap drawSnapshot, alpha float64) {
 		if !b.Far {
 			if d, ok := descMap[b.Index]; ok {
 				if size := mobileSize(d.PictID); size > 0 {
-					tailHeight := int(math.Round(10 * gs.BubbleScale))
+					tailHeight := int(math.Round(10 * bubbleScale))
 					y += tailHeight - int(math.Round(float64(size)*gs.GameScale))
 				}
 			}
 		}
 		borderCol, bgCol, textCol := bubbleColors(b.Type)
-		drawBubble(screen, b.Text, x, y, b.Type, b.Far, b.NoArrow, borderCol, bgCol, textCol)
+		drawBubble(screen, b.Text, x, y, b.Type, b.Far, b.NoArrow, borderCol, bgCol, textCol, bubbleScale, textScale)
 	}
 }
 

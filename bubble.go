@@ -113,7 +113,7 @@ func bubbleColors(typ int) (border, bg, text color.Color) {
 // parameter is currently unused but retained for future compatibility with the
 // original bubble images. The colors of the border, background, and text can be
 // customized via borderCol, bgCol, and textCol respectively.
-func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, noArrow bool, borderCol, bgCol, textCol color.Color) {
+func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, noArrow bool, borderCol, bgCol, textCol color.Color, bubbleScale, textScale float64) {
 	if txt == "" {
 		return
 	}
@@ -125,28 +125,55 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if sw <= 0 || sh <= 0 {
 		return
 	}
+	if bubbleScale <= 0 {
+		bubbleScale = 0.1
+	}
+	if textScale <= 0 {
+		textScale = 0.1
+	}
 
 	tailX, tailY := x, y
 	if tailX < 0 || tailX >= sw || tailY < 0 || tailY >= sh {
 		noArrow = true
 	}
 	// Visual scale for bubbles independent of font size
-	s := float64(gs.BubbleScale)
+	s := bubbleScale
 	pad := int(math.Round(6 * s))
+	if pad < 1 {
+		pad = 1
+	}
 	tailHeight := int(math.Round(10 * s))
+	if tailHeight < 1 {
+		tailHeight = 1
+	}
 	tailHalf := int(math.Round(6 * s))
+	if tailHalf < 1 {
+		tailHalf = 1
+	}
 	bubbleType := typ & kBubbleTypeMask
 
 	// Allow wider bubbles with larger scale; preserve font size
-	maxLineWidth := int(float64(gameAreaSizeX)/4*s) - 2*pad
+	maxLineWidth := int(math.Round(float64(gameAreaSizeX)/4*s)) - 2*pad
+	if maxLineWidth < 1 {
+		maxLineWidth = 1
+	}
 	font := bubbleFont
 	if bubbleType == kBubbleWhisper {
 		font = bubbleFontRegular
 	}
-	width, lines := wrapText(txt, font, float64(maxLineWidth))
-	metrics := font.Metrics()
-	lineHeight := int(math.Ceil(metrics.HAscent) + math.Ceil(metrics.HDescent) + math.Ceil(metrics.HLineGap))
+	available := float64(maxLineWidth) / textScale
+	if available < 1 {
+		available = 1
+	}
+	baseWidth, lines := wrapText(txt, font, available)
+	width := int(math.Ceil(float64(baseWidth) * textScale))
 	width += 2 * pad
+	metrics := font.Metrics()
+	baseLineHeight := math.Ceil(metrics.HAscent) + math.Ceil(metrics.HDescent) + math.Ceil(metrics.HLineGap)
+	lineHeight := int(math.Ceil(baseLineHeight * textScale))
+	if lineHeight < 1 {
+		lineHeight = 1
+	}
 	height := lineHeight*len(lines) + 2*pad
 
 	left, top, right, bottom := adjustBubbleRect(x, y, width, height, tailHeight, sw, sh, far || noArrow)
@@ -255,7 +282,7 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 		drawOutline.ColorScale.ScaleWithColor(borderColor)
 		vector.StrokePath(screen, &outline, strokeOp, drawOutline)
 	} else {
-		drawPonderWaves(screen, left+offsetX, top+offsetY, right+offsetX, bottom+offsetY, bgCol)
+		drawPonderWaves(screen, left+offsetX, top+offsetY, right+offsetX, bottom+offsetY, bgCol, s)
 	}
 
 	if bubbleType == kBubbleYell {
@@ -278,6 +305,7 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	textLeft := left + pad + offsetX
 	for i, line := range lines {
 		op := &text.DrawOptions{}
+		op.GeoM.Scale(textScale, textScale)
 		op.GeoM.Translate(float64(textLeft), float64(textTop+i*lineHeight))
 		op.ColorScale.ScaleWithColor(textCol)
 		text.Draw(screen, line, font, op)
@@ -486,10 +514,13 @@ func drawMonsterSpikes(screen *ebiten.Image, left, top, right, bottom, radius, s
 	corner(left+radius, bottom-radius, 0.5*math.Pi, math.Pi)
 }
 
-func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color) {
+func drawPonderWaves(screen *ebiten.Image, left, top, right, bottom int, col color.Color, bubbleScale float64) {
 	colR, colG, colB, colA := col.RGBA()
 	waveColor := color.RGBA64{R: uint16(colR), G: uint16(colG), B: uint16(colB), A: uint16(colA)}
-	s := float32(gs.BubbleScale)
+	if bubbleScale <= 0 {
+		bubbleScale = 0.1
+	}
+	s := float32(bubbleScale)
 	radius := float32(8) * s
 	var body vector.Path
 	body.MoveTo(float32(left)+radius, float32(top))
