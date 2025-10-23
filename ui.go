@@ -3954,6 +3954,10 @@ func makeQualityWindow() {
 		titleBG.A = 0xff
 		qualityWin.TitleBGColor = titleBG
 	}
+	// Render directly each frame so tall layouts do not reuse partially stale
+	// cached backing images, which were causing the window background to fade
+	// to a semi-transparent look below the first few rows.
+	qualityWin.NoCache = true
 
 	// Split settings into three panes: basic (left), appearance (center) and advanced (right)
 	var panelWidth float32 = 270
