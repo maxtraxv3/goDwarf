@@ -1,2 +1,12 @@
 Added "pixel art scaling" option for razor sharp rescaling on high-res displays (higher than 1080p)
 Rewrote chat bubble rendering so it is perfect-sharp native resolution rendering.
+Updated graphics library from v2.8.8 to v2.9.2: https://ebitengine.org/en/documents/2.9.html
+Updated vector calls to ebiten 2.9.
+Optimized logging.
+Fixed a several bugs related to ebiten 2.9 updates from moving away from deprecated calls.
+Faster rendering via reuse of pictureShift maps
+Pooled buffers for player input to reduce GC.
+Optimized inventory window redrawing.
+Optimize draw state allocations.
+Updated default.pgo (profile guided optimization)
+Several rendering pipeline optimizations.
