@@ -105,6 +105,28 @@ func bubbleColors(typ int) (border, bg, text color.Color) {
 	return
 }
 
+// scaledBubbleFace returns a text face scaled by the provided factor. When the
+// scale is 1 the original face is returned. The returned face shares the same
+// font source but uses an adjusted size so text is rasterized at the desired
+// resolution instead of being drawn and then scaled, which avoids blurring.
+func scaledBubbleFace(face text.Face, scale float64) text.Face {
+	if face == nil {
+		return nil
+	}
+	if scale <= 0 {
+		scale = 1
+	}
+	if math.Abs(scale-1) < 1e-9 {
+		return face
+	}
+	if gf, ok := face.(*text.GoTextFace); ok {
+		scaled := *gf
+		scaled.Size = gf.Size * scale
+		return &scaled
+	}
+	return face
+}
+
 // drawBubble renders a text bubble anchored so that (x, y) corresponds to the
 // bottom-center point of the balloon tail. If the bubble would extend past the
 // screen edges it is clamped while leaving the tail anchored at (x, y). If far
@@ -112,8 +134,10 @@ func bubbleColors(typ int) (border, bg, text color.Color) {
 // bubble itself. The tail can also be skipped explicitly via noArrow. The typ
 // parameter is currently unused but retained for future compatibility with the
 // original bubble images. The colors of the border, background, and text can be
-// customized via borderCol, bgCol, and textCol respectively.
-func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, noArrow bool, borderCol, bgCol, textCol color.Color, bubbleScale, textScale float64) {
+// customized via borderCol, bgCol, and textCol respectively. fontScale controls
+// the font size so text is rasterized at native resolution for the current
+// window scale.
+func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, noArrow bool, borderCol, bgCol, textCol color.Color, bubbleScale, fontScale float64) {
 	if txt == "" {
 		return
 	}
@@ -128,8 +152,8 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if bubbleScale <= 0 {
 		bubbleScale = 0.1
 	}
-	if textScale <= 0 {
-		textScale = 0.1
+	if fontScale <= 0 {
+		fontScale = 0.1
 	}
 
 	tailX, tailY := x, y
@@ -161,16 +185,24 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	if bubbleType == kBubbleWhisper {
 		font = bubbleFontRegular
 	}
-	available := float64(maxLineWidth) / textScale
+	font = scaledBubbleFace(font, fontScale)
+	if font == nil {
+		if bubbleType == kBubbleWhisper {
+			font = bubbleFontRegular
+		} else {
+			font = bubbleFont
+		}
+	}
+	available := float64(maxLineWidth)
 	if available < 1 {
 		available = 1
 	}
 	baseWidth, lines := wrapText(txt, font, available)
-	width := int(math.Ceil(float64(baseWidth) * textScale))
+	width := int(math.Ceil(float64(baseWidth)))
 	width += 2 * pad
 	metrics := font.Metrics()
 	baseLineHeight := math.Ceil(metrics.HAscent) + math.Ceil(metrics.HDescent) + math.Ceil(metrics.HLineGap)
-	lineHeight := int(math.Ceil(baseLineHeight * textScale))
+	lineHeight := int(math.Ceil(baseLineHeight))
 	if lineHeight < 1 {
 		lineHeight = 1
 	}
@@ -305,7 +337,6 @@ func drawBubble(screen *ebiten.Image, txt string, x, y int, typ int, far bool, n
 	textLeft := left + pad + offsetX
 	for i, line := range lines {
 		op := &text.DrawOptions{}
-		op.GeoM.Scale(textScale, textScale)
 		op.GeoM.Translate(float64(textLeft), float64(textTop+i*lineHeight))
 		op.ColorScale.ScaleWithColor(textCol)
 		text.Draw(screen, line, font, op)
