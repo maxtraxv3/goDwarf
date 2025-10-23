@@ -1,0 +1,2 @@
+Added "pixel art scaling" option for razor sharp rescaling on high-res displays (higher than 1080p)
+Rewrote chat bubble rendering so it is perfect-sharp native resolution rendering.
