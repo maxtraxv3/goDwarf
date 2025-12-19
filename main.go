@@ -306,6 +306,18 @@ func main() {
 	cancel()
 
 	<-ctx.Done()
+	
+	clanmacro.SetSendFunc(func(msg string) {
+		// Temporary test sender: prints expanded macro instead of sending.
+		// Replace this body with your real send function once tested.
+		fmt.Println("macro submit:", msg)
+	})
+
+	// Optionally load macros from a directory (adjust path as needed)
+	macroDir := filepath.Join(os.Getenv("HOME"), ".clanlord", "macros", "Default")
+	if err := clanmacro.LoadDir(macroDir); err != nil {
+		fmt.Println("clanmacro: load error:", err)
+	}
 }
 
 func waitForMovieAssets(ctx context.Context) bool {
