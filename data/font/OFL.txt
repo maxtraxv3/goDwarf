@@ -1,0 +1,19 @@
+SIL OPEN FONT LICENSE
+
+Version 1.1 - 26 February 2007
+
+Copyright 2015 Google LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of the font software, to deal in the font software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the font software, and to permit persons to whom the font software is furnished to do so, subject to the following conditions:
+
+1. Neither the font software nor any of its individual components, in Original or Modified Versions, may be sold by itself.
+
+2. Original or Modified Versions of the font software may be bundled, redistributed and/or sold with any software, provided that each copy contains the above copyright notice and this license. These can be included either as stand-alone text files, human-readable headers or in the appropriate machine-readable metadata fields within text or binary files as long as those fields can be easily viewed by the user.
+
+3. No Modified Version of the font software may use the name(s) of the font software author(s), publisher(s) or assignee(s) to promote, endorse, or sell any Modified Version. However, the following may be appended to any Modified Version provided those names are not used to endorse or promote that Modified Version:
+
+   a. These names may be used in a list of contributors to the Modified Version.
+
+4. The font software, modified or un-modified, in part or in whole, must be distributed entirely under this license, and must not be distributed under any other license. The requirements for this license apply to any font software which has been modified by the original author(s), as well as to portions of the font software from other font software publishers.
+
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE FONT SOFTWARE OR THE USE OR OTHER DEALINGS IN THE FONT SOFTWARE.

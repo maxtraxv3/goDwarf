@@ -1,0 +1,72 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+gtmm
+gtmm.exe
+godwarf
+godwarf.exe
+
+# Go build artifacts
+*.test
+*.out
+*.prof
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build directories
+build/*
+!build/aar/
+build/aar/*.apk
+build/aar/*.aar
+build/aar/*.jar
+build/aar/*.idsig
+build/aar/debug.keystore
+build/aar/jni/
+build/aar/classes.jar
+build/aar/R.txt
+build/aar/proguard.txt
+build/aar/AndroidManifest.xml
+build/aar/res/
+build/aar/src/
+!build/aar/build_apk.sh
+
+# Game data (too large for git)
+data/CL_Images
+data/CL_Sounds
+
+# IDE and misc files
+gttmm to do.txt
+controls_idea
+
+# Log files
+*.log
+*_go.log
+*_java.log
+
+# Temporary files
+/tmp/
+*.tmp
+*.temp
+
+# Android build artifacts
+*.apk.idsig
+*.aar
+*.jar
+
+# Local settings
+settings.json
