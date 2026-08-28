@@ -9,6 +9,7 @@ goDwarf needs file access to Read and Write your macro, Text logs and debug logs
 ## Game Data
 
 CL_Images and CL_Sounds are downloaded automatically from the official ClanLord servers on first launch.
+with Distortions back up server as a mirror if official servers are down. https://m45sci.xyz/downloads/clanlord/data/
 
 ## Credits
 
